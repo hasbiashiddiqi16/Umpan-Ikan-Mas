@@ -1,10 +1,14 @@
 import { and, count, desc, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { analyticsEvents, cmsRecipes, cmsReviews } from "@/db/schema";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   try {
     const requestedDays = Number(new URL(request.url).searchParams.get("days"));
     const days = [7, 30, 90].includes(requestedDays) ? requestedDays : 30;

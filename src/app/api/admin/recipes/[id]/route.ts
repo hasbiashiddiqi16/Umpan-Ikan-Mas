@@ -2,12 +2,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { validateCmsRecipeInput } from "@/lib/cms";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   const { id: idParam } = await context.params;
   const id = Number(idParam);
   if (!Number.isSafeInteger(id) || id < 1) return Response.json({ error: "ID konten tidak valid." }, { status: 400 });
@@ -24,6 +28,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   const { id: idParam } = await context.params;
   const id = Number(idParam);
   if (!Number.isSafeInteger(id) || id < 1) return Response.json({ error: "ID konten tidak valid." }, { status: 400 });

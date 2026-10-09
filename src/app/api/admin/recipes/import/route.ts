@@ -1,10 +1,14 @@
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { recipes } from "@/data/recipes";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   try {
     const values = recipes.map((recipe) => ({
       slug: recipe.slug,
