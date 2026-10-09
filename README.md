@@ -4,7 +4,9 @@ Platform rekomendasi racikan umpan ikan mas dengan katalog, komunitas, dan Conte
 
 ## Konfigurasi server
 
-Atur `DATABASE_URL` ke connection string PostgreSQL yang di-host. Skema tabel berada di `src/db/schema.ts`; database harus sudah memiliki tabel tersebut sebelum fitur CMS digunakan. Simpan variabel ini hanya di environment server (misalnya Netlify), bukan di client.
+Aplikasi menggunakan Netlify Database (PostgreSQL) melalui Drizzle ORM. Koneksi dikonfigurasi otomatis oleh Netlify, sehingga `DATABASE_URL` tidak perlu diatur dan impor route API saat build tidak membuka koneksi database.
+
+Skema tabel berada di `db/schema.ts`. Migrasi di `netlify/database/migrations` diterapkan otomatis oleh Netlify saat deploy, sebelum aplikasi dipublikasikan. Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`. Jangan menjalankan migrasi secara manual.
 
 ## Admin Content Studio
 
@@ -18,5 +20,5 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 ```bash
 npm install
-npm run dev
+npx netlify dev --port 8889
 ```
