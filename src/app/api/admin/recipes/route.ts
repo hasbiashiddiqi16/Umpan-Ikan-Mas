@@ -2,10 +2,14 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { validateCmsRecipeInput } from "@/lib/cms";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   try {
     const rows = await db.select().from(cmsRecipes).orderBy(desc(cmsRecipes.updatedAt));
     return Response.json({ recipes: rows });
@@ -15,6 +19,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   try {
     const body: unknown = await request.json();
     const parsed = validateCmsRecipeInput(body);

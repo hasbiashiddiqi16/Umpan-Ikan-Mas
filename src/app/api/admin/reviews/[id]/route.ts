@@ -1,12 +1,16 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   const id = Number((await context.params).id);
   if (!Number.isSafeInteger(id) || id < 1) return Response.json({ error: "ID ulasan tidak valid." }, { status: 400 });
   try {
