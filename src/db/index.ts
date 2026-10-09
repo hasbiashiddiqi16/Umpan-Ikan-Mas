@@ -1,24 +1,21 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { getDatabase } from "@netlify/database";
+import { drizzle } from "drizzle-orm/netlify-db";
+import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { PgAsyncDatabase } from "drizzle-orm/pg-core/async";
+import * as schema from "./schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+type Database = PgAsyncDatabase<PgQueryResultHKT, typeof schema>;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
+function createDatabase(): Database {
+  return drizzle({ client: getDatabase(), schema });
 }
 
-const globalForDb = globalThis as typeof globalThis & {
-  __arenaNextJsPostgresqlPool?: Pool;
-};
+let database: Database | undefined;
 
-export const pool =
-  globalForDb.__arenaNextJsPostgresqlPool ??
-  new Pool({
-    connectionString: databaseUrl,
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__arenaNextJsPostgresqlPool = pool;
-}
-
-export const db = drizzle(pool);
+export const db = new Proxy({} as Database, {
+  get(_target, property) {
+    database ??= createDatabase();
+    const value = Reflect.get(database, property, database);
+    return typeof value === "function" ? value.bind(database) : value;
+  },
+});
