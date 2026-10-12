@@ -9,6 +9,7 @@ import { Badge, Rating } from "@/components/shared";
 import { formatCount } from "@/lib/utils";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
+const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
 
 function getStoredFavorites(): string[] {
   try {
@@ -67,10 +68,10 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
           </div>
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
-        <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
-          <Badge>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</Badge>
-          <Badge tone="cream">💧 {recipe.water[0]}</Badge>
-          <Badge tone="cream">🎣 {recipe.fishingTypes[0]}</Badge>
+        <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
+          <Badge className={cardMetaBadgeClass}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}>💧 {recipe.water[0]}</Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {recipe.fishingTypes[0]}</Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#26382b]">{recipe.price}</p></div>

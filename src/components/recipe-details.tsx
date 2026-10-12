@@ -3,6 +3,8 @@ import type { Ingredient } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { Badge, Rating } from "@/components/shared";
 
+const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
+
 export function IngredientTable({ ingredients }: { ingredients: Ingredient[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[#e6eae3] bg-white">
@@ -108,7 +110,7 @@ export function ReviewCard({ review }: { review: RecipeReview }) {
         </div>
         <Rating value={review.rating} compact />
       </div>
-      <div className="mt-3 flex flex-wrap gap-1.5"><Badge>{review.weather === "Hujan" ? "🌧️" : review.weather === "Cerah" ? "☀️" : "☁️"} {review.weather}</Badge><Badge tone="cream">💧 {review.water}</Badge>{review.fishingType && <Badge tone="cream">🎣 {review.fishingType}</Badge>}{typeof review.catchCount === "number" && <Badge tone="cream">🐟 {review.catchCount} ekor</Badge>}</div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{review.weather === "Hujan" ? "🌧️" : review.weather === "Cerah" ? "☀️" : "☁️"} {review.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {review.water}</Badge>{review.fishingType && <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {review.fishingType}</Badge>}{typeof review.catchCount === "number" && <Badge tone="cream" className={cardMetaBadgeClass}>🐟 {review.catchCount} ekor</Badge>}</div>
       <p className="mt-4 break-words text-sm leading-6 text-[#647064]">“{review.comment}”</p>
     </article>
   );

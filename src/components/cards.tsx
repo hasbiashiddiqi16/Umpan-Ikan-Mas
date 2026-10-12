@@ -7,6 +7,8 @@ import type { FishingReport } from "@/data/fishingReports";
 import { Badge, Rating } from "@/components/shared";
 import { formatCount } from "@/lib/utils";
 
+const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
+
 const weatherStyles = [
   { name: "Musim Hujan", slug: "musim-hujan", icon: CloudRain, emoji: "🌧️", color: "bg-[#e8f0ef] text-[#456e70]", description: "Racikan yang banyak digunakan saat hujan dan suhu air berubah.", count: 48 },
   { name: "Musim Panas", slug: "musim-panas", icon: Sun, emoji: "☀️", color: "bg-[#f8efd9] text-[#926e2f]", description: "Pilihan beraroma ringan untuk hari cerah dan air lebih hangat.", count: 36 },
@@ -59,7 +61,7 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-bold text-[#405543]" style={{ backgroundColor: report.color }}>{report.initials}</span>
           <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><p className="mt-1 flex items-center gap-1 text-xs text-[#879087]"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-1.5"><Badge>{report.weather === "Hujan" ? "🌧️" : report.weather === "Cerah" ? "☀️" : "☁️"} {report.weather}</Badge><Badge tone="cream">💧 {report.water}</Badge><Badge tone="cream">🎣 {report.fishingType}</Badge></div>
+        <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{report.weather === "Hujan" ? "🌧️" : report.weather === "Cerah" ? "☀️" : "☁️"} {report.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {report.water}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>🎣 {report.fishingType}</Badge></div>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{report.catchCount} ekor</p></div></div>
         <p className="mt-4 flex-1 text-sm leading-6 text-[#687268]">“{report.comment}”</p>
         <div className="mt-4 flex items-center justify-between border-t border-[#edf0eb] pt-3"><Rating value={report.rating} compact /><Link href={`/resep/${report.recipeSlug}`} className="text-xs font-bold text-[#35573a] hover:underline">Lihat detail <ArrowRight size={13} className="ml-1 inline" /></Link></div>
