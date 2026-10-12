@@ -35,7 +35,7 @@ export default function HomePage() {
           </section>
           <section>
             <SectionHeader eyebrow="Sering dicoba" title="🔥 Racikan Populer" subtitle="Favorit pemancing, dari umpan harian sampai racikan untuk lomba." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
-            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} /></div>)}</div>
+            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-4">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className={`w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto ${index === 4 ? "xl:hidden" : ""}`}><RecipeCard recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} /></div>)}</div>
           </section>
           <section>
             <SectionHeader eyebrow="Baca situasinya" title="🌦️ Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
