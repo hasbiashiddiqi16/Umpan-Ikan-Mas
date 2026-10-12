@@ -9,6 +9,7 @@ import { Badge, Rating } from "@/components/shared";
 import { formatCount } from "@/lib/utils";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
+const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
 
 function getStoredFavorites(): string[] {
   try {
@@ -43,8 +44,8 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
   }
 
   return (
-    <article className="group overflow-hidden rounded-[22px] border border-[#e8ebe5] bg-white shadow-[0_7px_25px_rgba(41,55,43,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(41,55,43,.12)]">
-      <div className="relative h-[190px] overflow-hidden bg-[#e8e6d9] sm:h-[205px]">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e8ebe5] bg-white shadow-[0_7px_25px_rgba(41,55,43,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(41,55,43,.12)]">
+      <div className="relative h-[190px] shrink-0 overflow-hidden bg-[#e8e6d9] sm:h-[205px]">
         <Link href={`/resep/${recipe.slug}`} aria-label={`Lihat resep ${recipe.name}`} className="absolute inset-0 z-0">
           <Image src={recipe.image} alt={`${recipe.name}, bahan racikan umpan ikan mas`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
           <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/60 via-transparent to-[#16241b]/5" />
@@ -59,7 +60,7 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
         {matchScore !== undefined && <div className="absolute bottom-3.5 right-3.5 rounded-xl border border-white/25 bg-[#17372a]/85 px-3 py-2 text-white shadow-sm backdrop-blur-md"><p className="text-[9px] font-bold uppercase tracking-[.13em] text-white/70">Match</p><p className="text-lg font-black leading-none">{matchScore}%</p></div>}
         <div className="pointer-events-none absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan pemancing</p><p className="text-xs font-bold">Ikan mas</p></div>
       </div>
-      <div className="p-4 sm:p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={`/resep/${recipe.slug}`} className="line-clamp-1 text-[17px] font-extrabold tracking-tight text-[#223528] transition hover:text-[#55734d]">{recipe.name}</Link>
@@ -67,10 +68,10 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
           </div>
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          <Badge>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</Badge>
-          <Badge tone="cream">💧 {recipe.water[0]}</Badge>
-          <Badge tone="cream">🎣 {recipe.fishingTypes[0]}</Badge>
+        <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
+          <Badge className={cardMetaBadgeClass}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}>💧 {recipe.water[0]}</Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {recipe.fishingTypes[0]}</Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#26382b]">{recipe.price}</p></div>

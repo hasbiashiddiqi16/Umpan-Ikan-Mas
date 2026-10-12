@@ -22,7 +22,7 @@ export function ProvinceExplorer({ province, recipes }: { province: string; reci
     return filtered;
   }, [recipes, weather, water, fishingType, budget]);
   return (
-    <section className="mt-10"><SectionHeader eyebrow="Dari katalog UMPAN MAS" title={`Racikan populer di ${province}`} subtitle="Sampel resep yang dikaitkan dengan daerah ini. Sesuaikan lagi dengan kondisi kolam tempatmu memancing." />
+    <section className="mt-10"><SectionHeader eyebrow="Dari katalog UMPAN MAS" title={`Racikan populer di ${province}`} subtitle="Resep katalog yang dikaitkan dengan daerah ini. Sesuaikan lagi dengan kondisi kolam tempatmu memancing." />
       <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#e7ebe5] bg-[#f8faf7] p-3.5">
         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[.09em] text-[#899286]">Cuaca<select className={selectClass} value={weather} onChange={(event) => setWeather(event.target.value)}>{["Semua cuaca", "Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></label>
         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[.09em] text-[#899286]">Kondisi air<select className={selectClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Semua kondisi air", "Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></label>

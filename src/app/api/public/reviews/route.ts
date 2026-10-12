@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { recipes } from "@/data/recipes";
@@ -10,9 +10,11 @@ export async function GET(request: Request) {
   const slug = searchParams.get("slug");
   if (slug && slug.length > 180) return Response.json({ reviews: [] });
   try {
+    // Ulasan katalog dirender dari data statis pada detail resep. Hanya ulasan
+    // komunitas yang dikirimkan ke API agar seed yang tersinkron ke CMS tidak tampil ganda.
     const rows = slug
-      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"))).orderBy(desc(cmsReviews.createdAt)).limit(50)
-      : await db.select().from(cmsReviews).where(eq(cmsReviews.status, "approved")).orderBy(desc(cmsReviews.createdAt)).limit(250);
+      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(50)
+      : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(250);
     return Response.json({ reviews: rows.map((review) => ({ ...review, date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(review.createdAt) })) }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ reviews: [] });

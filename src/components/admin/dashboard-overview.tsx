@@ -81,7 +81,7 @@ export function DashboardOverview() {
         <MetricCard title="Kunjungan halaman" value={data?.views ?? 0} description={data?.change === null || data?.change === undefined ? "Belum ada periode pembanding" : "vs. 30 hari sebelumnya"} icon={Eye} tone="bg-[#edf3e9] text-[#52724f]" change={data?.change} />
         <MetricCard title="Total konten CMS" value={data?.contentTotal ?? 0} description="Resep yang dikelola" icon={FileText} tone="bg-[#f2eee3] text-[#927a42]" />
         <MetricCard title="Konten tayang" value={data?.published ?? 0} description="Terlihat di katalog publik" icon={Send} tone="bg-[#e9f1ee] text-[#4d786b]" />
-        <MetricCard title="Ulasan menunggu" value={data?.pendingReviews ?? 0} description="Perlu tinjauan editor" icon={MessageSquareText} tone="bg-[#f7ece7] text-[#9a654c]" />
+        <MetricCard title="Ulasan siap tampil" value={data?.approvedReviews ?? 0} description={data?.pendingReviews ? `${numberFormat.format(data.pendingReviews)} perlu tinjauan editor` : "Termasuk ulasan katalog tersinkron"} icon={MessageSquareText} tone="bg-[#f7ece7] text-[#9a654c]" />
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[1.65fr_1fr]">

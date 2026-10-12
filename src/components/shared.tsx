@@ -36,11 +36,11 @@ export function SectionHeader({
   light?: boolean;
 }) {
   return (
-    <div className="mb-7 flex items-end justify-between gap-5">
-      <div className="max-w-2xl">
+    <div className="mb-7 flex min-w-0 items-end justify-between gap-5">
+      <div className="min-w-0 max-w-2xl">
         {eyebrow && <p className={`mb-2 text-xs font-bold uppercase tracking-[.16em] ${light ? "text-[#c6d9c4]" : "text-[#718272]"}`}>{eyebrow}</p>}
-        <h2 className={`text-2xl font-extrabold tracking-tight sm:text-[2rem] ${light ? "text-white" : "text-[#1d2d22]"}`}>{title}</h2>
-        {subtitle && <p className={`mt-2 max-w-xl text-sm leading-6 sm:text-base ${light ? "text-white/70" : "text-[#6f766f]"}`}>{subtitle}</p>}
+        <h2 className={`break-words text-2xl font-extrabold tracking-tight sm:text-[2rem] ${light ? "text-white" : "text-[#1d2d22]"}`}>{title}</h2>
+        {subtitle && <p className={`mt-2 max-w-xl break-words text-sm leading-6 sm:text-base ${light ? "text-white/70" : "text-[#6f766f]"}`}>{subtitle}</p>}
       </div>
       {action && <div className="hidden shrink-0 sm:block">{action}</div>}
     </div>

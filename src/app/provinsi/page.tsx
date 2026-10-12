@@ -5,6 +5,7 @@ import { PageShell } from "@/components/navigation";
 import { Footer, SectionHeader } from "@/components/shared";
 import { ProvinceCard } from "@/components/cards";
 import { provinces } from "@/data/provinces";
+import { jabodetabekRecipeCount, recipes } from "@/data/recipes";
 
 export const metadata: Metadata = {
   title: "Umpan Ikan Mas Berdasarkan Provinsi",
@@ -20,7 +21,7 @@ export default function ProvincesPage() {
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-[#dfd0a8]"><MapPinned size={14} /> Cerita dari penjuru Nusantara</span>
           <h1 className="mt-4 max-w-2xl text-4xl font-black tracking-[-.045em] sm:text-5xl">Umpan Berdasarkan Provinsi</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Temukan racikan yang dibagikan pemancing di berbagai daerah. Setiap kolam punya karakter air dan kebiasaan ikan yang bisa berbeda.</p>
-          <div className="mt-6 flex flex-wrap gap-3"><span className="rounded-xl bg-white/10 px-4 py-3 text-sm"><strong className="text-lg">38</strong><span className="ml-2 text-white/70">provinsi</span></span><span className="rounded-xl bg-white/10 px-4 py-3 text-sm"><strong className="text-lg">20+</strong><span className="ml-2 text-white/70">racikan lokal</span></span></div>
+          <div className="mt-6 flex flex-wrap gap-3"><span className="rounded-xl bg-white/10 px-4 py-3 text-sm"><strong className="text-lg">38</strong><span className="ml-2 text-white/70">provinsi</span></span><span className="rounded-xl bg-white/10 px-4 py-3 text-sm"><strong className="text-lg">{recipes.length}</strong><span className="ml-2 text-white/70">racikan lokal</span></span><span className="rounded-xl bg-[#d9bd70]/20 px-4 py-3 text-sm"><strong className="text-lg">{jabodetabekRecipeCount}</strong><span className="ml-2 text-white/70">cakupan Jabodetabek</span></span></div>
         </div>
         <SectionHeader eyebrow="Jelajahi daerah" title="Pilih provinsimu" subtitle="Data ini adalah gambaran komunitas dan katalog UMPAN MAS, bukan representasi seluruh spot di daerah." />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">{provinces.map((province) => <ProvinceCard key={province.slug} province={province} />)}</div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { RouteScrollReset } from "@/components/route-scroll-reset";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id">
-      <body className="bg-[#fbfcf9] text-[#243328] antialiased"><AnalyticsTracker />{children}</body>
+    <html lang="id" data-scroll-behavior="smooth">
+      <body className="bg-[#fbfcf9] text-[#243328] antialiased"><RouteScrollReset /><AnalyticsTracker />{children}</body>
     </html>
   );
 }
