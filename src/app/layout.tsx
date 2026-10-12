@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id">
+    <html lang="id" data-scroll-behavior="smooth">
       <body className="bg-[#fbfcf9] text-[#243328] antialiased"><RouteScrollReset /><AnalyticsTracker />{children}</body>
     </html>
   );

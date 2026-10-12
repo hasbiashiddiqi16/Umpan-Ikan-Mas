@@ -506,7 +506,7 @@ const coreRecipes: Recipe[] = [
   },
 ];
 
-const additionalRecipeNames = [
+const curatedAdditionalRecipeNames = [
   "Pelet Pisang Ambon", "Roti Pandan Susu", "Ubi Madu Kroto", "Tahu Putih Keju", "Sarden Pelet Lomba",
   "Singkong Kelapa Gurih", "Jagung Susu Manis", "Tempe Pandan Halus", "Kacang Hijau Santan", "Pelet Belut Galat",
   "Telur Asin Keju", "Roti Tawar Pandan", "Ubi Ungu Susu", "Biskuit Keju Kroto", "Pelet Udang Rebon",
@@ -525,6 +525,11 @@ const additionalRecipeNames = [
   "Ubi Cokelat Wangi", "Kacang Keju Lomba", "Tempe Pandan Harian", "Pelet Susu Kroto",
 ] as const;
 
+const expansionBases = ["Pelet", "Jagung", "Roti", "Ubi", "Tahu", "Singkong", "Kacang", "Tempe", "Kelapa", "Biskuit", "Sarden", "Pisang", "Tepung"];
+const expansionProfiles = ["Pandan Wangi", "Susu Gurih", "Keju Lembut", "Kroto Segar", "Madu Manis", "Santan Kental", "Vanila Putih", "Kelapa Gurih"];
+const expansionRecipeNames = expansionBases.flatMap((base) => expansionProfiles.map((profile) => `Racikan ${base} ${profile}`)).slice(0, 101);
+const additionalRecipeNames = [...curatedAdditionalRecipeNames, ...expansionRecipeNames];
+
 const catalogCategories: Recipe["category"][] = ["Harian", "Ekonomis", "Lomba", "Premium", "Galat"];
 const catalogDifficulties: Recipe["difficulty"][] = ["Mudah", "Mudah", "Menengah", "Menengah", "Tingkat lanjut"];
 const catalogSummaries = [
@@ -539,8 +544,27 @@ function slugForGeneratedRecipe(name: string, index: number) {
   return `${normalized}-${String(index + 21).padStart(2, "0")}`;
 }
 
-// Distribusi tepat 99 resep: 23 provinsi memiliki 3 resep, 15 provinsi memiliki 2 resep.
-const recipeProvinceAssignments = provinceDirectory.flatMap((province, index) => Array.from({ length: index < 23 ? 3 : 2 }, () => province.name));
+const priorityProvinceRecipeTargets: Record<string, number> = {
+  "Sumatera Utara": 18,
+  "Jawa Barat": 30,
+  Banten: 18,
+  "DKI Jakarta": 14,
+  "Jawa Tengah": 20,
+  "DI Yogyakarta": 16,
+  "Jawa Timur": 22,
+};
+
+// Core recipe tetap tersebar ke wilayah prioritas, lalu resep tambahan mengisi
+// kuota hingga cakupan provinsi dan Jabodetabek sesuai katalog terbaru.
+const coreProvinceAssignments = [
+  "Jawa Barat", "Jawa Tengah", "Jawa Timur", "Banten", "DKI Jakarta", "Sumatera Utara", "Jawa Barat", "DI Yogyakarta", "Jawa Barat", "Jawa Timur",
+  "Banten", "Jawa Tengah", "Sumatera Utara", "DKI Jakarta", "Jawa Barat", "Jawa Timur", "Banten", "DI Yogyakarta", "Jawa Tengah", "Sumatera Utara",
+];
+const coreProvinceCounts = coreProvinceAssignments.reduce<Record<string, number>>((counts, province) => ({ ...counts, [province]: (counts[province] ?? 0) + 1 }), {});
+const recipeProvinceAssignments = [
+  ...coreProvinceAssignments,
+  ...provinceDirectory.flatMap((province) => Array.from({ length: (priorityProvinceRecipeTargets[province.name] ?? 2) - (coreProvinceCounts[province.name] ?? 0) }, () => province.name)),
+];
 
 const normalizedCoreRecipes: Recipe[] = coreRecipes.map((recipe, index) => ({
   ...recipe,
@@ -574,6 +598,10 @@ const generatedRecipes: Recipe[] = additionalRecipeNames.map((name, index) => {
 });
 
 export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes];
+
+/** Cakupan Jabodetabek dihitung dari resep berlabel DKI Jakarta, Jawa Barat, dan Banten. */
+export const jabodetabekProvinces = ["DKI Jakarta", "Jawa Barat", "Banten"] as const;
+export const jabodetabekRecipeCount = recipes.filter((recipe) => recipe.provinces.some((province) => jabodetabekProvinces.includes(province as (typeof jabodetabekProvinces)[number]))).length;
 
 export const defaultPreferences = {
   province: "Jawa Barat",
