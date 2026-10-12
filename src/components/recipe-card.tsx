@@ -9,7 +9,7 @@ import { Badge, Rating } from "@/components/shared";
 import { formatCount } from "@/lib/utils";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
-const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
+const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
 
 function getStoredFavorites(): string[] {
   try {
@@ -69,9 +69,9 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
-          <Badge className={cardMetaBadgeClass}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}>💧 {recipe.water[0]}</Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {recipe.fishingTypes[0]}</Badge>
+          <Badge className={cardMetaBadgeClass}><span className="truncate" title={recipe.weather[0]}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={recipe.water[0]}>💧 {recipe.water[0]}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={recipe.fishingTypes[0]}>🎣 {recipe.fishingTypes[0]}</span></Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#26382b]">{recipe.price}</p></div>
