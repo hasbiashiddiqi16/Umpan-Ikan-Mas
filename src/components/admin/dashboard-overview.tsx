@@ -97,7 +97,7 @@ export function DashboardOverview() {
           <div className="flex items-center gap-2 border-t border-[#eff1ed] bg-[#fafbf9] px-4 py-3 text-[10px] text-[#8f978d] sm:px-5"><Clock3 size={12} />{loading ? "Memuat data…" : `Diperbarui ${data ? formattedDate(data.generatedAt) : "—"}`}</div>
         </section>
       </div>
-      <p className="mt-4 text-[10px] leading-5 text-[#92998f]">Analitik menghitung page view, bukan pengunjung unik. Hindari memasukkan data pribadi ke konten publik. Rute dashboard MVP ini belum memakai login.</p>
+      <p className="mt-4 text-[10px] leading-5 text-[#92998f]">Analitik menghitung page view, bukan pengunjung unik. Hindari memasukkan data pribadi ke konten publik.</p>
     </AdminShell>
   );
 }

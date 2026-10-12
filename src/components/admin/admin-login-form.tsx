@@ -1,15 +1,44 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, LoaderCircle, LockKeyhole, MoveRight } from "lucide-react";
 
 export function AdminLoginForm() {
-  const router = useRouter();
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  function handleTogglePassword() {
+    const input = passwordRef.current;
+    if (input) {
+      const length = input.value.length;
+      selectionRef.current = {
+        start: input.selectionStart ?? length,
+        end: input.selectionEnd ?? length,
+      };
+    }
+    setShowPassword((visible) => !visible);
+  }
+
+  // Saat type input berubah (password <-> text), WebKit lama di iOS bisa
+  // kehilangan fokus dan posisi kursor sehingga toggle terasa tidak
+  // berfungsi. Kembalikan fokus + seleksi agar toggle langsung terasa di
+  // perangkat apa pun dan keyboard tetap terbuka di ponsel.
+  useEffect(() => {
+    const input = passwordRef.current;
+    const selection = selectionRef.current;
+    selectionRef.current = null;
+    if (!input || !selection) return;
+    input.focus({ preventScroll: true });
+    try {
+      input.setSelectionRange(selection.start, selection.end);
+    } catch {
+      // Abaikan pada browser yang tidak mendukung setSelectionRange.
+    }
+  }, [showPassword]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,9 +68,12 @@ export function AdminLoginForm() {
         return;
       }
 
-      router.replace("/dashboard");
-      // Pengaman: jika navigasi tidak terjadi (mis. cookie sesi tidak tersimpan
-      // di perangkat), kembalikan tombol agar bisa dicoba lagi.
+      // Navigasi dokumen penuh (bukan client-side router) agar cookie sesi
+      // yang baru saja dipasang pasti terbaca oleh server, termasuk pada
+      // browser lama. Halaman login juga tidak tertinggal di riwayat.
+      window.location.replace("/dashboard");
+      // Pengaman: jika navigasi tidak terjadi (mis. koneksi terputus),
+      // kembalikan tombol agar bisa dicoba lagi.
       window.setTimeout(() => setIsSubmitting(false), 5000);
     } catch {
       setError("Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.");
@@ -54,8 +86,9 @@ export function AdminLoginForm() {
       <div>
         <label htmlFor="admin-password" className="mb-2 block text-sm font-semibold text-[#354539]">Password admin</label>
         <div className="relative">
-          <LockKeyhole size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#89958a]" />
+          <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-4 top-0 flex items-center text-[#89958a]"><LockKeyhole size={17} /></span>
           <input
+            ref={passwordRef}
             id="admin-password"
             name="password"
             type={showPassword ? "text" : "password"}
@@ -70,13 +103,16 @@ export function AdminLoginForm() {
             aria-describedby={error ? "login-error" : undefined}
             className="h-[54px] w-full rounded-2xl border border-[#e1e7de] bg-[#fbfcfa] pl-11 pr-12 text-base text-[#27382b] outline-none transition placeholder:text-[#a2aaa0] focus:border-[#6b8c68] focus:bg-white"
           />
+          {/* Tombol toggle tanpa transform (posisi murni inset/flex) dan area
+              sentuh 48x54px agar tetap bisa diklik di browser lama & layar kecil. */}
           <button
             type="button"
-            onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute right-2 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl text-[#8a968a] transition hover:bg-[#eef2eb] hover:text-[#46634a]"
+            onClick={handleTogglePassword}
+            aria-pressed={showPassword}
             aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+            className="absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center rounded-r-2xl text-[#8a968a] transition hover:bg-[#eef2eb] hover:text-[#46634a]"
           >
-            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>

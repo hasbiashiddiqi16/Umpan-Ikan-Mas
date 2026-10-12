@@ -67,6 +67,19 @@ export async function isAdminAuthenticated() {
   return verifyAdminSessionToken(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
 }
 
+/**
+ * Apakah permintaan ini datang lewat HTTPS (langsung atau lewat proxy)?
+ * Cookie sesi memakai atribut `Secure` hanya pada situasi ini:
+ * - di HTTPS, cookie wajib Secure agar tidak bocor lewat jaringan;
+ * - di HTTP (dev/preview), cookie tanpa Secure tetap bisa disimpan dan
+ *   dihapus browser, sehingga login & logout tetap berfungsi.
+ */
+export function requestIsSecure(request: Request) {
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "";
+  return request.url.startsWith("https:")
+    || forwardedProto.split(",").some((proto) => proto.trim() === "https");
+}
+
 export async function requireAdminApi() {
   if (await isAdminAuthenticated()) return null;
   return Response.json(
