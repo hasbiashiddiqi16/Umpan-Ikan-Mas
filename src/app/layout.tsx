@@ -1,7 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  // Browser lama mengabaikan token yang tidak dikenal, jadi aman disertakan.
+  interactiveWidget: "resizes-content",
+  themeColor: "#fbfcf9",
+};
 
 export const metadata: Metadata = {
   title: {
