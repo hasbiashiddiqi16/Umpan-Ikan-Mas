@@ -46,7 +46,7 @@ export function ProvinceCard({ province, compact = false }: { province: Province
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#f7f8f4] text-[#607260] transition group-hover:bg-[#31593a] group-hover:text-white"><ArrowUpRight size={15} /></span>
       </div>
       {!compact && <div className="relative mt-4 flex items-center gap-1.5 text-[11px] text-[#838a80]"><MapPin size={12} /> Populer: <span className="truncate font-semibold text-[#536252]">{province.popularRecipe}</span></div>}
-      {compact && <p className="relative mt-3 text-[11px] font-semibold text-[#667166]">{formatCount(province.reportCount)} cerita pemancing</p>}
+      {compact && <p className="relative mt-3 text-[11px] font-semibold text-[#667166]">{formatCount(province.reviewCount)} cerita pemancing</p>}
     </Link>
   );
 }

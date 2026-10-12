@@ -1,3 +1,5 @@
+import { provinceDirectory } from "@/data/province-directory";
+
 export type Weather = "Hujan" | "Mendung" | "Cerah" | "Berawan" | "Panas";
 export type WaterCondition = "Keruh" | "Hijau" | "Jernih" | "Kekuningan";
 export type FishingType = "Harian" | "Lomba" | "Galat";
@@ -33,7 +35,7 @@ export type Recipe = {
   notSuitable: string[];
 };
 
-export const recipes: Recipe[] = [
+const coreRecipes: Recipe[] = [
   {
     slug: "umpan-putih-kroto",
     name: "Umpan Putih Kroto",
@@ -503,6 +505,75 @@ export const recipes: Recipe[] = [
     notSuitable: ["Air bening", "Cuaca sangat panas"],
   },
 ];
+
+const additionalRecipeNames = [
+  "Pelet Pisang Ambon", "Roti Pandan Susu", "Ubi Madu Kroto", "Tahu Putih Keju", "Sarden Pelet Lomba",
+  "Singkong Kelapa Gurih", "Jagung Susu Manis", "Tempe Pandan Halus", "Kacang Hijau Santan", "Pelet Belut Galat",
+  "Telur Asin Keju", "Roti Tawar Pandan", "Ubi Ungu Susu", "Biskuit Keju Kroto", "Pelet Udang Rebon",
+  "Jagung Nangka Harian", "Tahu Sutra Vanila", "Susu Jagung Lembut", "Kelapa Madu Kuning", "Pelet Cokelat Santan",
+  "Roti Sari Pandan", "Pisang Keju Kolam", "Ubi Talas Gurih", "Kacang Merah Susu", "Pelet Durian Lomba",
+  "Sarden Telur Bebek", "Jagung Tahu Putih", "Tepung Beras Kroto", "Roti Kukus Vanila", "Singkong Keju Manis",
+  "Pelet Pandan Galat", "Ubi Madu Kelapa", "Tahu Susu Harian", "Jagung Cokelat Lembut", "Kacang Tanah Kroto",
+  "Roti Kelapa Gurih", "Pelet Nanas Segar", "Pisang Susu Lomba", "Ubi Kuning Pandan", "Tahu Telur Amis",
+  "Jagung Sarden Gurih", "Pelet Keju Susu", "Roti Kacang Harian", "Singkong Pandan Wangi", "Ubi Ungu Keju",
+  "Tempe Telur Lomba", "Pelet Madu Jagung", "Kelapa Susu Lembut", "Biskuit Pandan Hemat", "Sarden Kroto Galat",
+  "Tahu Keju Ekonomis", "Jagung Kelapa Manis", "Pelet Vanila Putih", "Roti Pisang Gurih", "Ubi Susu Pandan",
+  "Kacang Hijau Keju", "Tempe Sarden Harian", "Pelet Talas Wangi", "Jagung Madu Lomba", "Roti Susu Putih",
+  "Singkong Kroto Galat", "Ubi Keju Kukus", "Pelet Belimbing Harian", "Tahu Pandan Lembut", "Jagung Telur Bebek",
+  "Kacang Santan Hijau", "Roti Sarden Gurih", "Pelet Pisang Keju", "Ubi Nangka Manis", "Tempe Madu Kolam",
+  "Jagung Pandan Galat", "Tahu Kroto Lomba", "Pelet Kelapa Gurih", "Roti Jagung Hemat", "Singkong Susu Putih",
+  "Ubi Cokelat Wangi", "Kacang Keju Lomba", "Tempe Pandan Harian", "Pelet Susu Kroto",
+] as const;
+
+const catalogCategories: Recipe["category"][] = ["Harian", "Ekonomis", "Lomba", "Premium", "Galat"];
+const catalogDifficulties: Recipe["difficulty"][] = ["Mudah", "Mudah", "Menengah", "Menengah", "Tingkat lanjut"];
+const catalogSummaries = [
+  "Racikan seimbang dengan aroma lembut untuk sesi mancing santai dan kondisi kolam yang berubah.",
+  "Perpaduan bahan harian yang mudah didapat, diracik untuk menjaga tekstur tetap padat di kail.",
+  "Racikan beraroma gurih yang dapat dicoba sebagai titik awal sebelum menyesuaikan karakter kolam.",
+  "Komposisi praktis dengan karakter manis-gurih untuk pemancing yang ingin bereksperimen secara bertahap.",
+];
+
+function slugForGeneratedRecipe(name: string, index: number) {
+  const normalized = name.toLocaleLowerCase("id-ID").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return `${normalized}-${String(index + 21).padStart(2, "0")}`;
+}
+
+// Distribusi tepat 99 resep: 23 provinsi memiliki 3 resep, 15 provinsi memiliki 2 resep.
+const recipeProvinceAssignments = provinceDirectory.flatMap((province, index) => Array.from({ length: index < 23 ? 3 : 2 }, () => province.name));
+
+const normalizedCoreRecipes: Recipe[] = coreRecipes.map((recipe, index) => ({
+  ...recipe,
+  provinces: [recipeProvinceAssignments[index]],
+  reviewCount: Math.max(25, recipe.reviewCount),
+}));
+
+const generatedRecipes: Recipe[] = additionalRecipeNames.map((name, index) => {
+  const template = coreRecipes[index % coreRecipes.length];
+  const catalogIndex = index + coreRecipes.length;
+  return {
+    ...template,
+    slug: slugForGeneratedRecipe(name, index),
+    name,
+    category: catalogCategories[index % catalogCategories.length],
+    rating: Number((4.2 + ((index * 3) % 8) / 10).toFixed(1)),
+    reviewCount: 25 + ((index * 7) % 76),
+    users: 180 + ((index * 137) % 2_800),
+    popularity: 35 + ((index * 11) % 62),
+    price: index % 5 === 0 ? "< Rp15.000" : index % 5 === 1 ? "Rp15.000–30.000" : index % 5 === 2 ? "Rp30.000–50.000" : index % 5 === 3 ? "Rp45.000–60.000" : "> Rp50.000",
+    priceValue: index % 5 === 0 ? 14000 : index % 5 === 1 ? 24000 : index % 5 === 2 ? 38000 : index % 5 === 3 ? 52000 : 62000,
+    difficulty: catalogDifficulties[index % catalogDifficulties.length],
+    image: index % 3 === 0 ? "/images/recipe-putih.jpg" : index % 3 === 1 ? "/images/recipe-pelet.jpg" : "/images/recipe-jagung.jpg",
+    provinces: [recipeProvinceAssignments[catalogIndex]],
+    summary: `${name} adalah ${catalogSummaries[index % catalogSummaries.length].toLocaleLowerCase("id-ID")}`,
+    ingredients: template.ingredients.map((ingredient) => ({ ...ingredient })),
+    steps: [...template.steps],
+    suitable: [...template.suitable],
+    notSuitable: [...template.notSuitable],
+  };
+});
+
+export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes];
 
 export const defaultPreferences = {
   province: "Jawa Barat",
