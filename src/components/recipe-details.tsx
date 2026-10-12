@@ -100,7 +100,7 @@ export function ConditionTags({ suitable, notSuitable }: { suitable: string[]; n
 
 export function ReviewCard({ review }: { review: RecipeReview }) {
   return (
-    <article className="min-w-0 rounded-2xl border border-[#e7eae4] bg-white p-4 sm:p-5">
+    <article className="flex h-full min-w-0 flex-col rounded-2xl border border-[#e7eae4] bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="break-words text-sm font-bold text-[#304033]">{review.name}</h3>
