@@ -1,0 +1,128 @@
+import type { Metadata } from "next";
+
+export const SITE_NAME = "UMPAN MAS";
+export const SITE_DESCRIPTION =
+  "Temukan resep dan racikan umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, dan pengalaman pemancing di Indonesia.";
+
+function getConfiguredOrigin(): string | undefined {
+  const candidate =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.URL ||
+    process.env.DEPLOY_PRIME_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+
+  if (!candidate) return undefined;
+
+  try {
+    const normalized = /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
+    const url = new URL(normalized);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Gunakan domain produksi yang dikonfigurasi eksplisit. Netlify URL dan
+ * variabel host deployment dipakai sebagai fallback; host lokal tidak pernah
+ * dimasukkan ke canonical, sitemap, atau structured data.
+ */
+export const siteOrigin = getConfiguredOrigin();
+
+export function absoluteUrl(path: string): string | undefined {
+  if (!siteOrigin) return undefined;
+  try {
+    const safePath = path.startsWith("/") && !path.startsWith("//")
+      ? path
+      : `/${path.split("/").filter(Boolean).join("/")}`;
+    const url = new URL(safePath, `${siteOrigin}/`);
+    return url.origin === siteOrigin ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+type PageMetadataOptions = {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  imageAlt?: string;
+  noIndex?: boolean;
+  openGraphType?: "website" | "article";
+  includeBrandInSocialTitle?: boolean;
+};
+
+/** Metadata halaman publik: judul, deskripsi, canonical, dan preview berbagi. */
+export function createPageMetadata({
+  title,
+  description,
+  path,
+  image = "/images/pond-hero.jpg",
+  imageAlt = "Pemancing menikmati suasana kolam pagi berkabut",
+  noIndex = false,
+  openGraphType = "website",
+  includeBrandInSocialTitle = true,
+}: PageMetadataOptions): Metadata {
+  const canonical = noIndex ? undefined : absoluteUrl(path);
+  const imageUrl = absoluteUrl(image);
+  const socialTitle = includeBrandInSocialTitle ? `${title} | ${SITE_NAME}` : title;
+
+  return {
+    title,
+    description,
+    ...(canonical ? { alternates: { canonical } } : {}),
+    openGraph: {
+      type: openGraphType,
+      locale: "id_ID",
+      siteName: SITE_NAME,
+      title: socialTitle,
+      description,
+      ...(canonical ? { url: canonical } : {}),
+      ...(imageUrl ? { images: [{ url: imageUrl, alt: imageAlt }] } : {}),
+    },
+    twitter: {
+      card: imageUrl ? "summary_large_image" : "summary",
+      title: socialTitle,
+      description,
+      ...(imageUrl ? { images: [imageUrl] } : {}),
+    },
+    ...(noIndex ? { robots: { index: false, follow: false } } : {}),
+  };
+}
+
+export function getSiteStructuredData(): Record<string, unknown> | undefined {
+  if (!siteOrigin) return undefined;
+
+  const organizationId = `${siteOrigin}/#organization`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": organizationId,
+        name: SITE_NAME,
+        url: siteOrigin,
+        description: SITE_DESCRIPTION,
+        areaServed: { "@type": "Country", name: "Indonesia" },
+        knowsAbout: [
+          "Umpan ikan mas",
+          "Resep umpan ikan mas",
+          "Memancing ikan mas",
+          "Kondisi kolam dan cuaca",
+        ],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteOrigin}/#website`,
+        url: siteOrigin,
+        name: SITE_NAME,
+        description: SITE_DESCRIPTION,
+        inLanguage: "id-ID",
+        publisher: { "@id": organizationId },
+      },
+    ],
+  };
+}

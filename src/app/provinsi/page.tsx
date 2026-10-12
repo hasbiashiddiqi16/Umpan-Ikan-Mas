@@ -6,11 +6,13 @@ import { Footer, SectionHeader } from "@/components/shared";
 import { ProvinceCard } from "@/components/cards";
 import { provinces } from "@/data/provinces";
 import { jabodetabekRecipeCount, recipes } from "@/data/recipes";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Umpan Ikan Mas Berdasarkan Provinsi",
-  description: "Jelajahi racikan dan cerita mancing ikan mas dari 38 provinsi di Indonesia.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Umpan Ikan Mas per Provinsi",
+  description: "Jelajahi resep umpan ikan mas dan cerita mancing komunitas dari 38 provinsi di Indonesia. Kondisi tiap kolam dapat berbeda.",
+  path: "/provinsi",
+});
 
 export default function ProvincesPage() {
   return (

@@ -15,12 +15,15 @@ export function AnalyticsTracker() {
     // Hindari Array.prototype.at (belum ada di WebKit lama, mis. iOS <= 15.3).
     const pathSegments = type === "recipe_view" ? normalized.split("/").filter(Boolean) : [];
     const entitySlug = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : undefined;
-    void fetch("/api/analytics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: normalized, type, entitySlug }),
-      keepalive: true,
-    }).catch(() => undefined);
+    // Analitik bukan bagian dari render awal; beri ruang bagi LCP sebelum request dimulai.
+    window.setTimeout(() => {
+      void fetch("/api/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: normalized, type, entitySlug }),
+        keepalive: true,
+      }).catch(() => undefined);
+    }, 1200);
   }, [pathname]);
   return null;
 }

@@ -17,6 +17,8 @@ import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
 import { calculateMatchScore } from "@/lib/recommendation";
 import { formatCount } from "@/lib/utils";
+import { JsonLd } from "@/components/json-ld";
+import { absoluteUrl, createPageMetadata, siteOrigin } from "@/lib/seo";
 
 export const dynamicParams = true;
 
@@ -33,7 +35,18 @@ async function findRecipe(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const recipe = await findRecipe(slug);
-  return recipe ? { title: `${recipe.name} — Resep Umpan Ikan Mas`, description: recipe.summary } : { title: "Resep tidak ditemukan" };
+  if (!recipe) {
+    return { title: "Resep tidak ditemukan", robots: { index: false, follow: false } };
+  }
+
+  return createPageMetadata({
+    title: `Resep Umpan Ikan Mas ${recipe.name}`,
+    description: `${recipe.summary} Lihat bahan, takaran, dan langkah meraciknya.`,
+    path: `/resep/${recipe.slug}`,
+    image: recipe.image,
+    imageAlt: `Bahan racikan ${recipe.name}`,
+    openGraphType: "article",
+  });
 }
 
 export function generateStaticParams() {
@@ -46,6 +59,46 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   if (!recipe) notFound();
   const matchScore = calculateMatchScore(recipe, defaultPreferences);
   const recipeReviews = reviews.filter((review) => review.recipeSlug === recipe.slug);
+  const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
+  const homeUrl = absoluteUrl("/");
+  const catalogUrl = absoluteUrl("/katalog");
+  const recipeImageUrl = absoluteUrl(recipe.image);
+  const breadcrumbStructuredData = recipeUrl && homeUrl && catalogUrl
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Beranda", item: homeUrl },
+          { "@type": "ListItem", position: 2, name: "Katalog Umpan", item: catalogUrl },
+          { "@type": "ListItem", position: 3, name: recipe.name, item: recipeUrl },
+        ],
+      }
+    : undefined;
+  const recipeStructuredData = recipeUrl && recipeImageUrl
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Recipe",
+        name: recipe.name,
+        description: recipe.summary,
+        image: [recipeImageUrl],
+        url: recipeUrl,
+        recipeCuisine: "Indonesia",
+        recipeCategory: recipe.category,
+        recipeYield: "1 sesi mancing",
+        prepTime: "PT25M",
+        totalTime: "PT25M",
+        recipeIngredient: recipe.ingredients.map((ingredient) =>
+          `${ingredient.amount} ${ingredient.name}${ingredient.brand && ingredient.brand !== "-" ? ` (${ingredient.brand})` : ""}`,
+        ),
+        recipeInstructions: recipe.steps.map((text, index) => ({
+          "@type": "HowToStep",
+          position: index + 1,
+          text,
+        })),
+        keywords: ["umpan ikan mas", recipe.name, recipe.category, ...recipe.weather, ...recipe.water, ...recipe.provinces].join(", "),
+        ...(siteOrigin ? { isPartOf: { "@id": `${siteOrigin}/#website` } } : {}),
+      }
+    : undefined;
   const information = [
     { label: "Target", value: "Ikan mas", icon: Fish },
     { label: "Cuaca", value: recipe.weather.slice(0, 2).join(" · "), icon: CloudRain },
@@ -56,11 +109,21 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   ];
   return (
     <PageShell>
+      {recipeStructuredData && <JsonLd data={recipeStructuredData} />}
+      {breadcrumbStructuredData && <JsonLd data={breadcrumbStructuredData} />}
       <main className="mx-auto min-w-0 max-w-7xl px-4 pb-40 pt-6 sm:px-8 sm:pt-9 lg:pb-16">
-        <div className="mb-5 flex items-center gap-2 text-xs font-medium text-[#849084]"><Link href="/katalog" className="inline-flex items-center gap-1 hover:text-[#31593a]"><ArrowLeft size={14} /> Katalog</Link><span>/</span><span className="truncate text-[#536253]">{recipe.name}</span></div>
+        <nav aria-label="Breadcrumb" className="mb-5 text-xs font-medium text-[#849084]">
+          <ol className="flex min-w-0 items-center gap-2">
+            <li><Link href="/" className="hover:text-[#31593a]">Beranda</Link></li>
+            <li aria-hidden="true">/</li>
+            <li><Link href="/katalog" className="hover:text-[#31593a]">Katalog Umpan</Link></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="truncate text-[#536253]">{recipe.name}</li>
+          </ol>
+        </nav>
         <section className="min-w-0 overflow-hidden rounded-[28px] border border-[#e5e9e2] bg-white shadow-[0_12px_38px_rgba(38,55,40,.07)]">
           <div className="grid lg:grid-cols-[.95fr_1.05fr]">
-            <div className="relative min-h-[270px] overflow-hidden bg-[#e4e3d6] sm:min-h-[380px] lg:min-h-[440px]"><Image src={recipe.image} alt={`Bahan racikan ${recipe.name}`} fill priority sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#1b3022]/35 via-transparent to-transparent" /><span className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] break-words rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#3a513d] backdrop-blur-sm">{recipe.category} · Ikan mas</span></div>
+            <div className="relative min-h-[270px] overflow-hidden bg-[#e4e3d6] sm:min-h-[380px] lg:min-h-[440px]"><Image src={recipe.image} alt={`Bahan racikan ${recipe.name}`} fill preload sizes="(max-width: 1023px) 100vw, 48vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#1b3022]/35 via-transparent to-transparent" /><span className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] break-words rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#3a513d] backdrop-blur-sm">{recipe.category} · Ikan mas</span></div>
             <div className="min-w-0 flex flex-col justify-center p-5 sm:p-8 lg:p-10">
               <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#876822]">🏆 Racikan komunitas</span><span className="rounded-full bg-[#eaf2e8] px-3 py-1.5 text-xs font-bold text-[#416245]">{matchScore}% match</span></div>
               <h1 className="mt-4 break-words text-3xl font-black tracking-[-.04em] text-[#213426] sm:text-4xl lg:text-[2.75rem]">{recipe.name}</h1>
