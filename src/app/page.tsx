@@ -13,12 +13,17 @@ import { fishingReports } from "@/data/fishingReports";
 import { calculateMatchScore, getRecommendedRecipes } from "@/lib/recommendation";
 import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Umpan Ikan Mas Indonesia | UMPAN MAS",
-  description: "Temukan resep umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, jenis kolam, dan pengalaman pemancing dari 38 provinsi.",
-  path: "/",
-  includeBrandInSocialTitle: false,
-});
+export const metadata: Metadata = {
+  ...createPageMetadata({
+    title: "Umpan Ikan Mas Indonesia | UMPAN MAS",
+    description: "Temukan resep umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, jenis kolam, dan pengalaman pemancing dari 38 provinsi.",
+    path: "/",
+    includeBrandInSocialTitle: false,
+  }),
+  verification: {
+    google: "ksR7woDfyr120REWdc8Keka9ionxwZMLodsD4P-4r9M",
+  },
+};
 
 const popularProvinceNames = ["Jawa Barat", "Jawa Tengah", "Jawa Timur", "Banten", "DKI Jakarta", "Sumatera Utara", "Riau", "Sumatera Selatan", "Lampung", "Bali"];
 
