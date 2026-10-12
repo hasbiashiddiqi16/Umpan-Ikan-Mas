@@ -1,6 +1,8 @@
 import { recipes } from "@/data/recipes";
 
 export type RecipeReview = {
+  /** Kunci stabil untuk sinkronisasi ulasan contoh ke CMS tanpa duplikasi. */
+  seedKey?: string;
   name: string;
   location: string;
   recipeSlug: string;
@@ -61,6 +63,7 @@ export const reviews: RecipeReview[] = recipes.flatMap((recipe, recipeIndex) => 
   const province = recipe.provinces[0];
   const city = cityByProvince[province] ?? province;
   return Array.from({ length: reviewsPerRecipe }, (_, reviewIndex) => ({
+    seedKey: `catalog:${recipe.slug}:${String(reviewIndex + 1).padStart(2, "0")}`,
     name: reviewers[(recipeIndex * 7 + reviewIndex) % reviewers.length],
     location: `${city}, ${province}`,
     recipeSlug: recipe.slug,
