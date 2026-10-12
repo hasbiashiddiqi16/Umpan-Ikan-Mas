@@ -4,11 +4,14 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, LockKeyhole, ShieldCheck, Waves } from "lucide-react";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Masuk Admin | UMPAN MAS Content Studio",
-  description: "Masuk ke dashboard admin UMPAN MAS untuk mengelola resep, ulasan, dan analitik.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Masuk Administrator",
+  description: "Halaman administrator untuk mengelola konten UMPAN MAS.",
+  path: "/login",
+  noIndex: true,
+});
 
 export default async function AdminLoginPage() {
   if (await isAdminAuthenticated()) redirect("/dashboard");

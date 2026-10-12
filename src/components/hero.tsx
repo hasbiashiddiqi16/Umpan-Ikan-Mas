@@ -5,7 +5,7 @@ import { ArrowDown, ArrowRight, CloudRain, ShieldCheck, Sparkles } from "lucide-
 export function Hero() {
   return (
     <section className="relative isolate mx-auto mt-4 w-full max-w-7xl min-h-[510px] overflow-hidden rounded-none bg-[#173326] sm:mt-6 sm:min-h-[560px] lg:rounded-[34px]">
-      <Image src="/images/pond-hero.jpg" alt="Pemancing menikmati suasana kolam pagi berkabut" fill priority sizes="100vw" className="-z-20 object-cover object-center" />
+      <Image src="/images/pond-hero.jpg" alt="Pemancing menikmati suasana kolam pagi berkabut" fill preload sizes="(max-width: 1279px) 100vw, 1280px" className="-z-20 object-cover object-center" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(15,37,27,.94)_0%,rgba(19,44,31,.84)_38%,rgba(18,43,31,.48)_67%,rgba(18,43,31,.14)_100%)]" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(12,31,22,.35),transparent_50%)]" />
       <div className="relative mx-auto flex min-h-[510px] max-w-7xl items-center px-6 py-12 sm:min-h-[560px] sm:px-10 lg:px-16">

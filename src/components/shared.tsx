@@ -112,7 +112,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-7xl px-5 py-5 text-xs text-white/50 sm:px-8">© 2025 UMPAN MAS · Dibuat untuk cerita mancing berikutnya.</p>
+        <p className="mx-auto max-w-7xl px-5 py-5 text-xs text-white/50 sm:px-8">© {new Date().getFullYear()} UMPAN MAS · Dibuat untuk cerita mancing berikutnya.</p>
       </div>
     </footer>
   );
