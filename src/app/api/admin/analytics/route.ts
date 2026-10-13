@@ -2,6 +2,7 @@ import { and, count, desc, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { analyticsEvents, cmsRecipes, cmsReviews } from "@/db/schema";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
       range: `${days} hari terakhir`,
       generatedAt: now.toISOString(),
     }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return Response.json({ error: "Analitik belum dapat dimuat." }, { status: 503 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Analitik belum dapat dimuat.");
   }
 }

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { validateCmsRecipeInput } from "@/lib/cms";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,8 @@ export async function GET() {
   try {
     const rows = await db.select().from(cmsRecipes).orderBy(desc(cmsRecipes.updatedAt));
     return Response.json({ recipes: rows });
-  } catch {
-    return Response.json({ error: "Konten belum dapat dimuat." }, { status: 503 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Konten belum dapat dimuat.");
   }
 }
 
@@ -29,9 +30,11 @@ export async function POST(request: Request) {
     const [created] = await db.insert(cmsRecipes).values(parsed.data).returning();
     return Response.json({ recipe: created }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error && error.message.includes("cms_recipes_slug_unique")
-      ? "Slug tersebut sudah digunakan. Ubah slug agar unik."
-      : "Konten gagal disimpan. Periksa data lalu coba lagi.";
-    return Response.json({ error: message }, { status: 400 });
+    const message = error instanceof Error ? error.message : "";
+    if (/cms_recipes_slug_unique|unique|duplicate/i.test(message)) {
+      return Response.json({ error: "Slug tersebut sudah digunakan. Ubah slug agar unik." }, { status: 400 });
+    }
+    // Masalah koneksi atau tabel yang belum dimigrasi bukan kesalahan data.
+    return databaseErrorResponse(error, "Konten gagal disimpan. Periksa data lalu coba lagi.");
   }
 }

@@ -4,9 +4,20 @@ Platform rekomendasi racikan umpan ikan mas dengan katalog, komunitas, dan Conte
 
 ## Konfigurasi server
 
-Aplikasi menggunakan Netlify Database (PostgreSQL) melalui Drizzle ORM. Koneksi dikonfigurasi otomatis oleh Netlify, sehingga `DATABASE_URL` tidak perlu diatur dan impor route API saat build tidak membuka koneksi database.
+Aplikasi menggunakan PostgreSQL melalui Drizzle ORM. Impor route API saat build tidak membuka koneksi database.
 
-Skema tabel berada di `db/schema.ts`. Migrasi di `netlify/database/migrations` diterapkan otomatis oleh Netlify saat deploy, sebelum aplikasi dipublikasikan. Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`. Jangan menjalankan migrasi secara manual.
+- **Di Netlify**: koneksi tersedia otomatis lewat `NETLIFY_DB_URL` yang disuntikkan Netlify, jadi tidak ada yang perlu diatur.
+- **Di host lain** (misalnya Vercel): setel `DATABASE_URL` dengan connection string basis data yang sama (salin dari Netlify → Project → Database → Connection string). Tanpa variabel itu, fitur yang memakai database — ulasan, konten resep, analitik, dan unggahan logo/poster — tidak berfungsi, sementara halaman publik tetap tampil dengan data bawaan.
+
+Skema tabel berada di `db/schema.ts`. Migrasi di `netlify/database/migrations` diterapkan otomatis oleh Netlify saat deploy, sebelum aplikasi dipublikasikan. Host lain tidak menerapkannya, jadi jalankan sekali:
+
+```bash
+DATABASE_URL="postgres://…" npm run db:migrate
+```
+
+Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan basis data yang sudah dimigrasi Netlify tetap dikenali. Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`.
+
+Buka `/api/health` untuk memeriksa kesiapan: endpoint itu melaporkan nama variabel lingkungan yang dipakai, jumlah baris tiap tabel, dan langkah perbaikan bila koneksi atau tabel belum siap — tanpa membocorkan rahasia.
 
 ## Admin Content Studio
 
