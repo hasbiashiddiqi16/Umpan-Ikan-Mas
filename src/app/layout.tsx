@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { JsonLd } from "@/components/json-ld";
 import { LocationPermissionSync } from "@/components/location-controls";
+import { PromoModalHost } from "@/components/promo-modal-host";
 import { RouteScrollReset } from "@/components/route-scroll-reset";
 import { absoluteUrl, getSiteStructuredData, SITE_DESCRIPTION, SITE_NAME, siteOrigin } from "@/lib/seo";
 import "./globals.css";
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <RouteScrollReset />
         <AnalyticsTracker />
         <LocationPermissionSync />
+        <PromoModalHost />
         {children}
       </body>
     </html>

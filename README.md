@@ -27,6 +27,17 @@ Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` 
 
 Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
 
+## Popup sambutan pengunjung baru
+
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) berisi gambar promosi, ucapan selamat datang, ringkasan isi website, dan tautan ke Katalog serta AI Umpan.
+
+- **Tampil sekali per perangkat.** Penanda disimpan di `localStorage` dengan kunci `umpan-mas-promo-welcome-seen-v1`. Hapus kunci itu untuk melihat ulang popup saat menguji.
+- **Angka pada popup dihitung dari data aplikasi** (jumlah resep, ulasan, dan provinsi), bukan nilai tetap, sehingga ikut berubah saat katalog bertambah.
+- **Muncul setelah halaman tenang**: ada jeda sebelum dibuka agar tidak menutup halaman untuk pengunjung yang langsung berinteraksi.
+- **Tidak muncul di `/dashboard` dan `/login`** karena keduanya bukan kunjungan publik.
+- **Bisa ditutup dengan** tombol tutup, tombol `Esc`, klik area gelap di luar kartu, atau salah satu tautan ajakan. Fokus keyboard kembali ke elemen sebelumnya.
+- **Tata letak responsif**: di layar lebar teks menumpuk di atas gambar dengan lapisan gelap; di layar kecil teks turun ke bawah gambar agar tetap mudah dibaca.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
