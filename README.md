@@ -47,9 +47,13 @@ Popup ini murni informasi awal, jadi:
 
 **Kapan muncul**
 
-- Tampil **sekali per perangkat**; penanda di `localStorage` dengan kunci `umpan-mas-promo-welcome-seen-v1`. Hapus kunci itu untuk menguji ulang.
-- Dibuka setelah halaman tenang, dan ditunda selama pengunjung masih aktif berinteraksi.
-- Tidak muncul di `/dashboard` dan `/login`.
+- Tampil **sekali per perangkat**, dibuka setelah halaman tenang dan ditunda selama pengunjung masih aktif berinteraksi.
+- Tidak muncul di `/dashboard` dan `/login` (termasuk saat dipaksa lewat `?sambutan=1`).
+- Penanda disimpan berlapis: `localStorage` (kunci `umpan-mas-promo-welcome-seen-v1`), lalu `sessionStorage`, lalu memori. Jadi kalau penyimpanan diblokir — mode privat atau halaman dibuka di dalam iframe yang di-sandbox — popup tetap tampil sekali per muat halaman, bukan malah tidak pernah muncul.
+
+**Melihat ulang untuk pratinjau**
+
+Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 

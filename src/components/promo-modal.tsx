@@ -57,8 +57,8 @@ export function PromoModal() {
     };
   }, []);
 
-  // Buka hanya pada kunjungan pertama, setelah halaman sempat tenang agar tidak
-  // memotong interaksi atau mengganggu render awal.
+  // Buka pada kunjungan pertama (atau selalu saat `?sambutan=1` dipakai untuk
+  // pratinjau), setelah halaman sempat tenang agar tidak memotong interaksi.
   useEffect(() => {
     if (!hydrated) return;
     if (pathname && EXCLUDED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
