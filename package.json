@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
+    "vercel-build": "node scripts/migrate.mjs --optional && next build",
     "supabase:check": "node scripts/supabase-check.mjs"
   },
   "dependencies": {

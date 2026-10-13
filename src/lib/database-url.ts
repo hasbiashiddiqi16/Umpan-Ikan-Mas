@@ -1,25 +1,41 @@
 /**
  * Menyiapkan connection string PostgreSQL sebelum dipakai klien.
  *
- * Basis data terkelola (Netlify Database, Neon, Supabase — termasuk host pooler
- * `aws-0-<wilayah>.pooler.supabase.com`) mewajibkan koneksi TLS, sedangkan
- * driver `pg` tidak menyalakan TLS kecuali diminta. Supabase juga sudah tidak
- * menerbitkan alamat IPv4 untuk koneksi langsung `db.<ref>.supabase.co`, jadi
- * host pooler itulah yang bisa dijangkau dari Vercel/host IPv4 lainnya.
+ * Dua hal yang membuat `DATABASE_URL` ke Supabase sering gagal:
  *
- * Karena itu: untuk host non-lokal tanpa parameter `sslmode`, kita tambahkan
- * `sslmode=require` supaya kesalahan "SSL off" tidak terjadi. Basis data lokal
- * (localhost/127.0.0.1/::1) dibiarkan apa adanya, dan `sslmode` yang sudah
- * ditulis sendiri selalu dihormati — termasuk `sslmode=disable`.
+ * 1. Koneksi langsung `db.<ref>.supabase.co` sekarang hanya punya alamat IPv6,
+ *    jadi Vercel dan host ber-IPv4 lain tidak bisa menjangkaunya. Host pooler
+ *    `aws-0-<wilayah>.pooler.supabase.com` masih punya alamat IPv4.
+ * 2. Sertifikat Supabase ditandatangani CA internal ("Supabase Root 2021 CA")
+ *    yang tidak ada di trust store Node. Padahal `pg` versi sekarang
+ *    memperlakukan `sslmode=require` sebagai `verify-full`, sehingga koneksi
+ *    ditolak dengan "self-signed certificate in certificate chain".
+ *
+ * Karena itu, untuk host Supabase kita menambahkan `uselibpqcompat=true`:
+ * pg-connection-string memetakannya ke `rejectUnauthorized = false` — artinya
+ * koneksi tetap terenkripsi TLS, hanya verifikasi sertifikat yang dilewati
+ * (sesuai maksud `sslmode=require` di libpq). Untuk host lain dengan CA publik
+ * (Neon, Netlify Database), verifikasi tetap penuh.
+ *
+ * Semua pilihan pengguna dihormati: `sslmode=disable` tidak pernah diubah, dan
+ * `sslmode=verify-full`/`verify-ca` dibiarkan apa adanya.
  */
 export type DatabaseUrlInfo = {
   /** Connection string siap pakai. */
   value: string;
   /** Mode TLS yang akhirnya dipakai. */
-  ssl: "required" | "disabled" | "default";
+  ssl: "default" | "disabled" | "required" | "required-unverified";
 };
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "0.0.0.0"]);
+/** Host Supabase memakai CA internal, jadi verifikasi sertifikat tidak bisa dilakukan Node. */
+const SUPABASE_HOST = /(^|\.)(supabase\.co|supabase\.com|supabase\.net)$/i;
+/** Mode yang berarti "enkripsi tanpa memverifikasi sertifikat" (semantik libpq). */
+const UNVERIFIED_MODES = new Set(["require", "prefer", "no-verify", "allow"]);
+
+export function isSupabaseHost(hostname: string): boolean {
+  return SUPABASE_HOST.test(hostname);
+}
 
 export function normalizeDatabaseUrl(raw: string | undefined): DatabaseUrlInfo {
   const value = raw?.trim() ?? "";
@@ -33,10 +49,33 @@ export function normalizeDatabaseUrl(raw: string | undefined): DatabaseUrlInfo {
     return { value, ssl: "default" };
   }
 
-  const sslMode = (url.searchParams.get("sslmode") ?? url.searchParams.get("ssl") ?? "").toLowerCase();
-  if (sslMode) return { value, ssl: sslMode === "disable" ? "disabled" : "required" };
-  if (LOCAL_HOSTS.has(url.hostname.toLowerCase())) return { value, ssl: "default" };
+  const host = url.hostname.toLowerCase();
+  const local = LOCAL_HOSTS.has(host);
+  const supabase = isSupabaseHost(host);
+  const parameter = url.searchParams.has("sslmode") ? "sslmode" : url.searchParams.has("ssl") ? "ssl" : null;
+  const mode = (parameter ? url.searchParams.get(parameter) : "")?.toLowerCase() ?? "";
+  const hasLibpqCompat = url.searchParams.get("uselibpqcompat") === "true";
 
+  if (mode === "disable") return { value, ssl: "disabled" };
+  if (mode === "verify-full" || mode === "verify-ca") return { value, ssl: "required" };
+  if (local && !mode) return { value, ssl: "default" };
+
+  if (mode) {
+    // Pengguna menulis sslmode sendiri. Untuk host Supabase, `require`/`prefer`
+    // harus dibarengi uselibpqcompat supaya tidak ditolak sebagai self-signed.
+    if (supabase && UNVERIFIED_MODES.has(mode) && !hasLibpqCompat) {
+      url.searchParams.set("uselibpqcompat", "true");
+      return { value: url.toString(), ssl: "required-unverified" };
+    }
+    return { value, ssl: UNVERIFIED_MODES.has(mode) ? "required-unverified" : "required" };
+  }
+
+  if (local) return { value, ssl: "default" };
+  if (supabase) {
+    url.searchParams.set("sslmode", "require");
+    url.searchParams.set("uselibpqcompat", "true");
+    return { value: url.toString(), ssl: "required-unverified" };
+  }
   url.searchParams.set("sslmode", "require");
   return { value: url.toString(), ssl: "required" };
 }
