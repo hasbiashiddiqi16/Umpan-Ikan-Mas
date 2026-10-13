@@ -66,8 +66,8 @@ function isConnectionFailure(signals: ErrorSignals): boolean {
 export type DatabaseHealth = {
   /** Nama variabel lingkungan yang dipakai, bukan nilainya. */
   envVar: "DATABASE_URL" | "NETLIFY_DB_URL" | null;
-  /** Mode TLS yang dipakai klien: "required" otomatis untuk host non-lokal. */
-  ssl: "required" | "disabled" | "default";
+  /** Mode TLS yang dipakai klien: "required" memverifikasi sertifikat, "required-unverified" tidak. */
+  ssl: "required" | "required-unverified" | "disabled" | "default";
   configured: boolean;
   connected: boolean;
   /** Tabel yang berhasil dibaca, beserta jumlah barisnya. */

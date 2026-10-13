@@ -25,7 +25,21 @@ Supabase kini hanya menerbitkan alamat **IPv6** untuk koneksi langsung (`db.<pro
 postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<wilayah>.pooler.supabase.com:5432/postgres?sslmode=require
 ```
 
-String itu disalin dari Supabase → tombol **Connect** → *Session pooler* (password basis data, bukan kunci API). Tempel sebagai `DATABASE_URL` di host Anda, deploy ulang, lalu jalankan `npm run db:migrate` sekali supaya tabel `cms_*` dibuat. Aplikasi otomatis menambahkan `sslmode=require` bila Anda lupa menuliskannya (host non-lokal), dan `/api/health` melaporkan mode TLS yang dipakai lewat kolom `ssl`.
+String itu disalin dari Supabase → tombol **Connect** → *Session pooler* (password basis data, bukan kunci API). Tempel apa adanya sebagai `DATABASE_URL` di host Anda, lalu deploy ulang — tabel `cms_*` dibuat otomatis saat deploy (lihat bagian berikutnya).
+
+Aplikasi menyesuaikan connection string sendiri: host non-lokal mendapat `sslmode=require`, dan khusus host Supabase ditambah `uselibpqcompat=true` karena sertifikat Supabase ditandatangani CA internal yang tidak ada di trust store Node — tanpa itu `pg` menolak koneksi dengan "self-signed certificate in certificate chain". TLS tetap aktif, hanya verifikasi sertifikat yang dilewati (semantik `sslmode=require` di libpq). `sslmode=disable`, `sslmode=verify-full`, dan `sslmode=verify-ca` yang Anda tulis sendiri tidak pernah diubah. `/api/health` melaporkan hasilnya di kolom `ssl`: `required` (terverifikasi), `required-unverified` (Supabase), `disabled`, atau `default`.
+
+### Menerapkan migrasi
+
+Migrasi diterapkan otomatis setiap deploy: skrip `vercel-build` pada `package.json` menjalankan `node scripts/migrate.mjs --optional` sebelum `next build`, jadi Vercel membuat/memperbarui tabel `cms_*` sendiri. Mode `--optional` membuat deploy tetap berhasil bila `DATABASE_URL` belum disetel atau basis data sedang tidak dapat dihubungi (hanya dicatat sebagai peringatan).
+
+Menjalankan manual — aman diulang, migrasi yang sudah ada dilewati:
+
+```bash
+DATABASE_URL="postgresql://…" npm run db:migrate
+```
+
+Tanpa Node sama sekali? Salin isi berkas `UMPAN-MAS-buat-tabel.sql` (dibuat dari migrasi yang sama) ke Supabase → SQL Editor → Run.
 
 Buka `/api/health` untuk memeriksa kesiapan: endpoint itu melaporkan nama variabel lingkungan yang dipakai, jumlah baris tiap tabel, dan langkah perbaikan bila koneksi atau tabel belum siap — tanpa membocorkan rahasia.
 
