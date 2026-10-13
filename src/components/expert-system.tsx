@@ -15,6 +15,8 @@ import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-s
 import { buildExpertBlend, getExpertKnowledgeStats, getKnowledgeEvidenceDescription } from "@/lib/expert-system";
 import type { UserPreferences } from "@/lib/recommendation";
 import { Badge, SectionHeader } from "@/components/shared";
+import { UseMyLocationButton } from "@/components/location-controls";
+import { useLocationAutofill } from "@/lib/use-location";
 
 const selectClass = "min-h-11 w-full rounded-xl border border-[#e3e8e1] bg-white px-3 text-sm font-semibold text-[#3d4d3f] outline-none transition focus:border-[#718b70] focus:ring-4 focus:ring-[#365b3a]/10";
 const ratioColors = ["bg-[#315b3c]", "bg-[#638363]", "bg-[#a7b78d]", "bg-[#d3b45f]", "bg-[#9a7449]", "bg-[#839d9a]"];
@@ -45,8 +47,12 @@ function ExpertRecipeEvidence({ result, index }: { result: NonNullable<ReturnTyp
 }
 
 export function ExpertSystem() {
-  const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences });
+  // Provinsi dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
+  const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences, province: "" });
   const [selectedIds, setSelectedIds] = useState<string[]>(initialIngredients);
+  const { markTouched: markLocationTouched } = useLocationAutofill((place) => {
+    setPreferences((current) => ({ ...current, province: place.province }));
+  });
   const [localReviews, setLocalReviews] = useState<ReturnType<typeof readCommunityReviews>>([]);
   const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>([]);
   const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
@@ -88,6 +94,7 @@ export function ExpertSystem() {
   const stats = getExpertKnowledgeStats(localReviews.length, allRecipes.length, serverOnlyReviews.length);
 
   function updatePreference(key: keyof UserPreferences, value: string) {
+    if (key === "province") markLocationTouched();
     setPreferences((current) => ({ ...current, [key]: value }));
   }
 
@@ -113,8 +120,11 @@ export function ExpertSystem() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(350px,.82fr)]">
         <section className="rounded-[25px] border border-[#e5eae2] bg-white p-4 shadow-[0_10px_32px_rgba(38,55,40,.045)] sm:p-6">
           <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Langkah 1 · Konteks</p><h2 className="mt-1 text-lg font-extrabold text-[#2d3f31]">Ceritakan kondisi mancing</h2></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef3e9] text-[#567455]"><Waves size={19} /></span></div>
+          <div className="mt-4">
+            <UseMyLocationButton onPlace={(place) => updatePreference("province", place.province)} label="Isi provinsi dari lokasi saya" />
+          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Field label="Provinsi" icon={MapPin}><select className={selectClass} value={preferences.province} onChange={(event) => updatePreference("province", event.target.value)}>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></Field>
+            <Field label="Provinsi" icon={MapPin}><select className={selectClass} value={preferences.province} onChange={(event) => updatePreference("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></Field>
             <Field label="Cuaca" icon={Sparkles}><select className={selectClass} value={preferences.weather} onChange={(event) => updatePreference("weather", event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></Field>
             <Field label="Kondisi air" icon={Droplets}><select className={selectClass} value={preferences.water} onChange={(event) => updatePreference("water", event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></Field>
             <Field label="Jenis pemancingan" icon={Fish}><select className={selectClass} value={preferences.fishingType} onChange={(event) => updatePreference("fishingType", event.target.value)}>{["Harian", "Lomba", "Galat"].map((item) => <option key={item}>{item}</option>)}</select></Field>
