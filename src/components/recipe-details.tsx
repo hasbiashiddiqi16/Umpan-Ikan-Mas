@@ -1,20 +1,25 @@
 import { Check, Clock3, Minus, X } from "lucide-react";
-import type { Ingredient } from "@/data/recipes";
+import { OPTIONAL_ADDITIONS_NOTE, type Ingredient } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { Badge, Rating } from "@/components/shared";
 
 const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
 
 export function IngredientTable({ ingredients }: { ingredients: Ingredient[] }) {
+  const mainIngredients = ingredients.filter((ingredient) => !ingredient.optional);
+  const optionalIngredients = ingredients.filter((ingredient) => ingredient.optional);
   return (
     <div className="overflow-hidden rounded-2xl border border-[#e6eae3] bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#edf0eb] bg-[#f7f9f5] px-4 py-3.5 sm:px-5">
         <p className="text-sm font-bold text-[#304334]">Bahan racikan</p>
-        <Badge tone="sage">{ingredients.length} bahan</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="sage">{mainIngredients.length} bahan</Badge>
+          {optionalIngredients.length > 0 && <Badge tone="gold">{optionalIngredients.length} tambahan opsional</Badge>}
+        </div>
       </div>
 
       <ul className="divide-y divide-[#eff1ed] sm:hidden" aria-label="Daftar bahan racikan">
-        {ingredients.map((ingredient, index) => (
+        {mainIngredients.map((ingredient, index) => (
           <li key={`${ingredient.name}-${index}`} className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
@@ -42,7 +47,7 @@ export function IngredientTable({ ingredients }: { ingredients: Ingredient[] }) 
             </tr>
           </thead>
           <tbody className="divide-y divide-[#eff1ed]">
-            {ingredients.map((ingredient, index) => (
+            {mainIngredients.map((ingredient, index) => (
               <tr key={`${ingredient.name}-${index}`} className="transition hover:bg-[#fafbf8]">
                 <td className="break-words px-4 py-3.5 font-semibold text-[#354639] sm:px-5">
                   <span className="mr-3 inline-grid h-6 w-6 place-items-center rounded-lg bg-[#eff4ec] text-[10px] font-bold text-[#668068]">{String(index + 1).padStart(2, "0")}</span>
@@ -55,6 +60,30 @@ export function IngredientTable({ ingredients }: { ingredients: Ingredient[] }) 
           </tbody>
         </table>
       </div>
+
+      {optionalIngredients.length > 0 && (
+        <div className="border-t border-[#edf0eb] bg-[#fbf9f2] px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold text-[#55492f]">Tambahan opsional</p>
+            <span className="rounded-full bg-[#f6ecd4] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[.1em] text-[#8a6b21]">boleh dilewati</span>
+          </div>
+          <p className="mt-1.5 text-xs leading-5 text-[#8a8474]">Tambahkan bila bahannya tersedia. Resep tetap bisa dipakai tanpa bagian ini.</p>
+          <ul className="mt-3 grid gap-2.5 sm:grid-cols-2" aria-label="Tambahan opsional">
+            {optionalIngredients.map((ingredient) => (
+              <li key={`${ingredient.name}-${ingredient.amount}`} className="flex items-start justify-between gap-3 rounded-xl border border-[#efe7d3] bg-white px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-semibold leading-5 text-[#3d4a3f]">{ingredient.name}</p>
+                  <p className="mt-0.5 break-words text-xs leading-5 text-[#8a8f85]">
+                    <span className="font-semibold text-[#6f7a6d]">Merek / catatan:</span> {ingredient.brand}
+                  </p>
+                </div>
+                <p className="shrink-0 text-right text-sm font-bold leading-5 text-[#4a5a47]">{ingredient.amount}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 break-words rounded-xl bg-white px-3.5 py-2.5 text-xs leading-5 text-[#7c8078]">{OPTIONAL_ADDITIONS_NOTE}</p>
+        </div>
+      )}
     </div>
   );
 }

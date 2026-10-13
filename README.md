@@ -18,6 +18,15 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
 
+## Takaran kroto dan bahan amis
+
+Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` pada data bahan:
+
+- **Kroto `1 ons`** (bukan gram) mengikuti kebiasaan pemancing. Resep yang memang berbasis kroto — nama resep menyebut kroto, atau resep inti yang bahannya memuat kroto seperti Sarden Susu Premium — memakai kroto sebagai bahan inti. Resep lain, termasuk resep turunan yang mewarisi bahan template, memakai kroto sebagai **tambahan opsional**.
+- **Ikan tuna kaleng amis `2 sdm`** bermerek **Deho / Sunbell Katsuo**, plus **minyak ikan amis `1 sdm`**. Baris tuna dilewati bila resep sudah memakai ikan kalengan (mis. Sarden).
+
+Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
