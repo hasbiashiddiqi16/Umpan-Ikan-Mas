@@ -13,8 +13,10 @@ import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-s
 import { rankExpertRecipes } from "@/lib/expert-system";
 import { RecommendationCard } from "@/components/cards";
 import { FavoriteButton } from "@/components/favorite-button";
+import { UseMyLocationButton } from "@/components/location-controls";
 import { Badge, SectionHeader } from "@/components/shared";
 import type { UserPreferences } from "@/lib/recommendation";
+import { useLocationAutofill } from "@/lib/use-location";
 
 const weatherOptions: { label: Weather; emoji: string; icon: typeof Cloud }[] = [
   { label: "Hujan", emoji: "🌧️", icon: CloudRain },
@@ -48,13 +50,17 @@ function ChoiceButton({ selected, onClick, children, className = "" }: { selecte
 }
 
 export function AIWizard() {
-  const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences });
+  // Provinsi sengaja dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
+  const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences, province: "" });
   const [step, setStep] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [memberReviews, setMemberReviews] = useState<RecipeReview[]>([]);
   const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>([]);
   const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
+  const { place: detectedPlace, markTouched: markLocationTouched } = useLocationAutofill((place) => {
+    setPreferences((current) => ({ ...current, province: place.province }));
+  });
 
   useEffect(() => {
     const syncReviews = () => setMemberReviews(readCommunityReviews());
@@ -83,10 +89,13 @@ export function AIWizard() {
   useEffect(() => {
     const applyFinderPreferences = () => {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("province") || params.get("recommend") === "1") {
+      const provinceParam = params.get("province");
+      if (provinceParam || params.get("recommend") === "1") {
         const weather = params.get("weather") ?? defaultPreferences.weather;
+        // Provinsi dari URL (mis. kiriman form pencarian) tidak boleh ditimpa deteksi lokasi.
+        if (provinceParam) markLocationTouched();
         setPreferences({
-          province: params.get("province") ?? defaultPreferences.province,
+          province: provinceParam ?? "",
           weather,
           water: params.get("water") ?? defaultPreferences.water,
           fishingType: params.get("type") ?? defaultPreferences.fishingType,
@@ -98,7 +107,7 @@ export function AIWizard() {
     };
     const timer = window.setTimeout(applyFinderPreferences, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [markLocationTouched]);
 
   const extraReviews = useMemo(() => approvedReviews.filter((remote) => !memberReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, memberReviews]);
   const recommendationRecipes = useMemo(() => {
@@ -113,6 +122,7 @@ export function AIWizard() {
   const alternatives = expertResults.slice(1, 3);
 
   function update(key: keyof UserPreferences, value: string) {
+    if (key === "province") markLocationTouched();
     setPreferences((current) => ({ ...current, [key]: value, ...(key === "weather" ? { season: seasonFor(value) } : {}) }));
   }
 
@@ -127,12 +137,13 @@ export function AIWizard() {
   function restart() {
     setStep(0);
     setShowResult(false);
-    setPreferences({ ...defaultPreferences });
+    // Kembali ke kondisi awal: provinsi mengikuti lokasi bila diizinkan, jika tidak dibiarkan kosong.
+    setPreferences({ ...defaultPreferences, province: detectedPlace?.province ?? "" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function renderQuestion() {
-    if (step === 0) return <div className="max-w-lg"><label htmlFor="province-select" className="mb-2 block text-sm font-bold text-[#526153]">Pilih provinsi</label><div className="relative"><MapPin size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#819080]" /><select id="province-select" className={`${selectClass} pl-11`} value={preferences.province} onChange={(event) => update("province", event.target.value)}>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></div><p className="mt-3 text-xs leading-5 text-[#8a9389]">Pilih daerah paling dekat dengan spotmu. Setiap kolam tetap punya karakter air yang berbeda.</p></div>;
+    if (step === 0) return <div className="max-w-lg"><UseMyLocationButton onPlace={(place) => update("province", place.province)} label="Isi provinsi dari lokasi saya" className="mb-4" /><label htmlFor="province-select" className="mb-2 block text-sm font-bold text-[#526153]">Pilih provinsi</label><div className="relative"><MapPin size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#819080]" /><select id="province-select" className={`${selectClass} pl-11`} value={preferences.province} onChange={(event) => update("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></div><p className="mt-3 text-xs leading-5 text-[#8a9389]">Pilih daerah paling dekat dengan spotmu. Bila lokasi tidak diizinkan, kolom ini dibiarkan kosong dan rekomendasi tetap dihitung dari kondisi lain. Setiap kolam tetap punya karakter air yang berbeda.</p></div>;
     if (step === 1) return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{weatherOptions.map(({ label, emoji, icon: Icon }) => <ChoiceButton key={label} selected={preferences.weather === label} onClick={() => update("weather", label)} className="min-h-[118px]"><Icon size={20} className="text-[#637c65]" /><span className="mt-3 block text-sm font-extrabold">{emoji} {label}</span><span className="mt-1 block text-xs text-[#899187]">Cuaca sekarang</span></ChoiceButton>)}</div>;
     if (step === 2) return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{waterOptions.map(({ label, emoji, note }) => <ChoiceButton key={label} selected={preferences.water === label} onClick={() => update("water", label)} className="min-h-[118px]"><span className="text-2xl" aria-hidden="true">{emoji}</span><span className="mt-3 block text-sm font-extrabold">{label}</span><span className="mt-1 block text-xs text-[#899187]">{note}</span></ChoiceButton>)}</div>;
     if (step === 3) return <div className="grid gap-3 sm:grid-cols-3">{typeOptions.map(({ label, emoji, note }) => <ChoiceButton key={label} selected={preferences.fishingType === label} onClick={() => update("fishingType", label)} className="min-h-[112px]"><span className="text-2xl" aria-hidden="true">{emoji}</span><span className="mt-2 block text-sm font-extrabold">{label}</span><span className="mt-1 block text-xs text-[#899187]">{note}</span></ChoiceButton>)}</div>;
@@ -157,8 +168,8 @@ export function AIWizard() {
         </div>
       </section>
 
-      {showResult && primary && <section id="ai-results" className="scroll-mt-24 pt-12"><div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-[#778676]">Hasil racikan untukmu</p><h2 className="text-3xl font-black tracking-tight text-[#203326]">🎯 Rekomendasi untuk Anda</h2><p className="mt-2 text-sm text-[#788278]">Disesuaikan untuk {preferences.province ?? defaultPreferences.province}, cuaca {(preferences.weather ?? defaultPreferences.weather).toLowerCase()}, air {(preferences.water ?? defaultPreferences.water).toLowerCase()}.</p></div><button type="button" onClick={restart} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#59705a] hover:bg-[#eef3eb]"><RotateCcw size={15} /> Ubah kondisi</button></div>
-        <div className="space-y-5"><RecommendationCard recipe={primary} score={expertResults[0].score} isPrimary /><div className="rounded-2xl border border-[#e5eae2] bg-white p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold text-[#334436]">Bahan utama racikan</p><p className="mt-1 text-xs text-[#8a9388]">Lihat takaran lengkap dan langkah persiapan di halaman resep.</p></div><FavoriteButton recipeSlug={primary.slug} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#e1e7df] px-3 text-xs font-bold text-[#526452] hover:bg-[#f5f8f2]" /></div><div className="flex flex-wrap gap-2">{primary.ingredients.slice(0, 5).map((ingredient) => <Badge key={ingredient.name} tone="cream">{ingredient.name} · {ingredient.amount}</Badge>)}</div></div></div>
+      {showResult && primary && <section id="ai-results" className="scroll-mt-24 pt-12"><div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-[#778676]">Hasil racikan untukmu</p><h2 className="text-3xl font-black tracking-tight text-[#203326]">🎯 Rekomendasi untuk Anda</h2><p className="mt-2 text-sm text-[#788278]">Disesuaikan untuk {preferences.province || "semua daerah"}, cuaca {(preferences.weather ?? defaultPreferences.weather).toLowerCase()}, air {(preferences.water ?? defaultPreferences.water).toLowerCase()}.</p></div><button type="button" onClick={restart} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#59705a] hover:bg-[#eef3eb]"><RotateCcw size={15} /> Ubah kondisi</button></div>
+        <div className="space-y-5"><RecommendationCard recipe={primary} score={expertResults[0].score} isPrimary /><div className="rounded-2xl border border-[#e5eae2] bg-white p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold text-[#334436]">Bahan utama racikan</p><p className="mt-1 text-xs text-[#8a9388]">Lihat takaran lengkap dan langkah persiapan di halaman resep.</p></div><FavoriteButton recipeSlug={primary.slug} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#e1e7df] px-3 text-xs font-bold text-[#526452] hover:bg-[#f5f8f2]" /></div><div className="flex flex-wrap gap-2">{primary.ingredients.filter((ingredient) => !ingredient.optional).slice(0, 5).map((ingredient) => <Badge key={ingredient.name} tone="cream">{ingredient.name} · {ingredient.amount}</Badge>)}</div></div></div>
         <div className="mt-10"><SectionHeader eyebrow="Pilihan lain yang cocok" title="Alternatif racikan" subtitle="Coba opsi lain jika bahan utama belum tersedia." /><div className="grid gap-5 lg:grid-cols-2">{alternatives.map((item) => <RecommendationCard key={item.recipe.slug} recipe={item.recipe} score={item.score} />)}</div></div>
         <div className="mt-6 flex items-start gap-2 rounded-xl bg-[#f2f5ef] p-4 text-xs leading-5 text-[#748073]"><Check size={15} className="mt-0.5 shrink-0 text-[#648064]" />Skor dihitung dari kecocokan kondisi dan data komunitas, bukan hasil yang dijamin. Respons ikan dapat berbeda di tiap kolam dan waktu.</div>
       </section>}

@@ -56,7 +56,12 @@ function ingredientArray(value: unknown): CmsIngredient[] | null {
     if (!entry || typeof entry !== "object") return null;
     const item = entry as Record<string, unknown>;
     if ([item.name, item.brand, item.amount].some((part) => typeof part !== "string" || !part.trim() || part.length > 120)) return null;
-    result.push({ name: (item.name as string).trim(), brand: (item.brand as string).trim(), amount: (item.amount as string).trim() });
+    result.push({
+      name: (item.name as string).trim(),
+      brand: (item.brand as string).trim(),
+      amount: (item.amount as string).trim(),
+      ...(item.optional === true ? { optional: true } : {}),
+    });
   }
   return result;
 }

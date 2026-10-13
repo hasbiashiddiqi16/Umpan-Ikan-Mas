@@ -18,7 +18,10 @@ export type ExpertBlendResult = {
 const normalise = (value: string) => value.toLocaleLowerCase("id-ID").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export function recipeIngredientIds(recipe: Recipe): string[] {
-  const text = normalise(`${recipe.name} ${recipe.ingredients.map((item) => `${item.name} ${item.brand}`).join(" ")}`);
+  // Tambahan opsional (kroto & amis) ada di semua resep, jadi tidak dipakai
+  // sebagai pembeda; hanya bahan inti yang menentukan kecocokan.
+  const coreIngredients = recipe.ingredients.filter((item) => !item.optional);
+  const text = normalise(`${recipe.name} ${coreIngredients.map((item) => `${item.name} ${item.brand}`).join(" ")}`);
   return ingredientKnowledge.filter((ingredient) => ingredient.keywords.some((keyword) => text.includes(normalise(keyword)))).map((ingredient) => ingredient.id);
 }
 

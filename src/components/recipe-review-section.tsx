@@ -6,8 +6,10 @@ import type { Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
+import { UseMyLocationButton } from "@/components/location-controls";
 import { Rating, SectionHeader } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
+import { useLocationAutofill } from "@/lib/use-location";
 
 const inputClass = "min-h-11 min-w-0 w-full rounded-xl border border-[#e4e9e2] bg-white px-3.5 text-sm text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
 
@@ -27,7 +29,8 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (value:
 function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted: (review: MemberReview) => void }) {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
-  const [province, setProvince] = useState("Jawa Barat");
+  // Provinsi dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
+  const [province, setProvince] = useState("");
   const [rating, setRating] = useState(0);
   const [weather, setWeather] = useState("Hujan");
   const [water, setWater] = useState("Keruh");
@@ -37,6 +40,10 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [serverSaved, setServerSaved] = useState<boolean | null>(null);
+  const { markTouched: markLocationTouched } = useLocationAutofill((place) => {
+    setProvince(place.province);
+    if (place.city) setCity(place.city);
+  });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,6 +52,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
     setServerSaved(null);
     if (rating < 1) { setError("Pilih rating bintang sebelum mengirim ulasan."); return; }
     if (name.trim().length < 2) { setError("Masukkan nama minimal 2 karakter."); return; }
+    if (!province) { setError("Pilih provinsi dulu, atau tekan “Gunakan lokasi saya” agar terisi otomatis."); return; }
     if (comment.trim().length < 12) { setError("Ceritakan pengalaman minimal 12 karakter agar bermanfaat untuk pemancing lain."); return; }
     const now = new Date();
     const newReview = {
@@ -77,10 +85,14 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
     <form onSubmit={submit} className="min-w-0 rounded-[22px] border border-[#e5eae2] bg-white p-4 shadow-[0_8px_24px_rgba(38,55,40,.035)] sm:p-6">
       <div className="flex min-w-0 items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eef3ea] text-[#587455]"><MessageSquareText size={19} /></span><div className="min-w-0"><h3 className="break-words text-base font-extrabold text-[#304133]">Pernah mencoba {recipe.name}?</h3><p className="mt-1 break-words text-xs leading-5 text-[#818b80]">Ulasan membantu pemancing lain dan menjadi sinyal untuk sistem pakar.</p></div></div>
       <div className="mt-5 rounded-xl bg-[#faf8f1] p-3.5"><p className="mb-1 text-xs font-bold text-[#716246]">Beri rating</p><StarRatingInput value={rating} onChange={setRating} /></div>
+      <div className="mt-4 flex flex-col gap-2.5 rounded-xl border border-[#e9ede7] bg-[#f8faf6] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-5 text-[#77827a]">Kota dan provinsi bisa terisi otomatis dari lokasi perangkatmu. Lokasi tidak dikirim ke server.</p>
+        <UseMyLocationButton onPlace={(place) => { setProvince(place.province); if (place.city) setCity(place.city); }} label="Gunakan lokasi saya" className="shrink-0" />
+      </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Nama pemancing<input className={inputClass} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={60} placeholder="Contoh: Budi" required /></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kota (opsional)<input className={inputClass} value={city} onChange={(event) => setCity(event.target.value)} maxLength={60} placeholder="Contoh: Bogor" /></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Provinsi<select className={inputClass} value={province} onChange={(event) => setProvince(event.target.value)}>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kota (opsional)<input className={inputClass} value={city} onChange={(event) => { markLocationTouched(); setCity(event.target.value); }} maxLength={60} placeholder="Contoh: Bogor" /></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Provinsi<select className={inputClass} value={province} onChange={(event) => { markLocationTouched(); setProvince(event.target.value); }}><option value="">Pilih provinsi</option>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Cuaca saat mencoba<select className={inputClass} value={weather} onChange={(event) => setWeather(event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kondisi air<select className={inputClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Jenis pemancingan<select className={inputClass} value={fishingType} onChange={(event) => setFishingType(event.target.value)}>{["Harian", "Lomba", "Galat"].map((item) => <option key={item}>{item}</option>)}</select></label>

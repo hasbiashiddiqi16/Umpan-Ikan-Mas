@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-export type CmsIngredient = { name: string; brand: string; amount: string };
+/** `optional` menandai tambahan yang boleh dilewati, mis. kroto atau bahan amis. */
+export type CmsIngredient = { name: string; brand: string; amount: string; optional?: boolean };
 
 export const cmsRecipes = pgTable("cms_recipes", {
   id: serial("id").primaryKey(),

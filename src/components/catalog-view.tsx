@@ -9,15 +9,14 @@ import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { SearchInput, EmptyState } from "@/components/shared";
 import { RecipeCard } from "@/components/recipe-card";
 import { FilterBar, defaultCatalogFilters, type CatalogFilters } from "@/components/filter-bar";
+import { UseMyLocationButton } from "@/components/location-controls";
+import { isCatalogCity, provinceForCatalogCity } from "@/data/geo-cities";
 import { calculateMatchScore, filterRecipesByBudget, getRecommendedRecipes } from "@/lib/recommendation";
 import { searchRecipes } from "@/lib/search";
+import { useLocationAutofill } from "@/lib/use-location";
+import type { DetectedPlace } from "@/lib/location";
 
 const categories = ["Semua", "Harian", "Lomba", "Galat", "Premium", "Ekonomis"];
-const cityProvince: Record<string, string> = {
-  Bogor: "Jawa Barat", Bandung: "Jawa Barat", Bekasi: "Jawa Barat", Depok: "Jawa Barat",
-  Jakarta: "DKI Jakarta", Semarang: "Jawa Tengah", Yogyakarta: "DI Yogyakarta", Surabaya: "Jawa Timur",
-  Palembang: "Sumatera Selatan", Denpasar: "Bali",
-};
 const FAVORITES_KEY = "umpan-mas-favorites";
 
 function readFavorites(): string[] {
@@ -31,6 +30,22 @@ export function CatalogView() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+
+  function applyLocationToFilters(place: DetectedPlace) {
+    setFilters((current) => ({
+      ...current,
+      province: place.province,
+      // Kota hanya dipakai bila tersedia sebagai pilihan filter.
+      city: isCatalogCity(place.city) ? (place.city as string) : current.city,
+    }));
+  }
+
+  function resetLocationFilters() {
+    setFilters((current) => ({ ...current, province: "Semua provinsi", city: "Semua kota" }));
+  }
+
+  const { consent: locationConsent, place: locationPlace, markTouched } = useLocationAutofill(applyLocationToFilters);
+  const locationFilterActive = Boolean(locationConsent === "granted" && locationPlace && filters.province === locationPlace.province);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>([]);
   const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
@@ -71,7 +86,7 @@ export function CatalogView() {
     let result = searchRecipes(allRecipes, query);
     if (filters.category !== "Semua") result = result.filter((recipe) => recipe.category === filters.category);
     if (filters.province !== "Semua provinsi") result = result.filter((recipe) => recipe.provinces.includes(filters.province));
-    if (filters.city !== "Semua kota") result = result.filter((recipe) => recipe.provinces.includes(cityProvince[filters.city] ?? ""));
+    if (filters.city !== "Semua kota") result = result.filter((recipe) => recipe.provinces.includes(provinceForCatalogCity(filters.city) ?? ""));
     if (filters.weather !== "Semua cuaca") result = result.filter((recipe) => recipe.weather.includes(filters.weather as (typeof recipe.weather)[number]));
     if (filters.season !== "Semua musim") result = result.filter((recipe) => recipe.seasons.includes(filters.season));
     if (filters.water !== "Semua kondisi air") result = result.filter((recipe) => recipe.water.includes(filters.water as (typeof recipe.water)[number]));
@@ -108,7 +123,29 @@ export function CatalogView() {
         <div className="flex flex-col gap-3 sm:flex-row"><SearchInput value={query} onChange={setQuery} className="flex-1" /><button type="button" onClick={() => setFavoritesOnly((value) => !value)} aria-pressed={favoritesOnly} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${favoritesOnly ? "border-[#e8cfbf] bg-[#fcf2ec] text-[#a35b3e]" : "border-[#e5e9e2] bg-white text-[#59685a] hover:bg-[#f7f9f5]"}`}><Heart size={16} fill={favoritesOnly ? "currentColor" : "none"} />{favoritesOnly ? "Menampilkan favorit" : "Lihat favorit"}</button></div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1" aria-label="Kategori resep">{categories.map((category) => <button type="button" key={category} onClick={() => selectCategory(category)} aria-pressed={filters.category === category} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${filters.category === category ? "bg-[#294b34] text-white shadow-sm" : "bg-[#f3f5f1] text-[#657165] hover:bg-[#e8eee5]"}`}>{category}</button>)}</div>
       </div>
-      <div className="mt-4"><FilterBar filters={filters} onChange={setFilters} resultCount={filteredRecipes.length} /></div>
+      <div className="mt-4">
+        <FilterBar
+          filters={filters}
+          onChange={(next) => {
+            markTouched();
+            setFilters(next);
+          }}
+          resultCount={filteredRecipes.length}
+          locationControl={
+            <div className="flex flex-wrap items-center gap-2">
+              <UseMyLocationButton onPlace={applyLocationToFilters} onForget={resetLocationFilters} label="Saring dari lokasi saya" />
+              {locationFilterActive && (
+                <>
+                  <span className="text-[11px] font-semibold text-[#7e897c]">Filter provinsi mengikuti lokasi terdeteksi.</span>
+                  <button type="button" onClick={() => { markTouched(); resetLocationFilters(); }} className="min-h-8 rounded-lg px-2.5 text-[11px] font-bold text-[#4f6b4f] underline-offset-2 transition hover:bg-[#eef3eb] hover:underline">
+                    Tampilkan semua daerah
+                  </button>
+                </>
+              )}
+            </div>
+          }
+        />
+      </div>
       <div className="mb-5 mt-7 flex items-center justify-between gap-4"><div><p className="text-sm font-extrabold text-[#344538]">{filteredRecipes.length} racikan ditemukan</p><p className="mt-1 text-xs text-[#8b9389]">Disusun berdasarkan kecocokan dan masukan komunitas</p></div><span className="hidden items-center gap-1.5 text-xs text-[#91998f] sm:inline-flex"><SlidersHorizontal size={13} /> Hasil diperbarui langsung</span></div>
       {filteredRecipes.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredRecipes.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={calculateMatchScore(recipe, { ...defaultPreferences, province: filters.province === "Semua provinsi" ? defaultPreferences.province : filters.province, weather: filters.weather === "Semua cuaca" ? defaultPreferences.weather : filters.weather, water: filters.water === "Semua kondisi air" ? defaultPreferences.water : filters.water, fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType, season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season })} featured={index === 0} />)}</div> : <EmptyState title={query ? "Umpan tidak ditemukan." : favoritesOnly ? "Belum ada resep favorit." : "Belum ada resep yang sesuai."} description={favoritesOnly ? "Simpan resep dengan mengetuk ikon hati. Favorit tersimpan di perangkat ini." : query ? "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." : "Coba ubah filter provinsi, kondisi air, atau budget untuk melihat racikan lainnya."} />}
     </div>

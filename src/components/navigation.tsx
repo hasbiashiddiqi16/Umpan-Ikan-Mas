@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { BookOpen, Bot, Heart, Home, Map, Search, UserRound, CloudSun } from "lucide-react";
+import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 
 const desktopLinks = [
   { label: "Beranda", href: "/" },
@@ -29,7 +31,7 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-[#e8ebe5]/80 bg-[#fbfcf9]/95 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:px-8">
         <Link href="/" aria-label="UMPAN MAS, beranda" className="flex shrink-0 items-center gap-2.5">
-          <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#244632] text-xl shadow-sm">🎣</span>
+          <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} priority className="h-10 w-10 shrink-0" />
           <span className="text-[15px] font-black tracking-[.07em] text-[#21392a] sm:text-base">UMPAN MAS</span>
         </Link>
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Navigasi utama">

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { JsonLd } from "@/components/json-ld";
+import { LocationPermissionSync } from "@/components/location-controls";
+import { PromoModal } from "@/components/promo-modal";
 import { RouteScrollReset } from "@/components/route-scroll-reset";
 import { absoluteUrl, getSiteStructuredData, SITE_DESCRIPTION, SITE_NAME, siteOrigin } from "@/lib/seo";
 import "./globals.css";
@@ -74,6 +76,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {siteStructuredData && <JsonLd data={siteStructuredData} />}
         <RouteScrollReset />
         <AnalyticsTracker />
+        <LocationPermissionSync />
+        <PromoModal />
         {children}
       </body>
     </html>

@@ -9,6 +9,11 @@ export type Ingredient = {
   name: string;
   brand: string;
   amount: string;
+  /**
+   * Bahan tambahan yang boleh dilewati. Tersedia di semua resep, sehingga tidak
+   * dipakai sebagai pembeda pada pencarian maupun skor kecocokan bahan.
+   */
+  optional?: boolean;
 };
 
 export type Recipe = {
@@ -597,7 +602,59 @@ const generatedRecipes: Recipe[] = additionalRecipeNames.map((name, index) => {
   };
 });
 
-export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes];
+/**
+ * Kroto ditakar dalam ons, bukan gram, mengikuti kebiasaan pemancing: kebanyakan
+ * memakai 1 ons (≈ 100 g). Bahan amis merujuk merek tuna kaleng yang umum
+ * dipakai sebagai perangsang amis, yaitu Deho atau Sunbell Katsuo.
+ */
+export const KROTO_AMOUNT = "1 ons";
+export const AMIS_TUNA_BRAND = "Deho / Sunbell Katsuo";
+export const AMIS_OIL_BRAND = "Deho / Sunbell";
+export const OPTIONAL_ADDITIONS_NOTE = `${KROTO_AMOUNT} ≈ 100 g. Kroto paling pas dicampurkan saat hendak memancing, dan bahan amis umumnya memakai merek Deho atau Sunbell.`;
+
+const KROTO_PATTERN = /kroto/i;
+/** Ikan kalengan yang mungkin sudah ada, agar baris tuna amis tidak dobel. */
+const CANNED_FISH_PATTERN = /sarden|tongkol|pindang|katsuo/i;
+
+const coreKrotoIngredient: Ingredient = { name: "Kroto", brand: "Segar", amount: KROTO_AMOUNT };
+const optionalKrotoIngredient: Ingredient = { ...coreKrotoIngredient, optional: true };
+const amisTunaIngredient: Ingredient = { name: "Ikan tuna kaleng (amis)", brand: AMIS_TUNA_BRAND, amount: "2 sdm", optional: true };
+const amisOilIngredient: Ingredient = { name: "Minyak ikan amis", brand: AMIS_OIL_BRAND, amount: "1 sdm", optional: true };
+
+/**
+ * Semua resep katalog mendapat tambahan yang sama:
+ * - Kroto bertakaran ons. Resep yang memang berbasis kroto (nama atau bahannya
+ *   menyebut kroto) memakai kroto sebagai bahan inti; sisanya sebagai opsi.
+ * - Tuna kaleng amis (Deho / Sunbell) selama resep belum memakai ikan kalengan,
+ *   plus minyaknya.
+ */
+function withOptionalAdditions(recipe: Recipe, fromCatalog: boolean): Recipe {
+  // Resep inti yang memang berbasis kroto (mis. Umpan Putih Kroto) memakai kroto
+  // sebagai bahan inti. Resep turunan katalog mewarisi bahan template, jadi kroto
+  // warisan tersebut cukup ditandai opsional agar tidak menyesatkan.
+  const krotoIsCore = KROTO_PATTERN.test(recipe.name) || (fromCatalog && recipe.ingredients.some((item) => KROTO_PATTERN.test(item.name)));
+  const ingredients = recipe.ingredients.map((item) => {
+    if (!KROTO_PATTERN.test(item.name)) return { ...item };
+    // Takaran kroto diseragamkan ke ons; merek dipertahankan bila sudah diisi.
+    // Kroto warisan template pada resep non-kroto ditandai opsional.
+    return {
+      ...item,
+      name: "Kroto",
+      amount: KROTO_AMOUNT,
+      brand: item.brand && item.brand !== "-" ? item.brand : "Segar",
+      ...(krotoIsCore ? {} : { optional: true }),
+    };
+  });
+  const additions: Ingredient[] = [];
+  if (!ingredients.some((item) => KROTO_PATTERN.test(item.name))) additions.push(krotoIsCore ? coreKrotoIngredient : optionalKrotoIngredient);
+  if (!recipe.ingredients.some((item) => CANNED_FISH_PATTERN.test(item.name))) additions.push(amisTunaIngredient);
+  additions.push(amisOilIngredient);
+  return { ...recipe, ingredients: [...ingredients, ...additions] };
+}
+
+export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes].map((recipe, index) =>
+  withOptionalAdditions(recipe, index < normalizedCoreRecipes.length),
+);
 
 /** Cakupan Jabodetabek dihitung dari resep berlabel DKI Jakarta, Jawa Barat, dan Banten. */
 export const jabodetabekProvinces = ["DKI Jakarta", "Jawa Barat", "Banten"] as const;

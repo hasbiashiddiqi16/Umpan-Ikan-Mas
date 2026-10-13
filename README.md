@@ -18,8 +18,59 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
 
+## Takaran kroto dan bahan amis
+
+Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` pada data bahan:
+
+- **Kroto `1 ons`** (bukan gram) mengikuti kebiasaan pemancing. Resep yang memang berbasis kroto — nama resep menyebut kroto, atau resep inti yang bahannya memuat kroto seperti Sarden Susu Premium — memakai kroto sebagai bahan inti. Resep lain, termasuk resep turunan yang mewarisi bahan template, memakai kroto sebagai **tambahan opsional**.
+- **Ikan tuna kaleng amis `2 sdm`** bermerek **Deho / Sunbell Katsuo**, plus **minyak ikan amis `1 sdm`**. Baris tuna dilewati bila resep sudah memakai ikan kalengan (mis. Sarden).
+
+Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
+
+## Popup sambutan pengunjung baru
+
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
+
+Popup ini murni informasi awal, jadi:
+
+- **Tidak bisa di-scroll.** Tidak ada area scroll di dalam popup, dan tinggi poster dibatasi sisa tinggi layar sehingga gambar selalu tampil utuh. Ukurannya dihitung ulang saat layar berubah ukuran atau diputar.
+- **Aksinya hanya menutup**: ikon silang di kanan atas, klik/ketuk di luar kartu, atau tombol `Esc` (padanan papan ketik untuk tombol tutup). Tidak ada tombol ajakan atau tautan di dalamnya — pengunjung menutup popup lalu menjelajah dari navigasi biasa.
+
+**Berkas gambar** (`public/images/`, dirender oleh `scripts/build-promo-poster.mjs` dari `promo-welcome.jpg`)
+
+| Berkas | Ukuran | Dipakai untuk |
+| --- | --- | --- |
+| `promo-welcome-mobile.jpg` | 860x1216 (2x dari 430 px) | layar < 640 px, teks di bawah gambar |
+| `promo-welcome-desktop.jpg` | 1640x1040 (2x dari 820 px) | layar >= 640 px, teks di sisi kiri gambar |
+
+**Aksesibilitas.** Pembaca layar tetap mendapat isi poster sebagai teks (judul dan ringkasan tersembunyi yang dipakai `aria-labelledby`/`aria-describedby`). Scroll halaman dikunci selama popup terbuka, fokus keyboard jatuh ke tombol tutup dan tertahan di dalam dialog, lalu kembali ke elemen sebelumnya setelah ditutup.
+
+**Kapan muncul**
+
+- Tampil **sekali per perangkat**, dibuka setelah halaman tenang dan ditunda selama pengunjung masih aktif berinteraksi.
+- Tidak muncul di `/dashboard` dan `/login` (termasuk saat dipaksa lewat `?sambutan=1`).
+- Penanda disimpan berlapis: `localStorage` (kunci `umpan-mas-promo-welcome-seen-v1`), lalu `sessionStorage`, lalu memori. Jadi kalau penyimpanan diblokir — mode privat atau halaman dibuka di dalam iframe yang di-sandbox — popup tetap tampil sekali per muat halaman, bukan malah tidak pernah muncul.
+
+**Melihat ulang untuk pratinjau**
+
+Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
+
+**Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
+
+## Izin lokasi (opsional)
+
+Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
+
+- **Banner di beranda** muncul saat pengguna belum pernah memutuskan. Pilihan "Izinkan lokasi" menjalankan deteksi; "Nanti saja" menyimpan keputusan menolak sehingga banner tidak muncul lagi dan form tetap kosong.
+- **Tombol "Gunakan lokasi saya"** tersedia di setiap form berisi lokasi: Cari Umpan di beranda, AI Umpan, Sistem Pakar, filter katalog, dan form ulasan. Setelah izin diberikan, tombol berubah menjadi chip lokasi dengan aksi **Perbarui** dan **Lupakan**.
+- **Form menyesuaikan lokasi**: provinsi terisi otomatis. Nama kota ikut terisi (dan dipakai filter kota katalog) hanya bila lokasi dekat dengan titik referensi kota (radius 35 km di `src/data/province-geo.ts`) dan akurasi perangkat lebih baik dari radius tersebut. Pilihan manual selalu menang dan tidak ditimpa deteksi berikutnya.
+- **Deteksi berjalan sepenuhnya di perangkat.** Koordinat GPS diterjemahkan menjadi provinsi/kota memakai daftar titik referensi kota di `src/data/province-geo.ts` (perkiraan pusat kota/kabupaten, bukan batas administrasi resmi). Tidak ada permintaan jaringan atau pengiriman koordinat ke server, analitik, maupun CMS. Hasil deteksi disimpan di `localStorage` (`umpan-mas-location-consent`, `umpan-mas-location-place-v1`) dan dapat dihapus lewat tombol **Lupakan**.
+- **Izin browser yang sudah pernah diberikan** (misalnya sebelum fitur ini ada) dipakai lewat `LocationPermissionSync` di root layout: form langsung menyesuaikan lokasi tanpa prompt ulang, dan pilihan "Nanti saja" tetap dihormati.
+- Kegagalan deteksi ditampilkan dengan pesan spesifik: perangkat tidak mendukung, koneksi tidak HTTPS, izin ditolak, waktu habis, atau lokasi diblokir karena halaman tersemat (iframe) — pada kasus terakhir pengguna diarahkan membuka situs di tab baru atau mengisi lokasi manual.
+
 ## SEO dan performa
 
+- **Aset merek**: logo berada di `public/images/logo-umpan-mas.png` (512px, latar transparan) dan dirujuk lewat `src/lib/brand.ts` agar hanya ada satu sumber. Favicon memakai konvensi Next.js: `src/app/icon.png` (256px) dan `src/app/apple-icon.png` (180px, diratakan ke putih karena iOS tidak mendukung transparansi). Logo juga dikirim sebagai `logo`/`image` pada structured data `Organization` agar Google dapat menampilkan identitas merek.
 - Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi kustom di Netlify bila domain tersebut berbeda dari `URL` bawaan Netlify; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
 - `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian.
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { LOGO_SRC } from "@/lib/brand";
+
 export const SITE_NAME = "UMPAN MAS";
 export const SITE_DESCRIPTION =
   "Temukan resep dan racikan umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, dan pengalaman pemancing di Indonesia.";
@@ -97,6 +99,8 @@ export function getSiteStructuredData(): Record<string, unknown> | undefined {
   if (!siteOrigin) return undefined;
 
   const organizationId = `${siteOrigin}/#organization`;
+  // Logo absolut membantu Google menampilkan identitas merek di hasil pencarian.
+  const logoUrl = absoluteUrl(LOGO_SRC);
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -106,6 +110,7 @@ export function getSiteStructuredData(): Record<string, unknown> | undefined {
         name: SITE_NAME,
         url: siteOrigin,
         description: SITE_DESCRIPTION,
+        ...(logoUrl ? { logo: logoUrl, image: logoUrl } : {}),
         areaServed: { "@type": "Country", name: "Indonesia" },
         knowsAbout: [
           "Umpan ikan mas",

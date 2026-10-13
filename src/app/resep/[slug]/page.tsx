@@ -88,7 +88,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
         prepTime: "PT25M",
         totalTime: "PT25M",
         recipeIngredient: recipe.ingredients.map((ingredient) =>
-          `${ingredient.amount} ${ingredient.name}${ingredient.brand && ingredient.brand !== "-" ? ` (${ingredient.brand})` : ""}`,
+          `${ingredient.amount} ${ingredient.name}${ingredient.brand && ingredient.brand !== "-" ? ` (${ingredient.brand})` : ""}${ingredient.optional ? " — opsional" : ""}`,
         ),
         recipeInstructions: recipe.steps.map((text, index) => ({
           "@type": "HowToStep",
