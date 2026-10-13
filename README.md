@@ -29,16 +29,14 @@ Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman 
 
 ## Popup sambutan pengunjung baru
 
-Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, tombol ajakan, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster. Tidak ada tombol ajakan di dalam popup — pengunjung menutupnya lalu menjelajah dari navigasi biasa.
 
 **Berkas gambar** (`public/images/`, dirender oleh `scripts/build-promo-poster.mjs` dari `promo-welcome.jpg`)
 
 | Berkas | Ukuran | Dipakai untuk |
 | --- | --- | --- |
-| `promo-welcome-mobile.jpg` | 860x1280 (2x dari 430 px) | layar < 640 px, teks di bawah gambar |
+| `promo-welcome-mobile.jpg` | 860x1216 (2x dari 430 px) | layar < 640 px, teks di bawah gambar |
 | `promo-welcome-desktop.jpg` | 1640x1040 (2x dari 820 px) | layar >= 640 px, teks di sisi kiri gambar |
-
-**Tombol tetap bisa diklik.** Karena tombolnya menyatu di gambar, di atas tiap tombol dipasang tautan bening dengan posisi persen (lihat `CTAS` di komponen) — koordinatnya dicetak oleh skrip pembuat poster. Tautan ini juga bisa dijangkau dengan `Tab` dan diberi label untuk pembaca layar.
 
 **Aksesibilitas.** Pembaca layar tetap mendapat isi poster sebagai teks (judul dan ringkasan tersembunyi yang dipakai `aria-labelledby`/`aria-describedby`). Popup juga bisa ditutup lewat tombol tutup, `Esc`, atau klik/ketuk di luar kartu; scroll halaman dikunci selama terbuka dan fokus keyboard kembali ke elemen sebelumnya.
 

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { markPromoSeen, shouldShowPromo } from "@/lib/promo-storage";
@@ -15,26 +14,8 @@ import { useHydrated } from "@/lib/use-location";
  * supaya teks tetap tajam di layar rapat.
  */
 const POSTER = {
-  mobile: { src: "/images/promo-welcome-mobile.jpg", width: 860, height: 1280 },
+  mobile: { src: "/images/promo-welcome-mobile.jpg", width: 860, height: 1216 },
   desktop: { src: "/images/promo-welcome-desktop.jpg", width: 1640, height: 1040 },
-};
-
-/**
- * Tombol di dalam gambar tidak bisa diklik, jadi di atas tiap tombol dipasang
- * tautan bening. Angkanya persen terhadap poster, dihitung oleh skrip pembuat
- * poster (lihat keluaran "Koordinat tombol").
- */
-type Cta = { href: string; label: string; left: number; top: number; width: number; height: number };
-
-const CTAS: Record<keyof typeof POSTER, Cta[]> = {
-  mobile: [
-    { href: "/katalog", label: "Mulai jelajahi racikan — buka Katalog", left: 6.51, top: 87.81, width: 42.21, height: 6.88 },
-    { href: "/ai-umpan", label: "Tanya AI Umpan", left: 51.28, top: 87.81, width: 42.21, height: 6.88 },
-  ],
-  desktop: [
-    { href: "/katalog", label: "Mulai jelajahi racikan — buka Katalog", left: 5.37, top: 86.73, width: 23.61, height: 9.23 },
-    { href: "/ai-umpan", label: "Tanya AI Umpan", left: 30.44, top: 86.73, width: 16.91, height: 9.23 },
-  ],
 };
 
 const DESCRIPTION =
@@ -51,8 +32,7 @@ export function PromoModal() {
   const hydrated = useHydrated();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const primaryMobileRef = useRef<HTMLAnchorElement>(null);
-  const primaryDesktopRef = useRef<HTMLAnchorElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
   const close = useCallback(() => {
@@ -100,12 +80,7 @@ export function PromoModal() {
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Fokuskan tombol ajakan pada poster yang benar-benar tampil di layar ini
-    // (ponsel dan layar lebar punya poster masing-masing).
-    const primary =
-      [primaryDesktopRef.current, primaryMobileRef.current].find((el) => el && el.offsetParent !== null) ??
-      primaryMobileRef.current;
-    primary?.focus();
+    closeButtonRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -155,6 +130,7 @@ export function PromoModal() {
         className="relative mt-auto w-full max-w-[430px] overflow-hidden rounded-t-[28px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:mt-0 sm:max-w-[820px] sm:rounded-[30px]"
       >
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={close}
           aria-label="Tutup sambutan"
@@ -174,17 +150,6 @@ export function PromoModal() {
             loading="eager"
             className="h-auto w-full"
           />
-          {CTAS.mobile.map((cta, index) => (
-            <Link
-              key={cta.href}
-              ref={index === 0 ? primaryMobileRef : undefined}
-              href={cta.href}
-              onClick={close}
-              aria-label={cta.label}
-              className="absolute rounded-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              style={{ left: `${cta.left}%`, top: `${cta.top}%`, width: `${cta.width}%`, height: `${cta.height}%` }}
-            />
-          ))}
         </div>
 
         {/* Poster layar lebar: lanskap, teks di sisi kiri gambar. */}
@@ -198,17 +163,6 @@ export function PromoModal() {
             loading="eager"
             className="h-auto w-full"
           />
-          {CTAS.desktop.map((cta, index) => (
-            <Link
-              key={cta.href}
-              ref={index === 0 ? primaryDesktopRef : undefined}
-              href={cta.href}
-              onClick={close}
-              aria-label={cta.label}
-              className="absolute rounded-[20px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              style={{ left: `${cta.left}%`, top: `${cta.top}%`, width: `${cta.width}%`, height: `${cta.height}%` }}
-            />
-          ))}
         </div>
 
         {/* Pembaca layar tetap mendapat isi poster sebagai teks. */}
