@@ -29,7 +29,12 @@ Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman 
 
 ## Popup sambutan pengunjung baru
 
-Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster. Tidak ada tombol ajakan di dalam popup — pengunjung menutupnya lalu menjelajah dari navigasi biasa.
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
+
+Popup ini murni informasi awal, jadi:
+
+- **Tidak bisa di-scroll.** Tidak ada area scroll di dalam popup, dan tinggi poster dibatasi sisa tinggi layar sehingga gambar selalu tampil utuh. Ukurannya dihitung ulang saat layar berubah ukuran atau diputar.
+- **Aksinya hanya menutup**: ikon silang di kanan atas, klik/ketuk di luar kartu, atau tombol `Esc` (padanan papan ketik untuk tombol tutup). Tidak ada tombol ajakan atau tautan di dalamnya — pengunjung menutup popup lalu menjelajah dari navigasi biasa.
 
 **Berkas gambar** (`public/images/`, dirender oleh `scripts/build-promo-poster.mjs` dari `promo-welcome.jpg`)
 
@@ -38,7 +43,7 @@ Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) 
 | `promo-welcome-mobile.jpg` | 860x1216 (2x dari 430 px) | layar < 640 px, teks di bawah gambar |
 | `promo-welcome-desktop.jpg` | 1640x1040 (2x dari 820 px) | layar >= 640 px, teks di sisi kiri gambar |
 
-**Aksesibilitas.** Pembaca layar tetap mendapat isi poster sebagai teks (judul dan ringkasan tersembunyi yang dipakai `aria-labelledby`/`aria-describedby`). Popup juga bisa ditutup lewat tombol tutup, `Esc`, atau klik/ketuk di luar kartu; scroll halaman dikunci selama terbuka dan fokus keyboard kembali ke elemen sebelumnya.
+**Aksesibilitas.** Pembaca layar tetap mendapat isi poster sebagai teks (judul dan ringkasan tersembunyi yang dipakai `aria-labelledby`/`aria-describedby`). Scroll halaman dikunci selama popup terbuka, fokus keyboard jatuh ke tombol tutup dan tertahan di dalam dialog, lalu kembali ke elemen sebelumnya setelah ditutup.
 
 **Kapan muncul**
 

@@ -18,6 +18,9 @@ const POSTER = {
   desktop: { src: "/images/promo-welcome-desktop.jpg", width: 1640, height: 1040 },
 };
 
+/** Sisa ruang di tepi layar (padanan `p-3` di ponsel dan `p-6` di layar lebar). */
+const VIEWPORT_MARGIN_PX = 48;
+
 const DESCRIPTION =
   "Katalog umpan ikan mas lengkap dengan cuaca, kondisi air, dan pengalaman komunitas: 200 racikan, 5.000 ulasan, dan 38 provinsi. " +
   "Tersedia AI Umpan dan Sistem Pakar, kolom provinsi bisa terisi otomatis bila lokasi diizinkan, dan semua resep memakai kroto 1 ons serta bahan amis Deho / Sunbell.";
@@ -31,6 +34,9 @@ export function PromoModal() {
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [open, setOpen] = useState(false);
+  // Popup ini murni informasi dan tidak boleh di-scroll, jadi poster dikunci
+  // agar selalu muat utuh di tinggi layar yang tersedia.
+  const [maxPosterHeight, setMaxPosterHeight] = useState<number>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -38,6 +44,17 @@ export function PromoModal() {
   const close = useCallback(() => {
     setOpen(false);
     markPromoSeen();
+  }, []);
+
+  useEffect(() => {
+    const update = () => setMaxPosterHeight(Math.max(280, window.innerHeight - VIEWPORT_MARGIN_PX));
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
   }, []);
 
   // Buka hanya pada kunjungan pertama, setelah halaman sempat tenang agar tidak
@@ -74,7 +91,7 @@ export function PromoModal() {
     };
   }, [hydrated, pathname]);
 
-  // Kunci scroll, tangani Esc, dan jaga fokus tetap di dalam dialog.
+  // Kunci scroll halaman, tangani Esc, dan tahan fokus di tombol tutup.
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -115,7 +132,7 @@ export function PromoModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[95] flex items-end justify-center overflow-y-auto bg-[#0f1f16]/65 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[95] flex items-center justify-center overflow-hidden bg-[#0f1f16]/65 p-3 backdrop-blur-sm sm:p-6"
       role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget) close();
@@ -127,7 +144,8 @@ export function PromoModal() {
         aria-modal="true"
         aria-labelledby="promo-welcome-title"
         aria-describedby="promo-welcome-description"
-        className="relative mt-auto w-full max-w-[430px] overflow-hidden rounded-t-[28px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:mt-0 sm:max-w-[820px] sm:rounded-[30px]"
+        style={{ maxHeight: maxPosterHeight }}
+        className="relative w-fit max-w-[430px] overflow-hidden rounded-[28px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:max-w-[820px] sm:rounded-[30px]"
       >
         <button
           ref={closeButtonRef}
@@ -140,7 +158,7 @@ export function PromoModal() {
         </button>
 
         {/* Poster ponsel: portrait, teks di bawah gambar. */}
-        <div className="relative sm:hidden">
+        <div className="sm:hidden">
           <Image
             src={POSTER.mobile.src}
             width={POSTER.mobile.width}
@@ -148,12 +166,13 @@ export function PromoModal() {
             alt=""
             unoptimized
             loading="eager"
-            className="h-auto w-full"
+            style={{ maxHeight: maxPosterHeight }}
+            className="block h-auto w-auto max-w-full"
           />
         </div>
 
         {/* Poster layar lebar: lanskap, teks di sisi kiri gambar. */}
-        <div className="relative hidden sm:block">
+        <div className="hidden sm:block">
           <Image
             src={POSTER.desktop.src}
             width={POSTER.desktop.width}
@@ -161,7 +180,8 @@ export function PromoModal() {
             alt=""
             unoptimized
             loading="eager"
-            className="h-auto w-full"
+            style={{ maxHeight: maxPosterHeight }}
+            className="block h-auto w-auto max-w-full"
           />
         </div>
 
