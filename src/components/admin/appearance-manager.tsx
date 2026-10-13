@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Eye, ImageUp, Loader2, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { PromoModal } from "@/components/promo-modal";
+import { POPUP_LATAR_RATIO, PromoModal } from "@/components/promo-modal";
 import { Badge } from "@/components/shared";
 import {
   DEFAULT_POPUP,
@@ -28,6 +28,49 @@ const labelClass = "grid gap-1.5 text-xs font-bold text-[#657164]";
 const hintClass = "text-[10px] font-medium leading-4 text-[#959c93]";
 
 const formatBytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
+
+/**
+ * Pratinjau poster yang menampilkan gambar secara utuh.
+ *
+ * Poster di situs publik dirender dengan lebar penuh dan tinggi mengikuti rasio
+ * aslinya (`h-auto w-full`), jadi pratinjau di sini memakai cara yang sama.
+ * Kotak berukuran tetap dengan `object-cover` membuat gambar terlihat terpotong
+ * dan tidak mewakili tampilan sebenarnya.
+ */
+function PosterPreview({ src, intrinsicWidth, intrinsicHeight, frameClass, alt, note }: {
+  src: string; intrinsicWidth: number; intrinsicHeight: number; frameClass: string; alt: string; note: string;
+}) {
+  const [ukuran, setUkuran] = useState<{ width: number; height: number } | null>(null);
+  return (
+    <>
+      <div className="mt-3 rounded-xl border border-[#e8ece5] bg-[#f1f4ef] p-2">
+        <Image
+          src={src}
+          width={intrinsicWidth}
+          height={intrinsicHeight}
+          unoptimized
+          sizes="420px"
+          alt={alt}
+          // Ukuran asli berkas ditampilkan supaya admin tahu rasio yang dipakai.
+          // Pembaruan dibuat idempoten: `onLoad` bisa terpanggil lagi saat
+          // komponen dirender ulang, dan menyetel objek baru setiap kali akan
+          // memicu render tanpa henti.
+          onLoad={(event) => {
+            const gambar = event.currentTarget;
+            if (gambar.naturalWidth <= 0) return;
+            const width = gambar.naturalWidth;
+            const height = gambar.naturalHeight;
+            setUkuran((sebelum) => (sebelum && sebelum.width === width && sebelum.height === height ? sebelum : { width, height }));
+          }}
+          className={`block h-auto w-full rounded-lg ${frameClass}`}
+        />
+      </div>
+      <p className="mt-2 text-[10px] font-medium text-[#959c93]">
+        Pratinjau utuh tanpa dipotong, sama seperti yang dilihat pengunjung{ukuran ? ` · ${ukuran.width} × ${ukuran.height} px` : ""} · {note}
+      </p>
+    </>
+  );
+}
 const formatDate = (value: string | null) => (value
   ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value))
   : "—");
@@ -253,10 +296,14 @@ export function AppearanceManager() {
                         <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS[key]}</p>
                         <Badge tone={info?.custom ? "sage" : "cream"}>{info?.custom ? "Unggahan" : "Bawaan"}</Badge>
                       </div>
-                      <div className="relative mt-3 h-28 overflow-hidden rounded-xl border border-[#e8ece5] bg-white">
-                        <Image src={`${info?.url ?? ""}?v=${info?.updatedAt ?? "bawaan"}`} alt="" fill unoptimized sizes="320px" className="object-cover object-center" />
-                      </div>
-                      <p className="mt-2 text-[10px] font-medium text-[#959c93]">Bawaan: {formatBytes(key === "popup-mobile" ? 90_655 : 125_652)} · diperbarui {formatDate(info?.updatedAt ?? null)}</p>
+                      <PosterPreview
+                        src={`${info?.url ?? ""}?v=${info?.updatedAt ?? "bawaan"}`}
+                        intrinsicWidth={key === "popup-mobile" ? 860 : 1640}
+                        intrinsicHeight={key === "popup-mobile" ? 1216 : 1040}
+                        frameClass={key === "popup-mobile" ? "mx-auto max-w-[190px]" : ""}
+                        alt={`Pratinjau ${MEDIA_LABELS[key].toLowerCase()}`}
+                        note={`bawaan ${formatBytes(key === "popup-mobile" ? 90_655 : 125_652)} · diperbarui ${formatDate(info?.updatedAt ?? null)}`}
+                      />
                       <div className="mt-2 flex flex-wrap gap-2">
                         <input ref={(node) => { fileInputs.current[key] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
                           onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(key, file); }} />
@@ -278,10 +325,12 @@ export function AppearanceManager() {
                     <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS["popup-latar"]}</p>
                     <Badge tone={media?.latar.custom ? "sage" : "cream"}>{media?.latar.custom ? "Unggahan" : "Bawaan"}</Badge>
                   </div>
-                  <div className="relative mt-3 h-28 overflow-hidden rounded-xl border border-[#e8ece5] bg-white">
-                    <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} alt="" fill unoptimized sizes="320px" className="object-cover object-center" />
+                  <div className="mt-3 rounded-xl border border-[#e8ece5] bg-[#f1f4ef] p-2">
+                    <div className="relative mx-auto w-full max-w-[190px] overflow-hidden rounded-lg" style={{ aspectRatio: POPUP_LATAR_RATIO }}>
+                      <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} alt="Pratinjau latar popup mode teks" fill unoptimized sizes="190px" className="object-cover object-center" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Pilih gambar yang gelap atau berkontras rendah di area teks, karena teks popup berwarna putih.</p>
+                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) karena dipakai sebagai latar — persis seperti tampilan pengunjung. Pilih gambar yang gelap atau berkontras rendah di area teks, karena teks popup berwarna putih.</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <input ref={(node) => { fileInputs.current["popup-latar"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
                       onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("popup-latar", file); }} />
