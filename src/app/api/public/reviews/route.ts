@@ -2,6 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { recipes } from "@/data/recipes";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
       : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(250);
     return Response.json({ reviews: rows.map((review) => ({ ...review, date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(review.createdAt) })) }, { headers: { "Cache-Control": "no-store" } });
   } catch {
+    // Katalog publik tetap tampil walau basis data belum tersambung.
     return Response.json({ reviews: [] });
   }
 }
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
     const [created] = await db.insert(cmsReviews).values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: item.fishingType, catchCount, comment, status: "pending" }).returning({ id: cmsReviews.id });
     return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
-  } catch {
-    return Response.json({ error: "Ulasan terkirim secara lokal, tetapi server sedang tidak tersedia." }, { status: 503 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Ulasan terkirim secara lokal, tetapi server sedang tidak tersedia.");
   }
 }

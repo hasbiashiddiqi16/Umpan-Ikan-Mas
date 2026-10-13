@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const [updated] = await db.update(cmsReviews).set({ status }).where(and(eq(cmsReviews.id, id), isNull(cmsReviews.seedKey))).returning();
     if (!updated) return Response.json({ error: "Ulasan tidak ditemukan atau merupakan data katalog yang tidak perlu dimoderasi." }, { status: 404 });
     return Response.json({ review: updated });
-  } catch {
-    return Response.json({ error: "Moderasi ulasan gagal disimpan." }, { status: 500 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Moderasi ulasan gagal disimpan.");
   }
 }

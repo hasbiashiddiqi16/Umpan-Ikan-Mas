@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { validateCmsRecipeInput } from "@/lib/cms";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     const [updated] = await db.update(cmsRecipes).set({ ...parsed.data, updatedAt: new Date() }).where(eq(cmsRecipes.id, id)).returning();
     if (!updated) return Response.json({ error: "Konten tidak ditemukan." }, { status: 404 });
     return Response.json({ recipe: updated });
-  } catch {
-    return Response.json({ error: "Konten gagal diperbarui. Slug harus unik." }, { status: 400 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    // Slug duplikat tetap 400; masalah koneksi/tabel dilaporkan sebagai 503 dengan petunjuk.
+    if (/unique|duplicate/i.test(message)) return Response.json({ error: "Slug sudah dipakai resep lain. Gunakan slug yang berbeda." }, { status: 400 });
+    return databaseErrorResponse(error, "Konten gagal diperbarui.");
   }
 }
 
@@ -38,7 +42,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const [deleted] = await db.delete(cmsRecipes).where(eq(cmsRecipes.id, id)).returning({ id: cmsRecipes.id });
     if (!deleted) return Response.json({ error: "Konten tidak ditemukan." }, { status: 404 });
     return Response.json({ ok: true });
-  } catch {
-    return Response.json({ error: "Konten gagal dihapus." }, { status: 500 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Konten gagal dihapus.");
   }
 }

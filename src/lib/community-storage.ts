@@ -6,6 +6,12 @@ export const COMMUNITY_REVIEWS_EVENT = "umpan:community-reviews-change";
 export type MemberReview = RecipeReview & {
   id: string;
   createdAt: string;
+  /**
+   * Hasil pengiriman ke server moderasi. `false` berarti gagal terkirim dan
+   * ulasan perlu dicoba lagi saat pengunjung membuka halaman resep berikutnya.
+   * `undefined` (data lama) tidak diikutkan percobaan ulang agar tidak ganda.
+   */
+  synced?: boolean;
 };
 
 function isMemberReview(value: unknown): value is MemberReview {
@@ -37,18 +43,42 @@ export function readCommunityReviews(): MemberReview[] {
 
 export type NewMemberReview = Omit<MemberReview, "id" | "createdAt">;
 
+function writeReviews(reviews: MemberReview[]): MemberReview[] {
+  try {
+    window.localStorage.setItem(COMMUNITY_REVIEWS_KEY, JSON.stringify(reviews));
+    window.dispatchEvent(new CustomEvent(COMMUNITY_REVIEWS_EVENT, { detail: reviews }));
+    return reviews;
+  } catch {
+    throw new Error("Penyimpanan browser penuh atau tidak tersedia.");
+  }
+}
+
+/**
+ * Mencatat apakah server sudah menerima ulasan, agar bisa dicoba ulang kalau
+ * belum. Bersifat best-effort: kalau penyimpanan browser diblokir, kegagalan
+ * mencatat penanda tidak boleh menghentikan alur pengguna.
+ */
+export function markCommunityReviewSync(id: string, synced: boolean): MemberReview[] {
+  if (typeof window === "undefined") return [];
+  const next = readCommunityReviews().map((review) => (review.id === id ? { ...review, synced } : review));
+  try {
+    return writeReviews(next);
+  } catch {
+    return next;
+  }
+}
+
+/** Ulasan yang gagal terkirim ke server dan masih menunggu percobaan ulang. */
+export function readUnsyncedReviews(): MemberReview[] {
+  return readCommunityReviews().filter((review) => review.synced === false);
+}
+
 export function saveCommunityReview(review: NewMemberReview): MemberReview {
   const createdAt = new Date().toISOString();
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `review-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
   const saved: MemberReview = { ...review, id, createdAt };
-  const next = [saved, ...readCommunityReviews()];
-  try {
-    window.localStorage.setItem(COMMUNITY_REVIEWS_KEY, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent(COMMUNITY_REVIEWS_EVENT, { detail: next }));
-    return saved;
-  } catch {
-    throw new Error("Penyimpanan browser penuh atau tidak tersedia.");
-  }
+  writeReviews([saved, ...readCommunityReviews()]);
+  return saved;
 }

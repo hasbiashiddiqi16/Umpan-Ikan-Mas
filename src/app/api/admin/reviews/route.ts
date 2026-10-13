@@ -2,6 +2,7 @@ import { count, desc, isNull, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { databaseErrorResponse } from "@/lib/database-status";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET() {
       db.select({ total: count() }).from(cmsReviews).where(isNotNull(cmsReviews.seedKey)),
     ]);
     return Response.json({ reviews, catalogReviewCount: Number(catalogSummary[0]?.total ?? 0) }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return Response.json({ error: "Ulasan belum dapat dimuat." }, { status: 503 });
+  } catch (error) {
+    return databaseErrorResponse(error, "Ulasan belum dapat dimuat.");
   }
 }

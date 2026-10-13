@@ -5,7 +5,7 @@ import { CheckCircle2, MessageSquareText, Send, Star } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
-import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Rating, SectionHeader } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
@@ -74,8 +74,8 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       setRating(0);
       setSaved(true);
       void fetch("/api/public/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newReview) })
-        .then((response) => setServerSaved(response.ok))
-        .catch(() => setServerSaved(false));
+        .then((response) => { markCommunityReviewSync(savedReview.id, response.ok); setServerSaved(response.ok); })
+        .catch(() => { markCommunityReviewSync(savedReview.id, false); setServerSaved(false); });
     } catch {
       setError("Ulasan belum tersimpan. Periksa ruang penyimpanan browser, lalu coba lagi.");
     }
@@ -101,13 +101,44 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-[11px] leading-5 text-[#929a90]">Tanpa akun. Tersimpan lokal di perangkat ini dan dapat memengaruhi rekomendasi di browser yang sama.</p><button type="submit" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29]"><Send size={15} /> Kirim ulasan</button></div>
       {error && <p role="alert" className="mt-3 rounded-lg bg-[#fbefeb] px-3 py-2 text-xs font-semibold text-[#9b513f]">{error}</p>}
-      {saved && <p role="status" className="mt-3 flex max-w-full items-start gap-2 rounded-lg bg-[#eef5eb] px-3 py-2 text-xs font-semibold leading-5 text-[#426641]"><CheckCircle2 size={15} className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">{serverSaved === true ? "Ulasan tersimpan dan menunggu persetujuan editor. Terima kasih sudah berbagi!" : serverSaved === false ? "Ulasan tersimpan di perangkat ini. Pengiriman untuk moderasi akan dicoba lagi saat tersedia." : "Ulasan tersimpan di perangkat ini; sedang mengirim untuk moderasi…"}</span></p>}
+      {saved && <p role="status" className="mt-3 flex max-w-full items-start gap-2 rounded-lg bg-[#eef5eb] px-3 py-2 text-xs font-semibold leading-5 text-[#426641]"><CheckCircle2 size={15} className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">{serverSaved === true ? "Ulasan tersimpan dan menunggu persetujuan editor. Terima kasih sudah berbagi!" : serverSaved === false ? "Ulasan tersimpan di perangkat ini. Kami akan mencoba mengirimnya lagi saat Anda membuka halaman resep berikutnya." : "Ulasan tersimpan di perangkat ini; sedang mengirim untuk moderasi…"}</span></p>}
     </form>
   );
 }
 
+/**
+ * Mengirim ulang ulasan yang dulu gagal tersimpan di server. Dijalankan saat
+ * halaman resep dibuka, jadi ulasan tidak hilang hanya karena server mati.
+ */
+function useReviewOutboxRetry() {
+  useEffect(() => {
+    const pending = readUnsyncedReviews();
+    if (!pending.length) return;
+    const controller = new AbortController();
+    void Promise.all(pending.map(async (review) => {
+      try {
+        const response = await fetch("/api/public/reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            recipeSlug: review.recipeSlug, name: review.name, location: review.location, rating: review.rating,
+            weather: review.weather, water: review.water, fishingType: review.fishingType,
+            catchCount: review.catchCount, comment: review.comment,
+          }),
+        });
+        if (response.ok) markCommunityReviewSync(review.id, true);
+      } catch {
+        // Server masih belum tersedia: biarkan menunggu kesempatan berikutnya.
+      }
+    }));
+    return () => { controller.abort(); };
+  }, []);
+}
+
 export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
   const [memberReviews, setMemberReviews] = useState<MemberReview[]>([]);
+  useReviewOutboxRetry();
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
   useEffect(() => {
     const sync = () => setMemberReviews(readCommunityReviews().filter((review) => review.recipeSlug === recipe.slug));

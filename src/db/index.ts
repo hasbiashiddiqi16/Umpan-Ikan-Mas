@@ -6,12 +6,29 @@ import * as schema from "./schema";
 
 type Database = PgAsyncDatabase<PgQueryResultHKT, typeof schema>;
 
+/**
+ * Nama variabel lingkungan yang menyediakan connection string, atau `null`
+ * kalau belum ada. Paket Netlify hanya membaca `NETLIFY_DB_URL`, yang disuntikkan
+ * otomatis saat aplikasi berjalan di Netlify. Di host lain (mis. Vercel) cukup
+ * setel `DATABASE_URL` dengan connection string basis data yang sama.
+ */
+export function databaseEnvName(): "DATABASE_URL" | "NETLIFY_DB_URL" | null {
+  if (process.env.DATABASE_URL) return "DATABASE_URL";
+  if (process.env.NETLIFY_DB_URL) return "NETLIFY_DB_URL";
+  return null;
+}
+
+export function isDatabaseConfigured(): boolean {
+  return databaseEnvName() !== null;
+}
+
 function createDatabase(): Database {
-  return drizzle({ client: getDatabase(), schema });
+  const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL;
+  // Tanpa override, paket Netlify memakai NETLIFY_DB_URL dari lingkungan.
+  return drizzle({ client: getDatabase(connectionString ? { connectionString } : {}), schema });
 }
 
 let database: Database | undefined;
-
 export const db = new Proxy({} as Database, {
   get(_target, property) {
     database ??= createDatabase();
