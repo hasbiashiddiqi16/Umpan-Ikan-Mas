@@ -12,6 +12,12 @@ export type MemberReview = RecipeReview & {
    * `undefined` (data lama) tidak diikutkan percobaan ulang agar tidak ganda.
    */
   synced?: boolean;
+  /**
+   * ID baris ulasan di server. Dipakai untuk memeriksa hasil moderasi: begitu
+   * admin menyetujui atau menolak, salinan lokal ini disesuaikan. Kosong untuk
+   * ulasan yang dibuat sebelum kolom ini ada atau yang belum pernah terkirim.
+   */
+  serverId?: number;
 };
 
 function isMemberReview(value: unknown): value is MemberReview {
@@ -25,6 +31,8 @@ function isMemberReview(value: unknown): value is MemberReview {
     typeof item.weather === "string" &&
     typeof item.water === "string" &&
     (item.catchCount === undefined || (typeof item.catchCount === "number" && item.catchCount >= 0)) &&
+    (item.serverId === undefined || (typeof item.serverId === "number" && Number.isSafeInteger(item.serverId) && item.serverId > 0)) &&
+    (item.synced === undefined || typeof item.synced === "boolean") &&
     typeof item.date === "string" &&
     typeof item.comment === "string" &&
     typeof item.createdAt === "string";
@@ -58,9 +66,11 @@ function writeReviews(reviews: MemberReview[]): MemberReview[] {
  * belum. Bersifat best-effort: kalau penyimpanan browser diblokir, kegagalan
  * mencatat penanda tidak boleh menghentikan alur pengguna.
  */
-export function markCommunityReviewSync(id: string, synced: boolean): MemberReview[] {
+export function markCommunityReviewSync(id: string, synced: boolean, serverId?: number): MemberReview[] {
   if (typeof window === "undefined") return [];
-  const next = readCommunityReviews().map((review) => (review.id === id ? { ...review, synced } : review));
+  const next = readCommunityReviews().map((review) => (review.id === id
+    ? { ...review, synced, ...(serverId ? { serverId } : {}) }
+    : review));
   try {
     return writeReviews(next);
   } catch {
@@ -71,6 +81,23 @@ export function markCommunityReviewSync(id: string, synced: boolean): MemberRevi
 /** Ulasan yang gagal terkirim ke server dan masih menunggu percobaan ulang. */
 export function readUnsyncedReviews(): MemberReview[] {
   return readCommunityReviews().filter((review) => review.synced === false);
+}
+
+/**
+ * Menghapus salinan lokal berdasarkan ID lokal. Dipakai setelah memeriksa hasil
+ * moderasi: ulasan yang ditolak admin — atau yang sudah disetujui dan kini
+ * tampil dari server — tidak boleh lagi disimpan di peramban.
+ */
+export function removeCommunityReviews(ids: string[]): MemberReview[] {
+  if (typeof window === "undefined") return [];
+  if (!ids.length) return readCommunityReviews();
+  const hapus = new Set(ids);
+  const next = readCommunityReviews().filter((review) => !hapus.has(review.id));
+  try {
+    return writeReviews(next);
+  } catch {
+    return next;
+  }
 }
 
 export function saveCommunityReview(review: NewMemberReview): MemberReview {
