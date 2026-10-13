@@ -26,8 +26,12 @@ import { useHydrated } from "@/lib/use-location";
  * Kartu dibatasi lebar dan tinggi layar, jadi rasio tetap + ukuran huruf
  * proporsional menjamin seluruh isi selalu terlihat utuh.
  */
-const RATIO = { mobile: "43 / 64", desktop: "41 / 26" } as const;
-const MAX_WIDTH = { mobile: 430, desktop: 820 } as const;
+/**
+ * Bingkai popup mode teks. Dipakai juga oleh pratinjau di dashboard supaya
+ * yang dilihat admin sama dengan yang dilihat pengunjung.
+ */
+export const POPUP_LATAR_RATIO = "43 / 64";
+const MAX_WIDTH = { mobile: 430 } as const;
 /** Sisa ruang di tepi layar (padanan `p-3` ponsel dan `p-6` layar lebar). */
 const VIEWPORT_MARGIN_PX = 48;
 
@@ -234,7 +238,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
         {!posterMode && (
           <div
             className="relative w-full"
-            style={{ aspectRatio: RATIO.mobile, maxWidth: MAX_WIDTH.mobile, maxHeight, margin: "0 auto", containerType: "inline-size" }}
+            style={{ aspectRatio: POPUP_LATAR_RATIO, maxWidth: MAX_WIDTH.mobile, maxHeight, margin: "0 auto", containerType: "inline-size" }}
           >
             <Image src={settings.media.latar.url} alt="" fill unoptimized loading="eager" sizes="430px" className="object-cover object-center" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,28,19,.72)_0%,rgba(11,28,19,.62)_42%,rgba(11,28,19,.88)_100%)]" />
