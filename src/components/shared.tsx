@@ -94,7 +94,7 @@ export function Footer() {
     <footer className="mt-20 bg-[#172d22] text-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr] md:py-16">
         <div>
-          <Link href="/" className="inline-flex items-center gap-2 text-lg font-extrabold tracking-tight"><Image src={LOGO_SRC} alt={LOGO_ALT} width={36} height={36} className="h-9 w-9 shrink-0" /> UMPAN MAS</Link>
+          <Link href="/" className="inline-flex items-center gap-2 text-lg font-extrabold tracking-tight"><Image src={LOGO_SRC} unoptimized alt={LOGO_ALT} width={36} height={36} className="h-9 w-9 shrink-0" /> UMPAN MAS</Link>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/65">Teman racik dan teman mancing. Temukan umpan ikan mas yang relevan dengan kondisi di kolammu.</p>
         </div>
         <div>

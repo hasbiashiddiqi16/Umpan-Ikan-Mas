@@ -67,3 +67,29 @@ export const analyticsEvents = pgTable("analytics_events", {
   index("analytics_events_created_idx").on(table.createdAt),
   index("analytics_events_path_created_idx").on(table.path, table.createdAt),
 ]);
+
+/**
+ * Berkas gambar yang diunggah dari dashboard (logo situs, poster popup).
+ * Disimpan di database sebagai base64 karena proyek ini tidak memakai object
+ * storage; dilayani kembali lewat `/api/media/[key]`. `key` sengaja pendek dan
+ * tetap (mis. `logo`, `popup-mobile`) supaya alamatnya tidak berubah saat
+ * gambar diganti.
+ */
+export const cmsMedia = pgTable("cms_media", {
+  key: varchar("key", { length: 60 }).primaryKey(),
+  mimeType: varchar("mime_type", { length: 60 }).notNull(),
+  data: text("data").notNull(),
+  byteSize: integer("byte_size").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Pengaturan tampilan situs dalam bentuk JSON per kunci. Kunci yang dipakai
+ * saat ini: `appearance` (logo & popup sambutan). Baris dibuat saat pertama
+ * kali disimpan dari dashboard; bila belum ada, aplikasi memakai nilai bawaan.
+ */
+export const cmsSettings = pgTable("cms_settings", {
+  key: varchar("key", { length: 60 }).primaryKey(),
+  value: jsonb("value").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
