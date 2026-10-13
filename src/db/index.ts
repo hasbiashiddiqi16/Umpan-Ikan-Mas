@@ -1,4 +1,5 @@
 import { getDatabase } from "@netlify/database";
+import { normalizeDatabaseUrl } from "@/lib/database-url";
 import { drizzle } from "drizzle-orm/netlify-db";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { PgAsyncDatabase } from "drizzle-orm/pg-core/async";
@@ -23,7 +24,9 @@ export function isDatabaseConfigured(): boolean {
 }
 
 function createDatabase(): Database {
-  const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL;
+  // `normalizeDatabaseUrl` menambahkan sslmode=require untuk host non-lokal
+  // (Supabase pooler, Neon, Netlify Database) yang mewajibkan TLS.
+  const { value: connectionString } = normalizeDatabaseUrl(process.env.DATABASE_URL || process.env.NETLIFY_DB_URL);
   // Tanpa override, paket Netlify memakai NETLIFY_DB_URL dari lingkungan.
   return drizzle({ client: getDatabase(connectionString ? { connectionString } : {}), schema });
 }

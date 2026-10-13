@@ -17,6 +17,16 @@ DATABASE_URL="postgres://…" npm run db:migrate
 
 Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan basis data yang sudah dimigrasi Netlify tetap dikenali. Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`.
 
+### Memakai PostgreSQL Supabase sebagai basis data
+
+Supabase kini hanya menerbitkan alamat **IPv6** untuk koneksi langsung (`db.<project-ref>.supabase.co`). Vercel dan host ber-IPv4 lain tidak bisa menjangkaunya — gejalanya `getaddrinfo ENOTFOUND db.<ref>.supabase.co` di `/api/health`. Pakai **Session pooler** yang IPv4:
+
+```
+postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<wilayah>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+String itu disalin dari Supabase → tombol **Connect** → *Session pooler* (password basis data, bukan kunci API). Tempel sebagai `DATABASE_URL` di host Anda, deploy ulang, lalu jalankan `npm run db:migrate` sekali supaya tabel `cms_*` dibuat. Aplikasi otomatis menambahkan `sslmode=require` bila Anda lupa menuliskannya (host non-lokal), dan `/api/health` melaporkan mode TLS yang dipakai lewat kolom `ssl`.
+
 Buka `/api/health` untuk memeriksa kesiapan: endpoint itu melaporkan nama variabel lingkungan yang dipakai, jumlah baris tiap tabel, dan langkah perbaikan bila koneksi atau tabel belum siap — tanpa membocorkan rahasia.
 
 ## Supabase

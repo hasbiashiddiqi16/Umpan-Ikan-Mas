@@ -33,12 +33,37 @@ function readEnvFile(name) {
 }
 
 const fromFile = { ...readEnvFile(".env"), ...readEnvFile(".env.local") };
-const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL || fromFile.DATABASE_URL || fromFile.NETLIFY_DB_URL;
+const rawConnectionString = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL || fromFile.DATABASE_URL || fromFile.NETLIFY_DB_URL;
+
+/**
+ * Logika yang sama dengan src/lib/database-url.ts: basis data terkelola
+ * (Supabase pooler, Neon, Netlify Database) mewajibkan TLS, sedangkan driver pg
+ * tidak menyalakannya tanpa parameter `sslmode`.
+ */
+function normalizeConnectionString(value) {
+  if (!value) return { value, added: false };
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return { value, added: false };
+  }
+  if (url.searchParams.get("sslmode") || url.searchParams.get("ssl")) return { value, added: false };
+  if (["localhost", "127.0.0.1", "::1", "[::1]", "0.0.0.0"].includes(url.hostname.toLowerCase())) return { value, added: false };
+  url.searchParams.set("sslmode", "require");
+  return { value: url.toString(), added: true };
+}
+
+const normalized = normalizeConnectionString(rawConnectionString);
+const connectionString = normalized.value;
 
 if (!connectionString) {
   console.error("Connection string belum ada. Setel DATABASE_URL (atau NETLIFY_DB_URL) lalu jalankan lagi.");
   console.error("Contoh: DATABASE_URL=\"postgres://user:pass@host/db?sslmode=require\" npm run db:migrate");
   process.exit(1);
+}
+if (normalized.added) {
+  console.log("Menambahkan sslmode=require ke connection string (host non-lokal).");
 }
 if (!existsSync(MIGRATIONS_DIR)) {
   console.error(`Folder migrasi tidak ditemukan: ${MIGRATIONS_DIR}`);
