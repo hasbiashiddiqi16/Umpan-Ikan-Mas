@@ -19,6 +19,37 @@ Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan b
 
 Buka `/api/health` untuk memeriksa kesiapan: endpoint itu melaporkan nama variabel lingkungan yang dipakai, jumlah baris tiap tabel, dan langkah perbaikan bila koneksi atau tabel belum siap — tanpa membocorkan rahasia.
 
+## Supabase
+
+Paket `@supabase/supabase-js` dan `@supabase/ssr` sudah terpasang, tetapi aplikasi ini **tetap berjalan tanpa Supabase**: bila kedua variabel di bawah kosong, halaman publik, dashboard, dan seluruh route API bekerja seperti biasa.
+
+Setel dua variabel ini di `.env.local` (pengembangan) dan di dashboard hosting (produksi):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL="https://<project-ref>.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_…"
+```
+
+Kunci itu memang dirancang untuk dipakai di peramban — jangan pernah memakai kunci rahasia (service role / secret key) pada variabel `NEXT_PUBLIC_*`.
+
+Berkas pendukung mengikuti struktur resmi Supabase di dalam `src/`:
+
+- `src/utils/supabase/env.ts` — membaca dan memvalidasi variabel lingkungan. Kunci `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` dipakai lebih dulu, dengan cadangan `NEXT_PUBLIC_SUPABASE_ANON_KEY` untuk proyek lama.
+- `src/utils/supabase/client.ts` — klien untuk komponen peramban (`createClient()`).
+- `src/utils/supabase/server.ts` — klien untuk Server Component, Server Action, dan route handler (`await createClient()`).
+- `src/utils/supabase/middleware.ts` — `updateSession(request)`: memperbarui cookie sesi Supabase pada setiap permintaan.
+- `src/proxy.ts` — memanggil `updateSession` untuk semua halaman (kecuali berkas statis). Next.js 16 mengganti nama konvensi `middleware.ts` menjadi `proxy.ts`, tugas dan urutan kerjanya sama.
+
+Di sisi basis data, aplikasi ini memakai PostgreSQL miliknya sendiri melalui Drizzle (lihat bagian sebelumnya), bukan Postgres Supabase — jadi tidak ada tabel `todos` contoh dan tidak ada migrasi Supabase di sini. Bila nanti tabel Supabase mulai dipakai lewat PostgREST, jalankan RLS di setiap tabel dan buat kebijakan sesuai kebutuhan.
+
+Untuk memastikan konfigurasi benar, jalankan:
+
+```bash
+npm run supabase:check   # atau: node scripts/supabase-check.mjs
+```
+
+Perintah itu memeriksa variabel lingkungan, format kunci, ketersediaan endpoint REST, dan (bila `DATABASE_URL` disetel) koneksi PostgreSQL — nilainya tidak pernah ditampilkan, hanya statusnya.
+
 ## Admin Content Studio
 
 Buka `/login` untuk masuk ke dashboard. Halaman dashboard dan endpoint `/api/admin/*` dilindungi oleh sesi admin HttpOnly yang kedaluwarsa setelah 8 jam.
@@ -92,5 +123,6 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 
 ```bash
 npm install
-npx netlify dev --port 8889
+npm run dev            # http://localhost:3000
+npm run supabase:check # opsional: periksa konfigurasi Supabase & PostgreSQL
 ```
