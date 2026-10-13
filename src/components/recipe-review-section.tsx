@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, MessageSquareText, Send, Star } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
-import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Rating, SectionHeader } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
@@ -74,7 +74,11 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       setRating(0);
       setSaved(true);
       void fetch("/api/public/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newReview) })
-        .then((response) => { markCommunityReviewSync(savedReview.id, response.ok); setServerSaved(response.ok); })
+        .then(async (response) => {
+          const data = response.ok ? await response.json() as { id?: number } : {};
+          markCommunityReviewSync(savedReview.id, response.ok, data.id);
+          setServerSaved(response.ok);
+        })
         .catch(() => { markCommunityReviewSync(savedReview.id, false); setServerSaved(false); });
     } catch {
       setError("Ulasan belum tersimpan. Periksa ruang penyimpanan browser, lalu coba lagi.");
@@ -127,7 +131,10 @@ function useReviewOutboxRetry() {
             catchCount: review.catchCount, comment: review.comment,
           }),
         });
-        if (response.ok) markCommunityReviewSync(review.id, true);
+        if (response.ok) {
+          const data = await response.json() as { id?: number };
+          markCommunityReviewSync(review.id, true, data.id);
+        }
       } catch {
         // Server masih belum tersedia: biarkan menunggu kesempatan berikutnya.
       }
@@ -136,26 +143,92 @@ function useReviewOutboxRetry() {
   }, []);
 }
 
-export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
+/**
+ * Menyelaraskan salinan lokal dengan hasil moderasi di server.
+ *
+ * Ulasan tersimpan dua kali: di peramban pengirim (agar langsung tampil) dan di
+ * server (untuk moderasi). Tanpa penyelarasan ini, ulasan yang ditolak admin
+ * akan terus tampil di peramban pengirimnya. Hasil yang ditangani:
+ *
+ * - `approved`  → salinan lokal dihapus; versi server yang tampil (tanpa ganda)
+ * - `rejected`  → salinan lokal dihapus, sesuai keputusan admin
+ * - `missing`   → dihapus hanya bila ID servernya dikenal (barisnya sudah tidak ada)
+ * - `pending`   → dibiarkan, supaya pengirim tetap melihat kirimannya
+ *
+ * Kalau server tidak dapat dihubungi, semuanya dibiarkan apa adanya.
+ */
+async function fetchModerationStatus(reviews: MemberReview[], signal?: AbortSignal): Promise<string[] | null> {
+  if (!reviews.length) return null;
+  try {
+    const response = await fetch("/api/public/reviews/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({ items: reviews.map((review) => ({ id: review.serverId, name: review.name, comment: review.comment })) }),
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as { results?: { status?: string }[] };
+    if (!Array.isArray(body.results) || body.results.length !== reviews.length) return null;
+    return body.results.map((result) => result?.status ?? "missing");
+  } catch {
+    return null;
+  }
+}
+
+/** Memuat ulasan komunitas sebuah resep: salinan lokal + hasil moderasi server. */
+function useCommunityReviews(slug: string) {
   const [memberReviews, setMemberReviews] = useState<MemberReview[]>([]);
-  useReviewOutboxRetry();
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
+
+  /** Membaca ulang salinan lokal; dipakai setelah kiriman baru tersimpan. */
+  const refresh = useCallback(() => {
+    setMemberReviews(readCommunityReviews().filter((review) => review.recipeSlug === slug));
+  }, [slug]);
+
   useEffect(() => {
-    const sync = () => setMemberReviews(readCommunityReviews().filter((review) => review.recipeSlug === recipe.slug));
-    sync();
+    let active = true;
     const controller = new AbortController();
-    void fetch(`/api/public/reviews?slug=${encodeURIComponent(recipe.slug)}`, { signal: controller.signal, cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() as Promise<{ reviews?: RecipeReview[] }> : { reviews: [] })
-      .then((body) => setApprovedReviews(body.reviews ?? []))
-      .catch(() => undefined);
+    const sync = () => {
+      if (active) setMemberReviews(readCommunityReviews().filter((review) => review.recipeSlug === slug));
+    };
+    sync();
+
+    void (async () => {
+      const lokal = readCommunityReviews().filter((review) => review.recipeSlug === slug);
+      const [statuses, approved] = await Promise.all([
+        fetchModerationStatus(lokal, controller.signal),
+        fetch(`/api/public/reviews?slug=${encodeURIComponent(slug)}`, { signal: controller.signal, cache: "no-store" })
+          .then(async (response) => response.ok ? await response.json() as { reviews?: RecipeReview[] } : { reviews: [] })
+          .then((body) => body.reviews ?? [])
+          .catch(() => [] as RecipeReview[]),
+      ]);
+      if (!active) return;
+      setApprovedReviews(approved);
+      if (!statuses) return;
+      const hapus = lokal.filter((review, index) => {
+        const status = statuses[index];
+        if (status === "approved" || status === "rejected") return true;
+        return status === "missing" && review.serverId !== undefined;
+      });
+      if (hapus.length) removeCommunityReviews(hapus.map((review) => review.id));
+    })();
+
     window.addEventListener(COMMUNITY_REVIEWS_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
+      active = false;
       controller.abort();
       window.removeEventListener(COMMUNITY_REVIEWS_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, [recipe.slug]);
+  }, [slug]);
+
+  return { memberReviews, approvedReviews, refresh };
+}
+
+export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
+  useReviewOutboxRetry();
+  const { memberReviews, approvedReviews, refresh } = useCommunityReviews(recipe.slug);
   const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
   const count = recipe.reviewCount + memberReviews.length + remote.length;
   const average = count ? (recipe.rating * recipe.reviewCount + memberReviews.reduce((sum, review) => sum + review.rating, 0) + remote.reduce((sum, review) => sum + review.rating, 0)) / count : recipe.rating;
@@ -163,24 +236,7 @@ export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
 }
 
 export function RecipeReviewSection({ recipe, seedReviews }: { recipe: Recipe; seedReviews: RecipeReview[] }) {
-  const [memberReviews, setMemberReviews] = useState<MemberReview[]>([]);
-  const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
-  useEffect(() => {
-    const sync = () => setMemberReviews(readCommunityReviews().filter((review) => review.recipeSlug === recipe.slug));
-    sync();
-    const controller = new AbortController();
-    void fetch(`/api/public/reviews?slug=${encodeURIComponent(recipe.slug)}`, { signal: controller.signal, cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() as Promise<{ reviews?: RecipeReview[] }> : { reviews: [] })
-      .then((body) => setApprovedReviews(body.reviews ?? []))
-      .catch(() => undefined);
-    window.addEventListener(COMMUNITY_REVIEWS_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      controller.abort();
-      window.removeEventListener(COMMUNITY_REVIEWS_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, [recipe.slug]);
+  const { memberReviews, approvedReviews, refresh } = useCommunityReviews(recipe.slug);
 
   const visibleReviews = useMemo(() => {
     const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
@@ -196,7 +252,7 @@ export function RecipeReviewSection({ recipe, seedReviews }: { recipe: Recipe; s
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Rating dan pengalaman menjadi masukan untuk rekomendasi. Hasil setiap kolam bisa berbeda." /><div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3"><div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{aggregate.score.toFixed(1)}</span><div><Rating value={aggregate.score} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} rating</p></div></div></div></div>
-      <RecipeReviewForm recipe={recipe} onSubmitted={(review) => setMemberReviews((current) => [review, ...current.filter((item) => item.id !== review.id)])} />
+      <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman terbaru</h3><span className="text-xs text-[#8a9389]">{visibleReviews.length} cerita ditampilkan</span></div>
       {visibleReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visibleReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#7b857a]">Belum ada ulasan rinci untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
     </section>
