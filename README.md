@@ -29,14 +29,26 @@ Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman 
 
 ## Popup sambutan pengunjung baru
 
-Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) berisi gambar promosi, ucapan selamat datang, ringkasan isi website, dan tautan ke Katalog serta AI Umpan.
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, tombol ajakan, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
 
-- **Tampil sekali per perangkat.** Penanda disimpan di `localStorage` dengan kunci `umpan-mas-promo-welcome-seen-v1`. Hapus kunci itu untuk melihat ulang popup saat menguji.
-- **Angka pada popup dihitung dari data aplikasi** (jumlah resep, ulasan, dan provinsi), bukan nilai tetap, sehingga ikut berubah saat katalog bertambah.
-- **Muncul setelah halaman tenang**: ada jeda sebelum dibuka agar tidak menutup halaman untuk pengunjung yang langsung berinteraksi.
-- **Tidak muncul di `/dashboard` dan `/login`** karena keduanya bukan kunjungan publik.
-- **Bisa ditutup dengan** tombol tutup, tombol `Esc`, klik area gelap di luar kartu, atau salah satu tautan ajakan. Fokus keyboard kembali ke elemen sebelumnya.
-- **Tata letak responsif**: di layar lebar teks menumpuk di atas gambar dengan lapisan gelap; di layar kecil teks turun ke bawah gambar agar tetap mudah dibaca.
+**Berkas gambar** (`public/images/`, dirender oleh `scripts/build-promo-poster.mjs` dari `promo-welcome.jpg`)
+
+| Berkas | Ukuran | Dipakai untuk |
+| --- | --- | --- |
+| `promo-welcome-mobile.jpg` | 860x1280 (2x dari 430 px) | layar < 640 px, teks di bawah gambar |
+| `promo-welcome-desktop.jpg` | 1640x1040 (2x dari 820 px) | layar >= 640 px, teks di sisi kiri gambar |
+
+**Tombol tetap bisa diklik.** Karena tombolnya menyatu di gambar, di atas tiap tombol dipasang tautan bening dengan posisi persen (lihat `CTAS` di komponen) — koordinatnya dicetak oleh skrip pembuat poster. Tautan ini juga bisa dijangkau dengan `Tab` dan diberi label untuk pembaca layar.
+
+**Aksesibilitas.** Pembaca layar tetap mendapat isi poster sebagai teks (judul dan ringkasan tersembunyi yang dipakai `aria-labelledby`/`aria-describedby`). Popup juga bisa ditutup lewat tombol tutup, `Esc`, atau klik/ketuk di luar kartu; scroll halaman dikunci selama terbuka dan fokus keyboard kembali ke elemen sebelumnya.
+
+**Kapan muncul**
+
+- Tampil **sekali per perangkat**; penanda di `localStorage` dengan kunci `umpan-mas-promo-welcome-seen-v1`. Hapus kunci itu untuk menguji ulang.
+- Dibuka setelah halaman tenang, dan ditunda selama pengunjung masih aktif berinteraksi.
+- Tidak muncul di `/dashboard` dan `/login`.
+
+**Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
 ## Izin lokasi (opsional)
 

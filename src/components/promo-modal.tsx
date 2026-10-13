@@ -4,38 +4,55 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Bot, X } from "lucide-react";
-import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { X } from "lucide-react";
 import { markPromoSeen, shouldShowPromo } from "@/lib/promo-storage";
 import { useHydrated } from "@/lib/use-location";
 
-export type PromoFacts = {
-  recipeCount: number;
-  reviewCount: number;
-  provinceCount: number;
+/**
+ * Poster sambutan dibuat utuh sebagai gambar (teks ikut di dalam gambar) oleh
+ * `scripts/build-promo-poster.mjs`. Dua berkas terpisah dipakai agar ukurannya
+ * pas di ponsel maupun layar lebar, masing-masing 2x dari ukuran tampilnya
+ * supaya teks tetap tajam di layar rapat.
+ */
+const POSTER = {
+  mobile: { src: "/images/promo-welcome-mobile.jpg", width: 860, height: 1280 },
+  desktop: { src: "/images/promo-welcome-desktop.jpg", width: 1640, height: 1040 },
 };
 
-const PROMO_IMAGE = "/images/promo-welcome.jpg";
+/**
+ * Tombol di dalam gambar tidak bisa diklik, jadi di atas tiap tombol dipasang
+ * tautan bening. Angkanya persen terhadap poster, dihitung oleh skrip pembuat
+ * poster (lihat keluaran "Koordinat tombol").
+ */
+type Cta = { href: string; label: string; left: number; top: number; width: number; height: number };
+
+const CTAS: Record<keyof typeof POSTER, Cta[]> = {
+  mobile: [
+    { href: "/katalog", label: "Mulai jelajahi racikan — buka Katalog", left: 6.51, top: 87.81, width: 42.21, height: 6.88 },
+    { href: "/ai-umpan", label: "Tanya AI Umpan", left: 51.28, top: 87.81, width: 42.21, height: 6.88 },
+  ],
+  desktop: [
+    { href: "/katalog", label: "Mulai jelajahi racikan — buka Katalog", left: 5.37, top: 86.73, width: 23.61, height: 9.23 },
+    { href: "/ai-umpan", label: "Tanya AI Umpan", left: 30.44, top: 86.73, width: 16.91, height: 9.23 },
+  ],
+};
+
+const DESCRIPTION =
+  "Katalog umpan ikan mas lengkap dengan cuaca, kondisi air, dan pengalaman komunitas: 200 racikan, 5.000 ulasan, dan 38 provinsi. " +
+  "Tersedia AI Umpan dan Sistem Pakar, kolom provinsi bisa terisi otomatis bila lokasi diizinkan, dan semua resep memakai kroto 1 ons serta bahan amis Deho / Sunbell.";
+
 /** Dashboard admin dan halaman login bukan bagian kunjungan publik. */
 const EXCLUDED_PREFIXES = ["/dashboard", "/login"];
 const DELAY_BEFORE_OPEN_MS = 1400;
 const IDLE_BEFORE_OPEN_MS = 600;
 
-const numberFormat = new Intl.NumberFormat("id-ID");
-
-const features = [
-  { emoji: "🎯", text: "Cari racikan dari cuaca, kondisi air, jenis kolam, dan budget." },
-  { emoji: "🤖", text: "AI Umpan dan Sistem Pakar membantu meracik dari bahan yang kamu punya." },
-  { emoji: "📍", text: "Izin lokasi opsional supaya kolom provinsi terisi otomatis." },
-  { emoji: "🐟", text: "Semua resep memakai kroto 1 ons dan amis Deho / Sunbell." },
-];
-
-export function PromoModal({ facts }: { facts: PromoFacts }) {
+export function PromoModal() {
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const primaryRef = useRef<HTMLAnchorElement>(null);
+  const primaryMobileRef = useRef<HTMLAnchorElement>(null);
+  const primaryDesktopRef = useRef<HTMLAnchorElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
   const close = useCallback(() => {
@@ -83,7 +100,12 @@ export function PromoModal({ facts }: { facts: PromoFacts }) {
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    primaryRef.current?.focus();
+    // Fokuskan tombol ajakan pada poster yang benar-benar tampil di layar ini
+    // (ponsel dan layar lebar punya poster masing-masing).
+    const primary =
+      [primaryDesktopRef.current, primaryMobileRef.current].find((el) => el && el.offsetParent !== null) ??
+      primaryMobileRef.current;
+    primary?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -116,12 +138,6 @@ export function PromoModal({ facts }: { facts: PromoFacts }) {
 
   if (!open) return null;
 
-  const stats = [
-    { value: numberFormat.format(facts.recipeCount), label: "racikan umpan" },
-    { value: numberFormat.format(facts.reviewCount), label: "ulasan komunitas" },
-    { value: numberFormat.format(facts.provinceCount), label: "provinsi" },
-  ];
-
   return (
     <div
       className="fixed inset-0 z-[95] flex items-end justify-center overflow-y-auto bg-[#0f1f16]/65 backdrop-blur-sm sm:items-center sm:p-6"
@@ -136,89 +152,69 @@ export function PromoModal({ facts }: { facts: PromoFacts }) {
         aria-modal="true"
         aria-labelledby="promo-welcome-title"
         aria-describedby="promo-welcome-description"
-        className="relative mt-auto w-full max-w-3xl overflow-hidden rounded-t-[28px] bg-[#fbfcf9] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:mt-0 sm:rounded-[30px]"
+        className="relative mt-auto w-full max-w-[430px] overflow-hidden rounded-t-[28px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:mt-0 sm:max-w-[820px] sm:rounded-[30px]"
       >
         <button
           type="button"
           onClick={close}
           aria-label="Tutup sambutan"
-          className="absolute right-3.5 top-3.5 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          className="absolute right-3 top-3 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
         >
           <X size={18} />
         </button>
 
-        {/*
-          Desktop: gambar jadi latar dan teks sambutan menumpuk di atasnya.
-          Mobile: gambar jadi banner, teks sambutan turun ke bawah gambar supaya
-          tetap terbaca tanpa perlu lapisan gelap selebar layar.
-        */}
-        <div className="relative flex flex-col sm:block sm:h-[256px]">
-          <div className="relative h-[168px] w-full overflow-hidden bg-[#1c3a29] sm:absolute sm:inset-0 sm:h-full">
-            <Image
-              src={PROMO_IMAGE}
-              alt="Ikan mas melompat di tepi kolam saat matahari terbit"
-              fill
-              sizes="(max-width: 768px) 100vw, 768px"
-              loading="eager"
-              className="object-cover object-[72%_center]"
+        {/* Poster ponsel: portrait, teks di bawah gambar. */}
+        <div className="relative sm:hidden">
+          <Image
+            src={POSTER.mobile.src}
+            width={POSTER.mobile.width}
+            height={POSTER.mobile.height}
+            alt=""
+            unoptimized
+            loading="eager"
+            className="h-auto w-full"
+          />
+          {CTAS.mobile.map((cta, index) => (
+            <Link
+              key={cta.href}
+              ref={index === 0 ? primaryMobileRef : undefined}
+              href={cta.href}
+              onClick={close}
+              aria-label={cta.label}
+              className="absolute rounded-[18px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              style={{ left: `${cta.left}%`, top: `${cta.top}%`, width: `${cta.width}%`, height: `${cta.height}%` }}
             />
-            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(14,34,23,.95)_0%,rgba(16,38,26,.9)_54%,rgba(17,40,27,.72)_70%,rgba(18,44,30,.26)_100%)] sm:block" />
-          </div>
-
-          <div className="relative flex flex-col gap-2.5 px-5 pt-5 text-[#233a2a] sm:h-full sm:max-w-md sm:justify-center sm:p-7 sm:text-white">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#dfe5da] bg-[#f3f6f0] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#41604a] sm:border-white/20 sm:bg-white/10 sm:text-[#f0e2bd]">
-              <Image src={LOGO_SRC} alt={LOGO_ALT} width={18} height={18} className="h-[18px] w-[18px]" />
-              UMPAN MAS
-            </span>
-            <h2 id="promo-welcome-title" className="text-[25px] font-black leading-[1.12] tracking-[-.035em] sm:text-[34px]">
-              Selamat datang, pemancing! 🎣
-            </h2>
-            <p id="promo-welcome-description" className="text-xs leading-5 text-[#5f6b60] sm:text-sm sm:leading-6 sm:text-white/90">
-              Teman racik sebelum berangkat mancing: katalog umpan ikan mas lengkap dengan cuaca, kondisi air, dan pengalaman komunitas.
-            </p>
-          </div>
+          ))}
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto p-5 sm:max-h-none sm:p-7">
-          <div className="grid grid-cols-3 gap-2.5">
-            {stats.map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-[#e6ebe3] bg-[#f6f8f4] px-2.5 py-3 text-center">
-                <p className="text-lg font-black leading-none text-[#2c4634] sm:text-xl">{stat.value}</p>
-                <p className="mt-1.5 text-[10px] font-semibold leading-4 text-[#66716a]">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
-            {features.map((feature) => (
-              <li key={feature.text} className="flex items-start gap-2.5 rounded-2xl border border-[#eaece6] bg-white p-3.5 text-xs leading-5 text-[#4f5c51]">
-                <span aria-hidden="true" className="text-base leading-none">{feature.emoji}</span>
-                <span>{feature.text}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+        {/* Poster layar lebar: lanskap, teks di sisi kiri gambar. */}
+        <div className="relative hidden sm:block">
+          <Image
+            src={POSTER.desktop.src}
+            width={POSTER.desktop.width}
+            height={POSTER.desktop.height}
+            alt=""
+            unoptimized
+            loading="eager"
+            className="h-auto w-full"
+          />
+          {CTAS.desktop.map((cta, index) => (
             <Link
-              ref={primaryRef}
-              href="/katalog"
+              key={cta.href}
+              ref={index === 0 ? primaryDesktopRef : undefined}
+              href={cta.href}
               onClick={close}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-6 text-sm font-bold text-white transition hover:bg-[#1f3c29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#294b34]"
-            >
-              Mulai jelajahi racikan <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/ai-umpan"
-              onClick={close}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dfe5da] bg-white px-6 text-sm font-bold text-[#3f5a43] transition hover:bg-[#f3f7f0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#294b34]"
-            >
-              <Bot size={16} /> Tanya AI Umpan
-            </Link>
-          </div>
+              aria-label={cta.label}
+              className="absolute rounded-[20px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              style={{ left: `${cta.left}%`, top: `${cta.top}%`, width: `${cta.width}%`, height: `${cta.height}%` }}
+            />
+          ))}
+        </div>
 
-          <p className="mt-4 text-[11px] leading-5 text-[#66716a]">
-            Sambutan ini tampil sekali di perangkat ini dan bisa ditutup dengan tombol Esc atau area di luar kartu.
-          </p>
+        {/* Pembaca layar tetap mendapat isi poster sebagai teks. */}
+        <div className="sr-only">
+          <h2 id="promo-welcome-title">Selamat datang, pemancing!</h2>
+          <p id="promo-welcome-description">{DESCRIPTION}</p>
         </div>
       </div>
     </div>
