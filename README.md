@@ -31,6 +31,7 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 
 ## SEO dan performa
 
+- **Aset merek**: logo berada di `public/images/logo-umpan-mas.png` (512px, latar transparan) dan dirujuk lewat `src/lib/brand.ts` agar hanya ada satu sumber. Favicon memakai konvensi Next.js: `src/app/icon.png` (256px) dan `src/app/apple-icon.png` (180px, diratakan ke putih karena iOS tidak mendukung transparansi). Logo juga dikirim sebagai `logo`/`image` pada structured data `Organization` agar Google dapat menampilkan identitas merek.
 - Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi kustom di Netlify bila domain tersebut berbeda dari `URL` bawaan Netlify; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
 - `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian.
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.

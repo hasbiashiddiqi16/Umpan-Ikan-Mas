@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { ArrowLeft, LockKeyhole, ShieldCheck, Waves } from "lucide-react";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { createPageMetadata } from "@/lib/seo";
+import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Masuk Administrator",
@@ -25,7 +27,7 @@ export default async function AdminLoginPage() {
           <div className="pointer-events-none absolute -bottom-40 -left-20 h-96 w-96 rounded-full bg-[#d5b76b]/10 blur-3xl" />
 
           <Link href="/" className="relative flex w-fit items-center gap-3" aria-label="Kembali ke situs UMPAN MAS">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-white/15">🎣</span>
+            <Image src={LOGO_SRC} alt={LOGO_ALT} width={48} height={48} priority className="h-12 w-12 shrink-0" />
             <span>
               <strong className="block text-sm font-black tracking-[.12em]">UMPAN MAS</strong>
               <small className="mt-1 block text-[10px] font-bold uppercase tracking-[.2em] text-[#c6d7c7]">CONTENT STUDIO</small>
@@ -46,7 +48,7 @@ export default async function AdminLoginPage() {
 
         <section className="flex min-h-[calc(100vh-40px)] flex-col justify-center px-6 py-9 sm:px-12 lg:px-14 xl:px-[72px]">
           <Link href="/" className="mb-12 flex w-fit items-center gap-2 lg:hidden">
-            <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#244632] text-xl">🎣</span>
+            <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} priority className="h-10 w-10 shrink-0" />
             <span className="text-sm font-black tracking-[.1em] text-[#24392a]">UMPAN MAS</span>
           </Link>
 
