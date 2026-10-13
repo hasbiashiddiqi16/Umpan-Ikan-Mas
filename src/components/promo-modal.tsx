@@ -4,50 +4,82 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
-import { markPromoSeen, shouldShowPromo } from "@/lib/promo-storage";
+import {
+  defaultAppearance,
+  mergeAppearance,
+  type AppearanceState,
+  type PopupFeature,
+  type PopupIcon,
+} from "@/lib/appearance";
+import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { isPromoForced, markPromoSeen, shouldShowPromo } from "@/lib/promo-storage";
 import { useHydrated } from "@/lib/use-location";
 
 /**
- * Poster sambutan dibuat utuh sebagai gambar (teks ikut di dalam gambar) oleh
- * `scripts/build-promo-poster.mjs`. Dua berkas terpisah dipakai agar ukurannya
- * pas di ponsel maupun layar lebar, masing-masing 2x dari ukuran tampilnya
- * supaya teks tetap tajam di layar rapat.
+ * Dua mode tampilan popup, keduanya dirender pada kartu ber-rasio tetap:
+ *
+ * - `poster`: gambar poster siap pakai (bawaan atau unggahan dari dashboard).
+ * - `teks`: gambar latar + teks yang diisi dari dashboard. Ukuran huruf memakai
+ *   satuan `cqw` (persen lebar kartu) supaya tata letaknya sama persis di semua
+ *   ukuran layar — inilah yang membuat popup tetap muat tanpa perlu di-scroll.
+ *
+ * Kartu dibatasi lebar dan tinggi layar, jadi rasio tetap + ukuran huruf
+ * proporsional menjamin seluruh isi selalu terlihat utuh.
  */
-const POSTER = {
-  mobile: { src: "/images/promo-welcome-mobile.jpg", width: 860, height: 1216 },
-  desktop: { src: "/images/promo-welcome-desktop.jpg", width: 1640, height: 1040 },
-};
-
-/** Sisa ruang di tepi layar (padanan `p-3` di ponsel dan `p-6` di layar lebar). */
+const RATIO = { mobile: "43 / 64", desktop: "41 / 26" } as const;
+const MAX_WIDTH = { mobile: 430, desktop: 820 } as const;
+/** Sisa ruang di tepi layar (padanan `p-3` ponsel dan `p-6` layar lebar). */
 const VIEWPORT_MARGIN_PX = 48;
-
-const DESCRIPTION =
-  "Katalog umpan ikan mas lengkap dengan cuaca, kondisi air, dan pengalaman komunitas: 200 racikan, 5.000 ulasan, dan 38 provinsi. " +
-  "Tersedia AI Umpan dan Sistem Pakar, kolom provinsi bisa terisi otomatis bila lokasi diizinkan, dan semua resep memakai kroto 1 ons serta bahan amis Deho / Sunbell.";
 
 /** Dashboard admin dan halaman login bukan bagian kunjungan publik. */
 const EXCLUDED_PREFIXES = ["/dashboard", "/login"];
 const DELAY_BEFORE_OPEN_MS = 1400;
 const IDLE_BEFORE_OPEN_MS = 600;
 
-export function PromoModal() {
+export function PopupIcon({ icon, className }: { icon: PopupIcon; className?: string }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      {icon === "target" && (<><circle cx="12" cy="12" r="8.5" {...common} /><circle cx="12" cy="12" r="3" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="#0f2a1c" /></>)}
+      {icon === "spark" && (<path d="M12 2.5l1.6 6.2 6.2 1.6-6.2 1.6L12 18.1l-1.6-6.2L4.2 10.3l6.2-1.6z" fill="currentColor" />)}
+      {icon === "pin" && (<><path d="M12 3.5a5.5 5.5 0 0 1 3.4 9.8c-.6.5-1 .9-1.2 1.6l-.4 1.3h-3.6l-.4-1.3c-.2-.7-.6-1.1-1.2-1.6A5.5 5.5 0 0 1 12 3.5z" {...common} /><path d="M12 20.5v-2.3" {...common} /></>)}
+      {icon === "fish" && (<><ellipse cx="11" cy="12" rx="6" ry="3.6" fill="currentColor" /><path d="M17 12l4-2.6v5.2z" fill="currentColor" /><circle cx="8.6" cy="11.3" r=".8" fill="#0f2a1c" /></>)}
+    </svg>
+  );
+}
+
+type PromoModalProps = {
+  /** Dipakai dashboard untuk pratinjau: pengaturan langsung, tanpa membaca API. */
+  override?: AppearanceState;
+  /** Pratinjau: langsung terbuka, tidak menyimpan penanda, tidak menunda. */
+  preview?: boolean;
+  /** Dipanggil saat popup ditutup (dipakai pratinjau untuk menyembunyikan kartu). */
+  onClose?: () => void;
+};
+
+export function PromoModal({ override, preview = false, onClose }: PromoModalProps) {
   const pathname = usePathname();
   const hydrated = useHydrated();
-  const [open, setOpen] = useState(false);
-  // Popup ini murni informasi dan tidak boleh di-scroll, jadi poster dikunci
-  // agar selalu muat utuh di tinggi layar yang tersedia.
-  const [maxPosterHeight, setMaxPosterHeight] = useState<number>();
+  const [open, setOpen] = useState(preview);
+  // `?sambutan=1` memaksa popup tampil, termasuk saat popup dinonaktifkan dari
+  // dashboard: berguna untuk memeriksa karya sebelum diaktifkan kembali.
+  const [forced, setForced] = useState(false);
+  const [appearance, setAppearance] = useState<AppearanceState | null>(override ? mergeAppearance(override) : null);
+  const [settingsSettled, setSettingsSettled] = useState(Boolean(override) || preview);
+  const [maxHeight, setMaxHeight] = useState<number>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
-    markPromoSeen();
-  }, []);
+    if (!preview) markPromoSeen();
+    onClose?.();
+  }, [onClose, preview]);
 
+  // Tinggi kartu dibatasi sisa tinggi layar supaya tidak ada bagian yang perlu digulir.
   useEffect(() => {
-    const update = () => setMaxPosterHeight(Math.max(280, window.innerHeight - VIEWPORT_MARGIN_PX));
+    const update = () => setMaxHeight(Math.max(260, window.innerHeight - VIEWPORT_MARGIN_PX));
     update();
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);
@@ -57,9 +89,30 @@ export function PromoModal() {
     };
   }, []);
 
+  // Pengaturan tampilan diambil sekali saat halaman dibuka. Bila permintaan
+  // gagal (mis. sedang luring), nilai bawaan dipakai agar popup tetap tampil.
+  useEffect(() => {
+    if (override) return;
+    let active = true;
+    fetch("/api/appearance", { cache: "force-cache" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: AppearanceState | null) => {
+        if (!active) return;
+        if (data) setAppearance(mergeAppearance(data));
+        setSettingsSettled(true);
+      })
+      .catch(() => {
+        if (active) setSettingsSettled(true);
+      });
+    return () => { active = false; };
+  }, [override]);
+
+  const settings = mergeAppearance(appearance).popup;
+
   // Buka pada kunjungan pertama (atau selalu saat `?sambutan=1` dipakai untuk
   // pratinjau), setelah halaman sempat tenang agar tidak memotong interaksi.
   useEffect(() => {
+    if (preview) return;
     if (!hydrated) return;
     if (pathname && EXCLUDED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
     if (!shouldShowPromo()) return;
@@ -80,6 +133,7 @@ export function PromoModal() {
       const userIsIdle = Date.now() - lastInteractionAt >= IDLE_BEFORE_OPEN_MS;
       if (!waitedLongEnough || !userIsIdle) return;
       window.clearInterval(timer);
+      setForced(isPromoForced());
       setOpen(true);
     }, 250);
 
@@ -89,11 +143,11 @@ export function PromoModal() {
       document.removeEventListener("pointerdown", markInteraction, true);
       document.removeEventListener("keydown", markInteraction, true);
     };
-  }, [hydrated, pathname]);
+  }, [hydrated, pathname, preview]);
 
-  // Kunci scroll halaman, tangani Esc, dan tahan fokus di tombol tutup.
+  // Kunci scroll halaman, tangani Esc, dan tahan fokus di dalam dialog.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !settingsSettled) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -126,9 +180,12 @@ export function PromoModal() {
       document.body.style.overflow = previousOverflow;
       previousFocus.current?.focus();
     };
-  }, [open, close]);
+  }, [close, open, settingsSettled]);
 
-  if (!open) return null;
+  if (!open || !settingsSettled || (!preview && !forced && !settings.enabled)) return null;
+
+  const posterMode = settings.mode === "poster";
+  const deskripsi = `${settings.judul} ${settings.ringkasan} ${settings.statistik.map((stat) => `${stat.value} ${stat.label}`).join(", ")}.`;
 
   return (
     <div
@@ -144,53 +201,101 @@ export function PromoModal() {
         aria-modal="true"
         aria-labelledby="promo-welcome-title"
         aria-describedby="promo-welcome-description"
-        style={{ maxHeight: maxPosterHeight }}
-        className="relative w-fit max-w-[430px] overflow-hidden rounded-[28px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:max-w-[820px] sm:rounded-[30px]"
+        style={{ maxHeight }}
+        className={`relative w-full overflow-hidden rounded-[26px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:rounded-[30px] ${
+          posterMode ? "max-w-[430px] sm:max-w-[820px]" : "max-w-[430px]"
+        }`}
       >
         <button
           ref={closeButtonRef}
           type="button"
           onClick={close}
           aria-label="Tutup sambutan"
-          className="absolute right-3 top-3 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
+          className="absolute right-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
         >
           <X size={18} />
         </button>
 
-        {/* Poster ponsel: portrait, teks di bawah gambar. */}
-        <div className="sm:hidden">
-          <Image
-            src={POSTER.mobile.src}
-            width={POSTER.mobile.width}
-            height={POSTER.mobile.height}
-            alt=""
-            unoptimized
-            loading="eager"
-            style={{ maxHeight: maxPosterHeight }}
-            className="block h-auto w-auto max-w-full"
-          />
-        </div>
+        {/* Poster ponsel / layar lebar: gambar sudah memuat seluruh informasi. */}
+        {posterMode && (
+          <>
+            <div className="sm:hidden">
+              <Image src={settings.media.mobile.url} width={860} height={1280} alt="" unoptimized loading="eager"
+                style={{ maxHeight }} className="block h-auto w-full" />
+            </div>
+            <div className="hidden sm:block">
+              <Image src={settings.media.desktop.url} width={1640} height={1040} alt="" unoptimized loading="eager"
+                style={{ maxHeight }} className="block h-auto w-full" />
+            </div>
+          </>
+        )}
 
-        {/* Poster layar lebar: lanskap, teks di sisi kiri gambar. */}
-        <div className="hidden sm:block">
-          <Image
-            src={POSTER.desktop.src}
-            width={POSTER.desktop.width}
-            height={POSTER.desktop.height}
-            alt=""
-            unoptimized
-            loading="eager"
-            style={{ maxHeight: maxPosterHeight }}
-            className="block h-auto w-auto max-w-full"
-          />
-        </div>
+        {/* Mode teks: satu susunan untuk semua layar, dipusatkan seperti poster. */}
+        {!posterMode && (
+          <div
+            className="relative w-full"
+            style={{ aspectRatio: RATIO.mobile, maxWidth: MAX_WIDTH.mobile, maxHeight, margin: "0 auto", containerType: "inline-size" }}
+          >
+            <Image src={settings.media.latar.url} alt="" fill unoptimized loading="eager" sizes="430px" className="object-cover object-center" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,28,19,.72)_0%,rgba(11,28,19,.62)_42%,rgba(11,28,19,.88)_100%)]" />
+            <PopupText settings={settings} compact={false} />
+          </div>
+        )}
 
-        {/* Pembaca layar tetap mendapat isi poster sebagai teks. */}
+        {/* Pembaca layar tetap mendapat isi popup sebagai teks. */}
         <div className="sr-only">
-          <h2 id="promo-welcome-title">Selamat datang, pemancing!</h2>
-          <p id="promo-welcome-description">{DESCRIPTION}</p>
+          <h2 id="promo-welcome-title">{settings.judul}</h2>
+          <p id="promo-welcome-description">{deskripsi}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Teks popup mode `teks`. Semua ukuran memakai `cqw` (persen lebar kartu),
+ * sehingga tampilan tetap proporsional di semua ukuran layar dan tidak pernah
+ * perlu digulir. `compact` dipakai kartu sempit di ponsel.
+ */
+function PopupText({ settings, compact }: { settings: AppearanceState["popup"]; compact: boolean }) {
+  const pad = compact ? "6.5cqw" : "5.4cqw";
+  return (
+    <div className="absolute inset-0 flex flex-col justify-center" style={{ padding: pad, gap: "2.6cqw" }}>
+      <span
+        className="inline-flex w-fit items-center rounded-full border border-white/25 bg-white/10 font-bold uppercase text-[#f0e2bd]"
+        style={{ gap: "1.8cqw", padding: "1.4cqw 2.6cqw", fontSize: "2.3cqw", letterSpacing: ".16em" }}
+      >
+        <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} unoptimized className="shrink-0" style={{ width: "4.6cqw", height: "4.6cqw" }} />
+        UMPAN MAS
+      </span>
+
+      <h2 className="font-black leading-[1.1] tracking-[-.03em] text-white" style={{ fontSize: "7.4cqw" }}>
+        {settings.judul}
+      </h2>
+
+      <p className="leading-[1.5] text-white/85" style={{ fontSize: "2.9cqw" }}>
+        {settings.ringkasan}
+      </p>
+
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${settings.statistik.length}, minmax(0, 1fr))`, gap: "2cqw" }}>
+        {settings.statistik.map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-white/15 bg-white/10 text-center" style={{ padding: "2.2cqw 1.6cqw" }}>
+            <p className="font-black leading-none text-white" style={{ fontSize: "4.6cqw" }}>{stat.value}</p>
+            <p className="font-semibold leading-tight text-white/75" style={{ fontSize: "2.1cqw", marginTop: "1.2cqw" }}>{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <ul className="grid" style={{ gap: "1.8cqw" }}>
+        {settings.fitur.map((feature: PopupFeature) => (
+          <li key={feature.text} className="flex items-start text-white/90" style={{ gap: "2.2cqw", fontSize: "2.5cqw" }}>
+            <span className="grid shrink-0 place-items-center rounded-full bg-white/12 text-[#f0e2bd]" style={{ width: "5.4cqw", height: "5.4cqw" }}>
+              <PopupIcon icon={feature.icon} className="w-[3.2cqw]" />
+            </span>
+            <span className="leading-snug">{feature.text}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -1,0 +1,402 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight, Eye, ImageUp, Loader2, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { AdminShell } from "@/components/admin/admin-shell";
+import { PromoModal } from "@/components/promo-modal";
+import { Badge } from "@/components/shared";
+import {
+  DEFAULT_POPUP,
+  MEDIA_ACCEPT,
+  MEDIA_LABELS,
+  MEDIA_MAX_BYTES,
+  POPUP_ICONS,
+  POPUP_ICON_LABELS,
+  mergeAppearance,
+  type AppearanceState,
+  type MediaKey,
+  type PopupIcon,
+  type PopupSettings,
+} from "@/lib/appearance";
+import { PROMO_SEEN_KEY } from "@/lib/promo-storage";
+
+const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+const areaClass = "min-h-24 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-3 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+const labelClass = "grid gap-1.5 text-xs font-bold text-[#657164]";
+const hintClass = "text-[10px] font-medium leading-4 text-[#959c93]";
+
+const formatBytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
+const formatDate = (value: string | null) => (value
+  ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value))
+  : "—");
+
+export function AppearanceManager() {
+  const [state, setState] = useState<AppearanceState | null>(null);
+  const [form, setForm] = useState<PopupSettings>(DEFAULT_POPUP);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const fileInputs = useRef<Partial<Record<MediaKey, HTMLInputElement | null>>>({});
+
+  /** Menyimpan keadaan tampilan dari server ke state editor. */
+  const applyAppearance = useCallback((payload: unknown) => {
+    const data = mergeAppearance(payload);
+    setState(data);
+    const { media: _media, ...popup } = data.popup;
+    void _media;
+    setForm(popup);
+  }, []);
+
+  // `loading` sudah bernilai true sejak awal; perubahan state hanya terjadi di
+  // dalam callback permintaan jaringan, bukan langsung di badan effect.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/appearance", { cache: "no-store" })
+      .then(async (response) => ({ ok: response.ok, data: await response.json() as AppearanceState & { error?: string } }))
+      .then(({ ok, data }) => {
+        if (!active) return;
+        if (!ok) { setError(data.error ?? "Pengaturan tampilan gagal dimuat."); return; }
+        applyAppearance(data);
+      })
+      .catch(() => { if (active) setError("Pengaturan tampilan gagal dimuat."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [applyAppearance]);
+
+  async function savePopup() {
+    setBusy("popup"); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/appearance", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json() as { appearance?: AppearanceState; notice?: string; error?: string };
+      if (!response.ok || !data.appearance) throw new Error(data.error ?? "Pengaturan popup gagal disimpan.");
+      applyAppearance(data.appearance);
+      setNotice(data.notice ?? "Pengaturan popup disimpan.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Pengaturan popup gagal disimpan.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function uploadMedia(key: MediaKey, file: File) {
+    setBusy(key); setError(""); setNotice("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "POST", body });
+      const data = await response.json() as { error?: string; notice?: string; media?: AppearanceState["logo"] };
+      if (!response.ok || !data.media) throw new Error(data.error ?? "Gambar gagal diunggah.");
+      setState((current) => current ? applyMedia(current, data.media!) : current);
+      setNotice(`${MEDIA_LABELS[key]} diperbarui.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Gambar gagal diunggah.");
+    } finally {
+      setBusy("");
+      const input = fileInputs.current[key];
+      if (input) input.value = "";
+    }
+  }
+
+  async function resetMedia(key: MediaKey) {
+    if (!window.confirm(`Kembalikan ${MEDIA_LABELS[key].toLowerCase()} ke gambar bawaan?`)) return;
+    setBusy(key); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "DELETE" });
+      const data = await response.json() as { error?: string; media?: AppearanceState["logo"] };
+      if (!response.ok || !data.media) throw new Error(data.error ?? "Gagal mengembalikan aset bawaan.");
+      setState((current) => current ? applyMedia(current, data.media!) : current);
+      setNotice(`${MEDIA_LABELS[key]} kembali ke gambar bawaan.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Gagal mengembalikan aset bawaan.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function showAgain() {
+    try {
+      window.localStorage.removeItem(PROMO_SEEN_KEY);
+      setNotice("Popup akan tampil lagi untuk Anda pada kunjungan berikutnya di peramban ini. Buka halaman publik untuk melihatnya.");
+    } catch {
+      setError("Peramban ini menolak akses penyimpanan, jadi penanda kunjungan tidak bisa dihapus otomatis.");
+    }
+  }
+
+  if (loading) {
+    return (
+      <AdminShell>
+        <div className="grid gap-3">
+          {[0, 1].map((item) => <div key={item} className="h-40 animate-pulse rounded-[20px] bg-[#f1f4ef]" />)}
+        </div>
+      </AdminShell>
+    );
+  }
+
+  const logo = state?.logo;
+  const media = state?.popup.media;
+  const previewAppearance: AppearanceState | undefined = state && media
+    ? { logo: state.logo, popup: { ...form, media } }
+    : undefined;
+
+  return (
+    <AdminShell>
+      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#899488]">
+            <Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Tampilan</span>
+          </div>
+          <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Logo &amp; popup</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#7a8579]">Kelola logo situs dan popup sambutan yang dilihat pengunjung baru — sama persis dengan yang tampil di situs publik.</p>
+        </div>
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          <button type="button" onClick={() => setPreviewOpen(true)} disabled={!previewAppearance}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60">
+            <Eye size={15} /> Pratinjau popup
+          </button>
+          <Link href="/" target="_blank" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]">
+            <ArrowUpRight size={15} /> Lihat situs publik
+          </Link>
+        </div>
+      </div>
+
+      {notice && <p role="status" className="mb-4 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-xs font-semibold text-[#436444]">{notice}</p>}
+      {error && <p role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold text-[#995744]">{error}</p>}
+
+      {/* Logo */}
+      <section className="mb-6 overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#344638]">Logo situs</h2>
+            <p className="mt-1 text-[10px] text-[#929a91]">Dipakai di navbar, footer, halaman masuk, popup sambutan, dan dashboard.</p>
+          </div>
+          {logo && <Badge tone={logo.custom ? "sage" : "cream"}>{logo.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+        </header>
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr]">
+          <div className="grid content-start gap-3">
+            <div className="grid place-items-center rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
+              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="Pratinjau logo situs" width={104} height={104} unoptimized className="h-26 w-26 object-contain" />
+            </div>
+            <p className="text-center text-[10px] leading-4 text-[#929a91]">Diperbarui: {formatDate(logo?.updatedAt ?? null)}</p>
+          </div>
+          <div className="grid content-start gap-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] px-4 py-3">
+              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="" width={40} height={40} unoptimized className="h-10 w-10 shrink-0 rounded-xl" />
+              <span className="text-[15px] font-black tracking-[.07em] text-[#21392a]">UMPAN MAS</span>
+              <span className="ml-auto text-[10px] font-semibold text-[#929a91]">Contoh pemakaian di navbar</span>
+            </div>
+            <p className={hintClass}>Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.logo)}. Latar transparan (PNG) paling bagus untuk logo.</p>
+            <div className="flex flex-wrap gap-2">
+              <input ref={(node) => { fileInputs.current.logo = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("logo", file); }} />
+              <button type="button" disabled={busy === "logo"} onClick={() => fileInputs.current.logo?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "logo" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo baru
+              </button>
+              <button type="button" disabled={busy === "logo" || !logo?.custom} onClick={() => void resetMedia("logo")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                <RotateCcw size={14} /> Kembalikan bawaan
+              </button>
+            </div>
+            <p className={hintClass}>Favicon/ikon aplikasi masih aset tetap di repo (<code>src/app/icon.png</code>), jadi mengikuti logo hanya setelah deploy ulang.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Popup */}
+      <section className="overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#344638]">Popup sambutan</h2>
+            <p className="mt-1 text-[10px] text-[#929a91]">Tampil sekali per perangkat untuk pengunjung baru, tidak bisa di-scroll, dan hanya punya aksi menutup.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={showAgain} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#e2e7e0] bg-white px-3 text-[10px] font-bold text-[#5c6b5c] transition hover:bg-[#f4f7f2]">
+              <Sparkles size={13} /> Tampilkan lagi untuk saya
+            </button>
+            <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full bg-[#f3f6f0] px-3 text-[11px] font-bold text-[#456047]">
+              <input type="checkbox" className="h-4 w-4 accent-[#345d3a]" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
+              {form.enabled ? "Aktif" : "Nonaktif"}
+            </label>
+          </div>
+        </header>
+
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-2">
+          <div className="grid content-start gap-4">
+            <div className={labelClass}>
+              <span>Mode tampilan</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {([["poster", "Poster gambar", "Pakai gambar poster (informasi sudah menyatu di gambar)."], ["teks", "Gambar + teks", "Unggah gambar latar, teks diisi di sini sehingga mudah diperbarui."]] as const).map(([value, title, description]) => (
+                  <label key={value} className={`flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3 text-left transition ${form.mode === value ? "border-[#8fae87] bg-[#f2f7f0]" : "border-[#e6eae3] bg-white hover:bg-[#fafbf8]"}`}>
+                    <input type="radio" name="popup-mode" className="mt-0.5 h-4 w-4 accent-[#345d3a]" checked={form.mode === value} onChange={() => setForm({ ...form, mode: value })} />
+                    <span>
+                      <span className="block text-xs font-extrabold text-[#354639]">{title}</span>
+                      <span className={`mt-1 block ${hintClass}`}>{description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {form.mode === "poster" ? (
+              <div className="grid gap-4">
+                {(["popup-mobile", "popup-desktop"] as const).map((key) => {
+                  const info = key === "popup-mobile" ? media?.mobile : media?.desktop;
+                  return (
+                    <div key={key} className="rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS[key]}</p>
+                        <Badge tone={info?.custom ? "sage" : "cream"}>{info?.custom ? "Unggahan" : "Bawaan"}</Badge>
+                      </div>
+                      <div className="relative mt-3 h-28 overflow-hidden rounded-xl border border-[#e8ece5] bg-white">
+                        <Image src={`${info?.url ?? ""}?v=${info?.updatedAt ?? "bawaan"}`} alt="" fill unoptimized sizes="320px" className="object-cover object-center" />
+                      </div>
+                      <p className="mt-2 text-[10px] font-medium text-[#959c93]">Bawaan: {formatBytes(key === "popup-mobile" ? 90_655 : 125_652)} · diperbarui {formatDate(info?.updatedAt ?? null)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <input ref={(node) => { fileInputs.current[key] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
+                          onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(key, file); }} />
+                        <button type="button" disabled={busy === key} onClick={() => fileInputs.current[key]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                          {busy === key ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
+                        </button>
+                        <button type="button" disabled={busy === key || !info?.custom} onClick={() => void resetMedia(key)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                          <Trash2 size={13} /> Hapus
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS["popup-latar"]}</p>
+                    <Badge tone={media?.latar.custom ? "sage" : "cream"}>{media?.latar.custom ? "Unggahan" : "Bawaan"}</Badge>
+                  </div>
+                  <div className="relative mt-3 h-28 overflow-hidden rounded-xl border border-[#e8ece5] bg-white">
+                    <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} alt="" fill unoptimized sizes="320px" className="object-cover object-center" />
+                  </div>
+                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Pilih gambar yang gelap atau berkontras rendah di area teks, karena teks popup berwarna putih.</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <input ref={(node) => { fileInputs.current["popup-latar"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
+                      onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("popup-latar", file); }} />
+                    <button type="button" disabled={busy === "popup-latar"} onClick={() => fileInputs.current["popup-latar"]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                      {busy === "popup-latar" ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
+                    </button>
+                    <button type="button" disabled={busy === "popup-latar" || !media?.latar.custom} onClick={() => void resetMedia("popup-latar")} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                      <Trash2 size={13} /> Hapus
+                    </button>
+                  </div>
+                </div>
+
+                <label className={labelClass}>
+                  <span>Judul sambutan</span>
+                  <input className={fieldClass} value={form.judul} maxLength={70} onChange={(event) => setForm({ ...form, judul: event.target.value })} />
+                  <span className={hintClass}>{form.judul.length}/70 karakter</span>
+                </label>
+
+                <label className={labelClass}>
+                  <span>Ringkasan</span>
+                  <textarea className={areaClass} value={form.ringkasan} maxLength={200} onChange={(event) => setForm({ ...form, ringkasan: event.target.value })} />
+                  <span className={hintClass}>{form.ringkasan.length}/200 karakter</span>
+                </label>
+
+                <div className="grid gap-3">
+                  <p className="text-xs font-bold text-[#657164]">Kotak statistik <span className={hintClass}>({form.statistik.length} dari maksimal 3)</span></p>
+                  {form.statistik.map((stat, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[110px_1fr_auto]">
+                      <input className={fieldClass} value={stat.value} maxLength={8} placeholder="200" aria-label={`Angka statistik ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, statistik: form.statistik.map((item, i) => i === index ? { ...item, value: event.target.value } : item) })} />
+                      <input className={fieldClass} value={stat.label} maxLength={22} placeholder="racikan umpan" aria-label={`Keterangan statistik ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, statistik: form.statistik.map((item, i) => i === index ? { ...item, label: event.target.value } : item) })} />
+                      <button type="button" aria-label={`Hapus statistik ${index + 1}`} disabled={form.statistik.length <= 2}
+                        onClick={() => setForm({ ...form, statistik: form.statistik.filter((_, i) => i !== index) })}
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#a26b5b] transition hover:bg-[#fbefec] disabled:opacity-40">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" disabled={form.statistik.length >= 3} onClick={() => setForm({ ...form, statistik: [...form.statistik, { value: "", label: "" }] })}
+                    className="min-h-10 w-fit rounded-xl border border-dashed border-[#cfdac9] px-3 text-[11px] font-bold text-[#4f6b50] transition hover:bg-[#f4f7f2] disabled:opacity-50">
+                    + Tambah statistik
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <p className="text-xs font-bold text-[#657164]">Sorotan fitur <span className={hintClass}>({form.fitur.length} dari 2–4)</span></p>
+                  {form.fitur.map((feature, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[120px_1fr_auto]">
+                      <select className={fieldClass} value={feature.icon} aria-label={`Ikon fitur ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, fitur: form.fitur.map((item, i) => i === index ? { ...item, icon: event.target.value as PopupIcon } : item) })}>
+                        {POPUP_ICONS.map((icon) => <option key={icon} value={icon}>{POPUP_ICON_LABELS[icon]}</option>)}
+                      </select>
+                      <input className={fieldClass} value={feature.text} maxLength={90} placeholder="Cari racikan dari cuaca, kondisi air, dan budget." aria-label={`Teks fitur ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, fitur: form.fitur.map((item, i) => i === index ? { ...item, text: event.target.value } : item) })} />
+                      <button type="button" aria-label={`Hapus fitur ${index + 1}`} disabled={form.fitur.length <= 2}
+                        onClick={() => setForm({ ...form, fitur: form.fitur.filter((_, i) => i !== index) })}
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#a26b5b] transition hover:bg-[#fbefec] disabled:opacity-40">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" disabled={form.fitur.length >= 4} onClick={() => setForm({ ...form, fitur: [...form.fitur, { icon: "target", text: "" }] })}
+                    className="min-h-10 w-fit rounded-xl border border-dashed border-[#cfdac9] px-3 text-[11px] font-bold text-[#4f6b50] transition hover:bg-[#f4f7f2] disabled:opacity-50">
+                    + Tambah fitur
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="grid content-start gap-4">
+            <div className="rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
+              <p className="text-xs font-extrabold text-[#354639]">Yang dilihat pengunjung</p>
+              <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#68766a]">
+                <li>• Tampil sekali per perangkat, setelah halaman tenang (± 1,4 detik).</li>
+                <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>
+                <li>• Tanpa scroll; aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
+                <li>• Teks nilai pada mode teks dibatasi panjangnya agar selalu muat.</li>
+              </ul>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setPreviewOpen(true)} disabled={!previewAppearance}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-4 text-xs font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-50">
+                <Eye size={15} /> Pratinjau versi sekarang
+              </button>
+              <button type="button" onClick={() => void savePopup()} disabled={busy === "popup"}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "popup" ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Simpan pengaturan popup
+              </button>
+            </div>
+            <p className={hintClass}>Pratinjau memakai pengaturan yang sedang Anda isi, termasuk perubahan yang belum disimpan.</p>
+          </div>
+        </div>
+      </section>
+
+      {previewOpen && previewAppearance && (
+        <PromoModal override={previewAppearance} preview onClose={() => setPreviewOpen(false)} />
+      )}
+    </AdminShell>
+  );
+}
+
+/** Menukar satu berkas media pada keadaan tampilan tanpa memuat ulang seluruhnya. */
+function applyMedia(state: AppearanceState, media: AppearanceState["logo"]): AppearanceState {
+  if (media.key === "logo") return { ...state, logo: media };
+  return {
+    ...state,
+    popup: {
+      ...state.popup,
+      media: {
+        mobile: media.key === "popup-mobile" ? media : state.popup.media.mobile,
+        desktop: media.key === "popup-desktop" ? media : state.popup.media.desktop,
+        latar: media.key === "popup-latar" ? media : state.popup.media.latar,
+      },
+    },
+  };
+}
