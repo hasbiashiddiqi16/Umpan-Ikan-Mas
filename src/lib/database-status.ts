@@ -3,6 +3,7 @@ import "server-only";
 import { count, eq } from "drizzle-orm";
 import { db, databaseEnvName, isDatabaseConfigured } from "@/db";
 import { cmsMedia, cmsRecipes, cmsReviews, cmsSettings } from "@/db/schema";
+import { normalizeDatabaseUrl } from "@/lib/database-url";
 
 /** Pesan yang ditampilkan ke admin saat basis data belum tersambung. */
 export const DATABASE_HINT =
@@ -65,6 +66,8 @@ function isConnectionFailure(signals: ErrorSignals): boolean {
 export type DatabaseHealth = {
   /** Nama variabel lingkungan yang dipakai, bukan nilainya. */
   envVar: "DATABASE_URL" | "NETLIFY_DB_URL" | null;
+  /** Mode TLS yang dipakai klien: "required" otomatis untuk host non-lokal. */
+  ssl: "required" | "disabled" | "default";
   configured: boolean;
   connected: boolean;
   /** Tabel yang berhasil dibaca, beserta jumlah barisnya. */
@@ -91,7 +94,8 @@ async function countRows(table: CountableTable) {
  */
 export async function checkDatabase(): Promise<DatabaseHealth> {
   const envVar = databaseEnvName();
-  const base = { envVar, tables: {} as Record<string, number>, missingTables: [] as string[], pendingReviews: null as number | null };
+  const { ssl } = normalizeDatabaseUrl(process.env.DATABASE_URL || process.env.NETLIFY_DB_URL);
+  const base = { envVar, ssl, tables: {} as Record<string, number>, missingTables: [] as string[], pendingReviews: null as number | null };
   if (!envVar) {
     return { ...base, configured: false, connected: false, message: DATABASE_HINT };
   }
