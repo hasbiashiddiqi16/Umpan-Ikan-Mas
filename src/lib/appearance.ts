@@ -4,12 +4,15 @@
  * bisa dipakai komponen klien (editor dashboard) maupun server.
  */
 
-export const MEDIA_KEYS = ["logo", "popup-mobile", "popup-desktop", "popup-latar"] as const;
+export const MEDIA_KEYS = ["logo", "logo-footer", "popup-mobile", "popup-desktop", "popup-latar"] as const;
 export type MediaKey = (typeof MEDIA_KEYS)[number];
 
 /** Berkas bawaan yang dipakai selama belum ada unggahan dari dashboard. */
 export const MEDIA_DEFAULTS: Record<MediaKey, string> = {
   logo: "/images/logo-umpan-mas.png",
+  // Berkas terpisah untuk footer, supaya bisa memakai versi logo yang warnanya
+  // cocok dengan teks putih di latar hijau gelap (navbar tetap memakai `logo`).
+  "logo-footer": "/images/logo-footer.png",
   "popup-mobile": "/images/promo-welcome-mobile.jpg",
   "popup-desktop": "/images/promo-welcome-desktop.jpg",
   "popup-latar": "/images/promo-welcome.jpg",
@@ -17,6 +20,7 @@ export const MEDIA_DEFAULTS: Record<MediaKey, string> = {
 
 export const MEDIA_LABELS: Record<MediaKey, string> = {
   logo: "Logo situs",
+  "logo-footer": "Logo footer",
   "popup-mobile": "Poster popup · ponsel",
   "popup-desktop": "Poster popup · layar lebar",
   "popup-latar": "Latar popup mode teks",
@@ -25,6 +29,7 @@ export const MEDIA_LABELS: Record<MediaKey, string> = {
 /** Batas ukuran unggahan per jenis aset (byte). */
 export const MEDIA_MAX_BYTES: Record<MediaKey, number> = {
   logo: 1_500_000,
+  "logo-footer": 1_500_000,
   "popup-mobile": 3_000_000,
   "popup-desktop": 3_000_000,
   "popup-latar": 3_000_000,
@@ -206,6 +211,8 @@ export type MediaInfo = { key: MediaKey; url: string; custom: boolean; updatedAt
 
 export type AppearanceState = {
   logo: MediaInfo;
+  /** Logo yang dipakai di footer; berkasnya terpisah dari logo navbar. */
+  footerLogo: MediaInfo;
   popup: PopupSettings & {
     media: { mobile: MediaInfo; desktop: MediaInfo; latar: MediaInfo };
   };
@@ -223,7 +230,7 @@ export function mediaUrl(key: MediaKey): string {
 export function mergeAppearance(value: unknown): AppearanceState {
   const base = defaultAppearance();
   if (!value || typeof value !== "object") return base;
-  const item = value as { logo?: Partial<MediaInfo>; popup?: (Partial<PopupSettings> & { media?: Partial<AppearanceState["popup"]["media"]> }) | null };
+  const item = value as { logo?: Partial<MediaInfo>; footerLogo?: Partial<MediaInfo>; popup?: (Partial<PopupSettings> & { media?: Partial<AppearanceState["popup"]["media"]> }) | null };
   const popup = resolvePopupSettings(item.popup);
   const media = item.popup?.media ?? {};
   const info = (key: MediaKey, candidate?: Partial<MediaInfo>): MediaInfo => ({
@@ -234,6 +241,7 @@ export function mergeAppearance(value: unknown): AppearanceState {
   });
   return {
     logo: info("logo", item.logo),
+    footerLogo: info("logo-footer", item.footerLogo),
     popup: {
       ...popup,
       media: {
@@ -249,6 +257,7 @@ export function defaultAppearance(): AppearanceState {
   const info = (key: MediaKey): MediaInfo => ({ key, url: mediaUrl(key), custom: false, updatedAt: null });
   return {
     logo: info("logo"),
+    footerLogo: info("logo-footer"),
     popup: {
       ...DEFAULT_POPUP,
       media: { mobile: info("popup-mobile"), desktop: info("popup-desktop"), latar: info("popup-latar") },

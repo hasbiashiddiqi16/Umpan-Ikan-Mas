@@ -41,6 +41,7 @@ export async function readAppearance(): Promise<AppearanceState> {
     const popup = resolvePopupSettings(setting?.value);
     return {
       logo: toInfo("logo", byKey.get("logo")),
+      footerLogo: toInfo("logo-footer", byKey.get("logo-footer")),
       popup: {
         ...popup,
         media: {
