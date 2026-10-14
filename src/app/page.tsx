@@ -40,6 +40,9 @@ export default async function HomePage() {
   // Semua angka komunitas di halaman ini berasal dari satu sumber: tabel ulasan.
   const ratings = await getRecipeRatings();
   const bestRecommendations = getRecommendedRecipes(recipes, defaultPreferences, ratings).slice(0, 3);
+  // "Racikan Populer" diurutkan dari JUMLAH ulasan, bukan rating. Rata-rata di
+  // sini hanya pemutus seri ketika jumlah ulasannya sama — pada kondisi itu
+  // urutannya setara dengan skor Bayesian, jadi rumusnya tidak perlu diulang.
   const popularRecipes = [...recipes]
     .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0))
     .slice(0, 5);

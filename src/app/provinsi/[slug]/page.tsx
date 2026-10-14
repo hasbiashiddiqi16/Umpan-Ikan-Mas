@@ -35,7 +35,9 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
   // Angka ulasan hanya dari ulasan asli yang sudah disetujui (bukan ulasan contoh).
   const recipeRatings = await getRecipeRatings();
   // Kalau provinsi ini belum punya racikan khusus, tampilkan racikan yang paling
-  // banyak diulas pengunjung — urutannya juga dari tabel ulasan, bukan angka katalog.
+  // banyak diulas pengunjung — urutannya juga dari tabel ulasan, bukan angka
+  // katalog. Karena jumlah ulasan yang menentukan, rata-rata hanya pemutus seri
+  // (pada jumlah yang sama, urutan ini setara dengan skor Bayesian).
   const displayedRecipes = regionalRecipes.length
     ? regionalRecipes
     : [...recipes]

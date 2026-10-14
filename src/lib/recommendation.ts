@@ -47,6 +47,8 @@ export function getRecommendedRecipes<T extends Recipe>(
     const scoreDifference = calculateMatchScore(b, preferences) - calculateMatchScore(a, preferences);
     if (scoreDifference) return scoreDifference;
     // Seri diputus oleh bukti komunitas nyata: jumlah ulasan lalu rata-ratanya.
+    // Jumlah ulasan yang menentukan, jadi rata-rata di sini hanya pemutus seri
+    // pada jumlah yang sama — urutannya setara dengan skor Bayesian.
     const countDifference = (ratings?.[b.slug]?.count ?? 0) - (ratings?.[a.slug]?.count ?? 0);
     if (countDifference) return countDifference;
     return (ratings?.[b.slug]?.average ?? 0) - (ratings?.[a.slug]?.average ?? 0);

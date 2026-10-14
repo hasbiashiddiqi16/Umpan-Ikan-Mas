@@ -203,6 +203,26 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Sistem pakar & AI Umpan.** Analisis sistem pakar baru muncul setelah pengunjung memilih minimal 2 bahan, dan hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
 
+## Peringkat rating memakai rata-rata Bayesian
+
+Urutan **"Rating Tertinggi"** di katalog tidak lagi memakai rata-rata mentah, karena rata-rata mentah membuat resep dengan 5 ulasan bintang 5 mengalahkan resep dengan 200 ulasan rata-rata 4,8. Yang dipakai adalah rata-rata Bayesian (setara "weighted rating" IMDb):
+
+```
+skor = v/(v+m) · R + m/(v+m) · C
+```
+
+- `v` = jumlah ulasan pengunjung yang sudah disetujui untuk resep itu, `R` = rata-rata resep itu.
+- `C` = rata-rata **seluruh** ulasan yang sudah disetujui (`globalReviewAverage()` di `src/lib/rating-utils.ts`) — dihitung dari setiap ulasan (Σ jumlah × rata-rata ÷ total ulasan), bukan rata-rata dari rata-rata resep. Kalau belum ada ulasan sama sekali, `C` tidak diketahui dan tidak ada skor yang dikarang.
+- `m` = ambang, **20** (`BAYESIAN_MIN_REVIEWS`). Resep dengan 5 ulasan berarti separuh jalan antara rata-ratanya sendiri dan rata-rata situs; resep dengan 200 ulasan hampir tidak terpengaruh.
+- Satu rumus, satu nilai: `bayesianRatingScore()` dan `ratingScoreRanker()` di `src/lib/rating-utils.ts`, dipakai lewat `useRatingSummary()`. Nilai `C` dan `m` dikirim server pada `GET /api/public/reviews/summary` (`global`, `minReviews`) supaya katalog dan server tidak menghitung angka yang berbeda.
+
+Aturan yang menyertainya, agar tetap jujur:
+
+- **Skor hanya untuk mengurutkan, bukan angka yang ditampilkan.** Kartu resep tetap menampilkan rata-rata asli dan jumlah ulasannya; skor Bayesian tidak pernah muncul sebagai rating.
+- **Resep tanpa ulasan selalu di bawah** resep yang sudah diulas (bukan ditempatkan di posisi `C`), dan tetap menampilkan "Belum ada rating".
+- **Urutan berbasis jumlah ulasan tidak berubah.** "Racikan Populer" (beranda), "Ulasan Terbanyak" (katalog), urutan pilihan di `/cuaca`, urutan resep provinsi, dan pemutus seri rekomendasi memakai **jumlah** ulasan lebih dulu; rata-rata di sana hanya pemutus seri pada jumlah yang sama — dan pada jumlah yang sama, urutan rata-rata setara dengan urutan skor Bayesian.
+- Pengunjung diberi tahu: saat memilih "Rating Tertinggi", katalog menampilkan catatan `BAYESIAN_HINT` yang menjelaskan mengapa resep berulasan sedikit tidak langsung melompat ke atas.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
