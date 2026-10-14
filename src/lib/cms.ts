@@ -1,7 +1,7 @@
 import {
   normalizeFishingText,
   normalizeFishingType,
-  normalizeFishingTypes,
+  orderFishingTypes,
   primaryFishingType,
   type Recipe,
 } from "@/data/recipes";
@@ -84,10 +84,12 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const difficulty = typeof item.difficulty === "string" && validDifficulties.includes(item.difficulty) ? item.difficulty : "Mudah";
   const weather = stringArray(item.weather, validWeather);
   const water = stringArray(item.water, validWater);
-  const fishingTypes = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType);
+  const fishingTypesInput = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType) ?? null;
   // Kategori tidak lagi dipilih manual di dashboard: diturunkan dari jenis
-  // pemancingan resep supaya badge dan tag kondisi selalu sama isinya.
-  const category = primaryFishingType(title, fishingTypes ?? []);
+  // pemancingan resep, dan jenis yang tertulis di judul diletakkan paling depan
+  // supaya badge dan tag kondisi selalu sama isinya — juga saat disimpan.
+  const fishingTypes = fishingTypesInput ? orderFishingTypes(title, fishingTypesInput) : null;
+  const category = fishingTypes ? fishingTypes[0] : primaryFishingType(title, []);
   const provinces = stringArray(item.provinces);
   const seasons = stringArray(item.seasons, validSeasons);
   const steps = stringArray(item.steps);
@@ -123,12 +125,14 @@ export function mergeRecipesBySlug(seedRecipes: Recipe[], managedRecipes: Recipe
  * antarmuka dan penyimpanan berikutnya memakai satu sebutan saja.
  */
 export function normalizeCmsRecipeRecord<T extends CmsRecipeRecord>(record: T): T {
+  // Baris lama bisa menyimpan kategori manual (mis. "Premium") yang tidak lagi
+  // dikenal: kategori dan urutan jenis dihitung ulang dari satu tempat yang sama
+  // dengan halaman publik, jadi badge selalu sama dengan tag kondisi.
+  const fishingTypes = orderFishingTypes(record.title, record.fishingTypes);
   return {
     ...record,
-    // Baris lama bisa menyimpan kategori manual (mis. "Premium") yang tidak lagi
-    // dikenal: dibaca ulang dari jenis pemancingannya.
-    category: primaryFishingType(record.title, record.fishingTypes),
-    fishingTypes: normalizeFishingTypes(record.fishingTypes),
+    category: fishingTypes[0],
+    fishingTypes,
     summary: normalizeFishingText(record.summary),
     suitable: record.suitable.map(normalizeFishingText),
     notSuitable: record.notSuitable.map(normalizeFishingText),
@@ -139,7 +143,7 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
   return {
     slug: record.slug,
     name: record.title,
-    category: primaryFishingType(record.title, record.fishingTypes),
+    category: orderFishingTypes(record.title, record.fishingTypes)[0],
     rating: record.rating / 10,
     reviewCount: record.reviewCount,
     users: record.users,
@@ -149,7 +153,7 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
     image: record.image,
     weather: record.weather as Recipe["weather"],
     water: record.water as Recipe["water"],
-    fishingTypes: normalizeFishingTypes(record.fishingTypes) as Recipe["fishingTypes"],
+    fishingTypes: orderFishingTypes(record.title, record.fishingTypes),
     provinces: record.provinces,
     seasons: record.seasons,
     popularity: record.popularity,

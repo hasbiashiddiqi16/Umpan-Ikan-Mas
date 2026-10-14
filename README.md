@@ -168,6 +168,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 - **Tidak ada badge berdasarkan posisi.** Prop `featured` pada `RecipeCard` dihapus, termasuk label "🏆 Rekomendasi" yang dulu otomatis diberikan ke kartu pertama. Setiap kartu menampilkan jenis resep yang sebenarnya.
 - **Tag kondisi menampilkan seluruh jenis.** Kartu menulis "🎣 Harian / Lomba" (bukan hanya jenis pertama), dan jenis pertama selalu sama dengan badge.
 - **Kategori "Premium"/"Ekonomis" dihapus.** Itu tingkat harga, bukan jenis kolam; informasinya sudah ada pada filter Budget dan "Estimasi biaya" di kartu. Dashboard kini menampilkan kategori sebagai nilai otomatis (dihitung dari jenis pemancingan) dan `validateCmsRecipeInput` ikut menghitungnya, jadi data baru tidak bisa lagi memasukkan kategori yang bertentangan.
+- **Resep dari dashboard ikut aturan yang sama.** `normalizeCmsRecipeRecord()` dan `cmsRecipeToRecipe()` menghitung ulang kategori **dan** mengurutkan jenis pemancingan dari judul + daftar jenisnya, sehingga baris lama yang masih menyimpan kategori manual (mis. "Premium") tetap tampil dengan badge yang sama dengan tag kondisinya. `validateCmsRecipeInput` menyimpan jenis dalam urutan itu juga, jadi basis data tidak menyimpan nilai yang bertentangan.
 
 ## Satu sumber angka, skor kecocokan, dan label "Populer"
 
