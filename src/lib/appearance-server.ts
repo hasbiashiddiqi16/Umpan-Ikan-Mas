@@ -42,6 +42,7 @@ export async function readAppearance(): Promise<AppearanceState> {
     return {
       logo: toInfo("logo", byKey.get("logo")),
       footerLogo: toInfo("logo-footer", byKey.get("logo-footer")),
+      hero: toInfo("hero", byKey.get("hero")),
       popup: {
         ...popup,
         media: {

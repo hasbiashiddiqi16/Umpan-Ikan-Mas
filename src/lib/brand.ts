@@ -16,4 +16,12 @@ export const LOGO_SRC = "/api/media/logo";
 export const FOOTER_LOGO_SRC = "/api/media/logo-footer";
 export const LOGO_ALT = "Logo UMPAN MAS: ikan mas dan bola umpan";
 export const FOOTER_LOGO_ALT = "Logo UMPAN MAS untuk footer";
+/**
+ * Gambar latar bagian hero di beranda. Bawaannya `public/images/pond-hero.jpg`,
+ * dan bisa diganti dari dashboard (Content Studio → Tampilan) tanpa deploy
+ * ulang: alamatnya tetap `/api/media/hero`.
+ */
+export const HERO_SRC = "/api/media/hero";
+/** Keterangan gambar dibuat umum karena gambarnya bisa diganti admin. */
+export const HERO_ALT = "Suasana kolam pemancingan ikan mas";
 export const BRAND_NAME = "UMPAN MAS";
