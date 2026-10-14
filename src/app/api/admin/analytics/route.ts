@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { analyticsEvents, cmsRecipes, cmsReviews } from "@/db/schema";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { databaseErrorResponse } from "@/lib/database-status";
+import { getRatingSummary } from "@/lib/review-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,9 @@ export async function GET(request: Request) {
     const views = Number(currentCount?.value ?? 0);
     const previousViews = Number(previousCount?.value ?? 0);
     const change = previousViews === 0 ? null : Math.round(((views - previousViews) / previousViews) * 100);
+    // Angka yang sama dengan pemeringkatan publik: rata-rata seluruh ulasan
+    // pengunjung (C, tanpa ulasan contoh) dan ambang m skor Bayesian.
+    const { global, minReviews } = await getRatingSummary();
     return Response.json({
       views,
       previousViews,
@@ -48,6 +52,9 @@ export async function GET(request: Request) {
       archived,
       pendingReviews,
       approvedReviews,
+      visitorReviewCount: global.count,
+      visitorReviewAverage: global.average,
+      minReviews,
       daily,
       topPages,
       range: `${days} hari terakhir`,

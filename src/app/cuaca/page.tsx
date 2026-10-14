@@ -23,7 +23,9 @@ const guides = [
 
 export default async function WeatherPage() {
   // Urutan pilihan cuaca memakai bukti komunitas nyata (jumlah lalu rata-rata
-  // ulasan yang disetujui), bukan angka popularitas katalog.
+  // ulasan yang disetujui), bukan angka popularitas katalog. Yang menentukan
+  // adalah jumlah ulasan; rata-rata hanya pemutus seri, dan pada jumlah ulasan
+  // yang sama urutannya setara dengan skor Bayesian.
   const ratings = await getRecipeRatings();
   const urutUlasan = (a: (typeof recipes)[number], b: (typeof recipes)[number]) =>
     (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0);

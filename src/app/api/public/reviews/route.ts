@@ -5,6 +5,7 @@ import { normalizeFishingType } from "@/data/recipes";
 import { recipes } from "@/data/recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { isFutureReviewDate } from "@/lib/review-dates";
+import { checkReviewLimits, hashReviewValue, isReviewHoneypotFilled, isTurnstileConfigured, readReviewDevice, reviewClientIp, reviewPayloadHash, verifyTurnstileToken } from "@/lib/review-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,21 @@ export async function POST(request: Request) {
     const body: unknown = await request.json();
     if (!body || typeof body !== "object") return Response.json({ error: "Data ulasan tidak valid." }, { status: 400 });
     const item = body as Record<string, unknown>;
+    // Honeypot: kolom tersembunyi yang tidak pernah diisi pengunjung sungguhan.
+    // Bot yang mengisinya dijawab "sukses" palsu agar tidak belajar.
+    if (isReviewHoneypotFilled(item)) {
+      return Response.json({ ok: true, id: null, status: "pending" }, { status: 201 });
+    }
+    const ip = reviewClientIp(request);
+    // Turnstile aktif hanya bila TURNSTILE_SECRET_KEY disetel di server.
+    if (isTurnstileConfigured() && !(await verifyTurnstileToken(item.turnstileToken, ip))) {
+      return Response.json({ error: "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.", code: "turnstile" }, { status: 400 });
+    }
+    // Tanpa akun, perangkat dikenali lewat token bertanda tangan dari server.
+    const device = readReviewDevice(request);
+    if (!device) {
+      return Response.json({ error: "Perangkat ini belum punya token ulasan. Muat ulang halaman lalu kirim ulang.", code: "device" }, { status: 400 });
+    }
     // Tanggal ulasan selalu ditentukan server. Nilai bertanggal masa depan dari
     // klien (mis. jam perangkat yang salah) ditolak, bukan disimpan apa adanya.
     if (isFutureReviewDate(typeof item.createdAt === "string" ? item.createdAt : null)) {
@@ -63,7 +79,23 @@ export async function POST(request: Request) {
     const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
     const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
-    const [created] = await db.insert(cmsReviews).values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: normalizeFishingType(item.fishingType), catchCount, comment, status: "pending" }).returning({ id: cmsReviews.id });
+    // Sidik jari isi kiriman + penjagaan anti-spam (24 jam per resep per perangkat).
+    const payloadHash = reviewPayloadHash([recipeSlug, name, location, rating, item.weather, item.water, item.fishingType, catchCount, comment]);
+    const hit = await checkReviewLimits({ deviceId: device.id, ipHash: hashReviewValue(`ip:${ip}`), recipeSlug, payloadHash });
+    if (hit) {
+      // Kiriman ulang yang identik (mis. percobaan ulang jaringan) dijawab dengan
+      // ulasan yang sudah ada supaya tidak menggandakan baris di basis data.
+      if (hit.code === "duplicate" && hit.existingId) {
+        return Response.json({ ok: true, id: hit.existingId, status: "pending", duplicate: true });
+      }
+      const headers: Record<string, string> = { "Cache-Control": "no-store" };
+      if (hit.retryAfterSeconds) headers["Retry-After"] = String(hit.retryAfterSeconds);
+      return Response.json({ error: hit.error, code: hit.code }, { status: hit.status, headers });
+    }
+    const [created] = await db
+      .insert(cmsReviews)
+      .values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: normalizeFishingType(item.fishingType), catchCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash })
+      .returning({ id: cmsReviews.id });
     return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
   } catch (error) {
     return databaseErrorResponse(error, "Ulasan terkirim secara lokal, tetapi server sedang tidak tersedia.");

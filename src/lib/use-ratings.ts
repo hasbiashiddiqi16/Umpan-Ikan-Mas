@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BAYESIAN_MIN_REVIEWS, globalReviewAverage } from "@/lib/rating-utils";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 
 /**
@@ -11,19 +12,34 @@ import type { RecipeRatingMap } from "@/lib/review-summary";
  * Resep tanpa ulasan tidak muncul di peta ini; pemanggil menampilkan
  * "Belum ada rating" untuk kasus itu.
  */
-let cache: RecipeRatingMap | null = null;
-let pending: Promise<RecipeRatingMap> | null = null;
+export type RatingSummaryState = {
+  ratings: RecipeRatingMap;
+  /** Rata-rata seluruh ulasan (nilai `C` pada rumus Bayesian); 0 bila belum ada ulasan. */
+  globalAverage: number;
+  /** Ambang `m` yang dipakai untuk skor Bayesian. */
+  minReviews: number;
+};
 
-async function loadRatings(): Promise<RecipeRatingMap> {
+const RINGKASAN_KOSONG: RatingSummaryState = { ratings: {}, globalAverage: 0, minReviews: BAYESIAN_MIN_REVIEWS };
+
+let cache: RatingSummaryState | null = null;
+let pending: Promise<RatingSummaryState> | null = null;
+
+async function loadRatings(): Promise<RatingSummaryState> {
   if (cache) return cache;
   if (!pending) {
     pending = fetch("/api/public/reviews/summary", { cache: "no-store" })
-      .then(async (response) => (response.ok ? (await response.json()) as { ratings?: RecipeRatingMap } : { ratings: {} }))
+      .then(async (response) => (response.ok ? (await response.json()) as { ratings?: RecipeRatingMap; global?: { count?: number; average?: number }; minReviews?: number } : {}))
       .then((body) => {
-        cache = body.ratings ?? {};
+        const ratings = body.ratings ?? {};
+        // Nilai `C` dari server dipakai apa adanya; bila tidak ada, dihitung dari
+        // peta rating yang sama supaya rumusnya tetap satu.
+        const terhitung = globalReviewAverage(ratings) ?? 0;
+        const nilai = typeof body.global?.average === "number" && body.global.average > 0 ? body.global.average : terhitung;
+        cache = { ratings, globalAverage: nilai, minReviews: body.minReviews ?? BAYESIAN_MIN_REVIEWS };
         return cache;
       })
-      .catch(() => ({}) as RecipeRatingMap)
+      .catch(() => RINGKASAN_KOSONG)
       .finally(() => {
         pending = null;
       });
@@ -31,19 +47,24 @@ async function loadRatings(): Promise<RecipeRatingMap> {
   return pending;
 }
 
-export function useRecipeRatings(): RecipeRatingMap {
-  const [ratings, setRatings] = useState<RecipeRatingMap>(() => cache ?? {});
+/** Ringkasan lengkap (rating + rata-rata global + ambang) untuk pemeringkatan. */
+export function useRatingSummary(): RatingSummaryState {
+  const [ringkasan, setRingkasan] = useState<RatingSummaryState>(() => cache ?? RINGKASAN_KOSONG);
   useEffect(() => {
     if (cache) return;
     let active = true;
-    void loadRatings().then((map) => {
-      if (active) setRatings(map);
+    void loadRatings().then((hasil) => {
+      if (active) setRingkasan(hasil);
     });
     return () => {
       active = false;
     };
   }, []);
-  return ratings;
+  return ringkasan;
+}
+
+export function useRecipeRatings(): RecipeRatingMap {
+  return useRatingSummary().ratings;
 }
 
 /** Menghapus simpanan sementara — dipakai pengujian. */

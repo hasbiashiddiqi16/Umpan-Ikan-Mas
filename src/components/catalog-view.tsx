@@ -14,7 +14,8 @@ import { isCatalogCity, provinceForCatalogCity } from "@/data/geo-cities";
 import { calculateMatchScore, filterRecipesByBudget, getRecommendedRecipes } from "@/lib/recommendation";
 import { searchRecipes } from "@/lib/search";
 import { useLocationAutofill } from "@/lib/use-location";
-import { useRecipeRatings } from "@/lib/use-ratings";
+import { useRatingSummary } from "@/lib/use-ratings";
+import { BAYESIAN_HINT, ratingScoreRanker } from "@/lib/rating-utils";
 import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 import type { DetectedPlace } from "@/lib/location";
 
@@ -32,7 +33,10 @@ function readFavorites(): string[] {
 
 export function CatalogView() {
   // Rating dari ulasan asli; dipakai untuk urutan dan label kartu.
-  const ratings = useRecipeRatings();
+  const { ratings, globalAverage, minReviews } = useRatingSummary();
+  // Urutan "Rating Tertinggi" memakai rata-rata Bayesian (m = minReviews):
+  // resep dengan sedikit ulasan tidak menyalip resep yang diulas jauh lebih banyak.
+  const rankerRating = useMemo(() => ratingScoreRanker(ratings, globalAverage, minReviews), [ratings, globalAverage, minReviews]);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
@@ -109,8 +113,11 @@ export function CatalogView() {
     if (filters.difficulty !== "Semua tingkat") result = result.filter((recipe) => recipe.difficulty === filters.difficulty);
     if (favoritesOnly) result = result.filter((recipe) => favoriteSlugs.includes(recipe.slug));
 
-    // Urutan memakai rating ulasan asli. Resep tanpa ulasan tidak dikarang angkanya.
-    if (filters.sort === "Rating Tertinggi") return [...result].sort((a, b) => (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0) || (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
+    // Urutan "Rating Tertinggi" memakai rata-rata Bayesian dari rating ulasan
+    // asli (lihat BAYESIAN_HINT). Resep tanpa ulasan tidak dikarang angkanya dan
+    // selalu berada di bawah resep yang sudah diulas. Urutan lain tetap
+    // berbasis jumlah ulasan, jadi tidak ikut berubah.
+    if (filters.sort === "Rating Tertinggi") return [...result].sort(rankerRating);
     if (filters.sort === "Ulasan Terbanyak") return [...result].sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
     if (filters.sort === "Terbaru") return [...result].reverse();
     if (filters.sort === "Harga Terendah") return [...result].sort((a, b) => a.priceValue - b.priceValue);
@@ -122,7 +129,7 @@ export function CatalogView() {
       fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType,
       season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season,
     });
-  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs, ratings]);
+  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs, ratings, rankerRating]);
 
   function selectCategory(category: string) {
     setFilters((current) => ({ ...current, category }));
@@ -170,7 +177,8 @@ export function CatalogView() {
           }
         />
       </div>
-      <div className="mb-5 mt-7 flex items-center justify-between gap-4"><div><p className="text-sm font-extrabold text-[#344538]">{filteredRecipes.length} racikan ditemukan</p><p className="mt-1 text-xs text-[#8b9389]">Disusun berdasarkan kecocokan dan masukan komunitas</p></div><span className="hidden items-center gap-1.5 text-xs text-[#91998f] sm:inline-flex"><SlidersHorizontal size={13} /> Hasil diperbarui langsung</span></div>
+      <div className="mb-5 mt-7 flex items-center justify-between gap-4"><div><p className="text-sm font-extrabold text-[#344538]">{filteredRecipes.length} racikan ditemukan</p><p className="mt-1 text-xs text-[#8b9389]">{filters.sort === "Rating Tertinggi" ? "Diurutkan dari skor rating ulasan pengunjung (rata-rata Bayesian)" : "Disusun berdasarkan kecocokan dan masukan komunitas"}</p></div><span className="hidden items-center gap-1.5 text-xs text-[#91998f] sm:inline-flex"><SlidersHorizontal size={13} /> Hasil diperbarui langsung</span></div>
+      {filters.sort === "Rating Tertinggi" && <p className="mb-5 -mt-2 rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[11px] leading-5 text-[#7a8479]">{BAYESIAN_HINT}</p>}
       {filteredRecipes.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredRecipes.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={filterAktif ? calculateMatchScore(recipe, { ...defaultPreferences, province: filters.province === "Semua provinsi" ? defaultPreferences.province : filters.province, weather: filters.weather === "Semua cuaca" ? defaultPreferences.weather : filters.weather, water: filters.water === "Semua kondisi air" ? defaultPreferences.water : filters.water, fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType, season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season }) : undefined} />)}</div> : <EmptyState title={query ? "Umpan tidak ditemukan." : favoritesOnly ? "Belum ada resep favorit." : "Belum ada resep yang sesuai."} description={favoritesOnly ? "Simpan resep dengan mengetuk ikon hati. Favorit tersimpan di perangkat ini." : query ? "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." : "Coba ubah filter provinsi, kondisi air, atau budget untuk melihat racikan lainnya."} />}
     </div>
   );
