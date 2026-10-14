@@ -20,7 +20,7 @@ import {
   type PopupIcon,
   type PopupSettings,
 } from "@/lib/appearance";
-import { PROMO_SEEN_KEY } from "@/lib/promo-storage";
+import { PROMO_SEEN_WINDOW_MS, clearPromoSeen } from "@/lib/promo-storage";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
 const areaClass = "min-h-24 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-3 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
@@ -166,8 +166,8 @@ export function AppearanceManager() {
 
   function showAgain() {
     try {
-      window.localStorage.removeItem(PROMO_SEEN_KEY);
-      setNotice("Popup akan tampil lagi untuk Anda pada kunjungan berikutnya di peramban ini. Buka halaman publik untuk melihatnya.");
+      clearPromoSeen();
+      setNotice("Penanda kunjungan dihapus. Buka halaman publik di tab ini untuk melihat popupnya lagi.");
     } catch {
       setError("Peramban ini menolak akses penyimpanan, jadi penanda kunjungan tidak bisa dihapus otomatis.");
     }
@@ -356,7 +356,7 @@ export function AppearanceManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Popup sambutan</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Tampil sekali per perangkat untuk pengunjung baru, tidak bisa di-scroll, dan hanya punya aksi menutup.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Muncul pada kunjungan pertama, setiap sesi peramban baru (tab ditutup lalu dibuka lagi), dan setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam. Tanpa scroll, dan aksinya hanya menutup.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={showAgain} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#e2e7e0] bg-white px-3 text-[10px] font-bold text-[#5c6b5c] transition hover:bg-[#f4f7f2]">
@@ -506,7 +506,8 @@ export function AppearanceManager() {
             <div className="rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
               <p className="text-xs font-extrabold text-[#354639]">Yang dilihat pengunjung</p>
               <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#68766a]">
-                <li>• Tampil sekali per perangkat, setelah halaman tenang (± 1,4 detik).</li>
+                <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, dan lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam — setelah halaman tenang (± 1,4 detik).</li>
+                <li>• Selama masa itu, pengunjung yang berpindah halaman tidak melihatnya berulang kali.</li>
                 <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>
                 <li>• Tanpa scroll; aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
                 <li>• Teks nilai pada mode teks dibatasi panjangnya agar selalu muat.</li>

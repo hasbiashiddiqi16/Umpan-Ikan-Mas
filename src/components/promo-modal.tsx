@@ -12,7 +12,7 @@ import {
   type PopupIcon,
 } from "@/lib/appearance";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
-import { isPromoForced, markPromoSeen, shouldShowPromo } from "@/lib/promo-storage";
+import { isPromoForced, markPromoSeen, nextPromoDueAt, shouldShowPromo } from "@/lib/promo-storage";
 import { useHydrated } from "@/lib/use-location";
 
 /**
@@ -113,37 +113,70 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
 
   const settings = mergeAppearance(appearance).popup;
 
-  // Buka pada kunjungan pertama (atau selalu saat `?sambutan=1` dipakai untuk
-  // pratinjau), setelah halaman sempat tenang agar tidak memotong interaksi.
+  // Kapan popup boleh tampil:
+  // - kunjungan pertama, atau sesi peramban baru (mis. tab ditutup paksa), atau
+  //   sudah lewat 24 jam sejak terakhir dilihat — dibuka setelah halaman sempat
+  //   tenang agar tidak memotong interaksi;
+  // - tab yang dibiarkan terbuka lama: begitu pengunjung kembali, popup tampil
+  //   bila jatah 24 jamnya sudah lewat.
   useEffect(() => {
     if (preview) return;
     if (!hydrated) return;
     if (pathname && EXCLUDED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
-    if (!shouldShowPromo()) return;
 
     let cancelled = false;
+    let delayTimer: number | undefined;
+    let dueTimer: number | undefined;
+
+    const openNow = () => {
+      if (cancelled) return;
+      if (delayTimer !== undefined) { window.clearInterval(delayTimer); delayTimer = undefined; }
+      if (dueTimer !== undefined) { window.clearTimeout(dueTimer); dueTimer = undefined; }
+      setForced(isPromoForced());
+      setOpen(true);
+    };
+
     const startedAt = Date.now();
     let lastInteractionAt = Date.now();
     const markInteraction = () => {
       lastInteractionAt = Date.now();
     };
 
-    document.addEventListener("pointerdown", markInteraction, true);
-    document.addEventListener("keydown", markInteraction, true);
+    if (shouldShowPromo()) {
+      document.addEventListener("pointerdown", markInteraction, true);
+      document.addEventListener("keydown", markInteraction, true);
 
-    const timer = window.setInterval(() => {
-      if (cancelled) return;
-      const waitedLongEnough = Date.now() - startedAt >= DELAY_BEFORE_OPEN_MS;
-      const userIsIdle = Date.now() - lastInteractionAt >= IDLE_BEFORE_OPEN_MS;
-      if (!waitedLongEnough || !userIsIdle) return;
-      window.clearInterval(timer);
-      setForced(isPromoForced());
-      setOpen(true);
-    }, 250);
+      delayTimer = window.setInterval(() => {
+        if (cancelled) return;
+        const waitedLongEnough = Date.now() - startedAt >= DELAY_BEFORE_OPEN_MS;
+        const userIsIdle = Date.now() - lastInteractionAt >= IDLE_BEFORE_OPEN_MS;
+        if (!waitedLongEnough || !userIsIdle) return;
+        openNow();
+      }, 250);
+    } else {
+      // Masih dalam masa sembunyi: jadwalkan pemunculan berikutnya pada saat
+      // jatah 24 jamnya habis (tab boleh tetap terbuka).
+      const dueAt = nextPromoDueAt();
+      if (dueAt !== null) {
+        dueTimer = window.setTimeout(() => {
+          if (shouldShowPromo()) openNow();
+        }, Math.max(1_000, dueAt - Date.now()));
+      }
+    }
+
+    // Timer di tab latar bisa tertunda (peramban menidurkan tab), jadi saat tab
+    // kembali aktif keadaannya diperiksa ulang.
+    const onVisibilityChange = () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      if (shouldShowPromo()) openNow();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      if (delayTimer !== undefined) window.clearInterval(delayTimer);
+      if (dueTimer !== undefined) window.clearTimeout(dueTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("pointerdown", markInteraction, true);
       document.removeEventListener("keydown", markInteraction, true);
     };
