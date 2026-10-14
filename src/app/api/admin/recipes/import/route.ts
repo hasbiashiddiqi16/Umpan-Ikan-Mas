@@ -1,6 +1,7 @@
 import { inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
+import { normalizeFishingText, normalizeFishingType, normalizeFishingTypes } from "@/data/recipes";
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
 import { requireAdminApi } from "@/lib/admin-auth";
@@ -43,7 +44,7 @@ export async function POST() {
     const recipeValues = recipes.map((recipe) => ({
       slug: recipe.slug,
       title: recipe.name,
-      summary: recipe.summary,
+      summary: normalizeFishingText(recipe.summary),
       category: recipe.category,
       status: "published",
       image: recipe.image,
@@ -56,13 +57,13 @@ export async function POST() {
       popularity: recipe.popularity,
       weather: recipe.weather,
       water: recipe.water,
-      fishingTypes: recipe.fishingTypes,
+      fishingTypes: normalizeFishingTypes(recipe.fishingTypes),
       provinces: recipe.provinces,
       seasons: recipe.seasons,
       ingredients: recipe.ingredients,
       steps: recipe.steps,
-      suitable: recipe.suitable,
-      notSuitable: recipe.notSuitable,
+      suitable: recipe.suitable.map(normalizeFishingText),
+      notSuitable: recipe.notSuitable.map(normalizeFishingText),
       author: "Tim UMPAN MAS",
     }));
     const existingRecipes = await db.select({ slug: cmsRecipes.slug }).from(cmsRecipes).where(inArray(cmsRecipes.slug, recipes.map((recipe) => recipe.slug)));
@@ -107,7 +108,7 @@ export async function POST() {
         rating: review.rating,
         weather: review.weather,
         water: review.water,
-        fishingType: review.fishingType ?? "Harian",
+        fishingType: normalizeFishingType(review.fishingType ?? "Harian"),
         catchCount: review.catchCount ?? null,
         comment: review.comment,
         status: "approved",

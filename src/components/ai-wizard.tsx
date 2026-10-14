@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Cloud, CloudRain, CloudSun, Droplets, MapPin, RotateCcw, Sparkles, Sun, Waves } from "lucide-react";
-import { defaultPreferences, recipes, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
+import { defaultPreferences, normalizeFishingType, recipes, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
+import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { reviews, type RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
@@ -33,11 +34,11 @@ const waterOptions: { label: WaterCondition; emoji: string; note: string }[] = [
 const typeOptions: { label: FishingType; emoji: string; note: string }[] = [
   { label: "Harian", emoji: "🎣", note: "Mancing santai" },
   { label: "Lomba", emoji: "🏆", note: "Kompetisi / lomba" },
-  { label: "Galat", emoji: "🔥", note: "Kolam galatama" },
+  { label: "Galatama", emoji: "🔥", note: "Kolam galatama" },
 ];
 const budgetOptions = ["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"];
 const steps = ["Lokasi", "Cuaca", "Kondisi air", "Jenis kolam", "Budget"];
-const selectClass = "min-h-14 w-full rounded-2xl border border-[#dde5da] bg-white px-4 text-base font-semibold text-[#344637] outline-none transition focus:border-[#708a6c] focus:ring-4 focus:ring-[#365b3d]/10";
+const selectClass = `${SELECT_FIELD_CLASS} min-h-14 w-full min-w-0 rounded-2xl border border-[#dde5da] bg-white pl-11 text-base font-semibold text-[#344637] outline-none transition focus:border-[#708a6c] focus:ring-4 focus:ring-[#365b3d]/10`;
 
 function seasonFor(weather: string): string {
   if (weather === "Hujan") return "Musim Hujan";
@@ -98,7 +99,8 @@ export function AIWizard() {
           province: provinceParam ?? "",
           weather,
           water: params.get("water") ?? defaultPreferences.water,
-          fishingType: params.get("type") ?? defaultPreferences.fishingType,
+          // Tautan lama bisa membawa type=Galat; diseragamkan ke "Galatama".
+          fishingType: normalizeFishingType(params.get("type") ?? defaultPreferences.fishingType),
           budget: params.get("budget") ?? defaultPreferences.budget,
           season: seasonFor(weather),
         });
@@ -143,7 +145,7 @@ export function AIWizard() {
   }
 
   function renderQuestion() {
-    if (step === 0) return <div className="max-w-lg"><UseMyLocationButton onPlace={(place) => update("province", place.province)} label="Isi provinsi dari lokasi saya" className="mb-4" /><label htmlFor="province-select" className="mb-2 block text-sm font-bold text-[#526153]">Pilih provinsi</label><div className="relative"><MapPin size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#819080]" /><select id="province-select" className={`${selectClass} pl-11`} value={preferences.province} onChange={(event) => update("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></div><p className="mt-3 text-xs leading-5 text-[#8a9389]">Pilih daerah paling dekat dengan spotmu. Bila lokasi tidak diizinkan, kolom ini dibiarkan kosong dan rekomendasi tetap dihitung dari kondisi lain. Setiap kolam tetap punya karakter air yang berbeda.</p></div>;
+    if (step === 0) return <div className="max-w-lg"><UseMyLocationButton onPlace={(place) => update("province", place.province)} label="Isi provinsi dari lokasi saya" className="mb-4" /><label htmlFor="province-select" className="mb-2 block text-sm font-bold text-[#526153]">Pilih provinsi</label><SelectBox><MapPin size={18} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#819080]" /><select id="province-select" className={selectClass} value={preferences.province} onChange={(event) => update("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></SelectBox><p className="mt-3 text-xs leading-5 text-[#8a9389]">Pilih daerah paling dekat dengan spotmu. Bila lokasi tidak diizinkan, kolom ini dibiarkan kosong dan rekomendasi tetap dihitung dari kondisi lain. Setiap kolam tetap punya karakter air yang berbeda.</p></div>;
     if (step === 1) return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{weatherOptions.map(({ label, emoji, icon: Icon }) => <ChoiceButton key={label} selected={preferences.weather === label} onClick={() => update("weather", label)} className="min-h-[118px]"><Icon size={20} className="text-[#637c65]" /><span className="mt-3 block text-sm font-extrabold">{emoji} {label}</span><span className="mt-1 block text-xs text-[#899187]">Cuaca sekarang</span></ChoiceButton>)}</div>;
     if (step === 2) return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{waterOptions.map(({ label, emoji, note }) => <ChoiceButton key={label} selected={preferences.water === label} onClick={() => update("water", label)} className="min-h-[118px]"><span className="text-2xl" aria-hidden="true">{emoji}</span><span className="mt-3 block text-sm font-extrabold">{label}</span><span className="mt-1 block text-xs text-[#899187]">{note}</span></ChoiceButton>)}</div>;
     if (step === 3) return <div className="grid gap-3 sm:grid-cols-3">{typeOptions.map(({ label, emoji, note }) => <ChoiceButton key={label} selected={preferences.fishingType === label} onClick={() => update("fishingType", label)} className="min-h-[112px]"><span className="text-2xl" aria-hidden="true">{emoji}</span><span className="mt-2 block text-sm font-extrabold">{label}</span><span className="mt-1 block text-xs text-[#899187]">{note}</span></ChoiceButton>)}</div>;

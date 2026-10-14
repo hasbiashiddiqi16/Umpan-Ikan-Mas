@@ -8,10 +8,13 @@ import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Rating, SectionHeader } from "@/components/shared";
+import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { ReviewCard } from "@/components/recipe-details";
 import { useLocationAutofill } from "@/lib/use-location";
 
 const inputClass = "min-h-11 min-w-0 w-full rounded-xl border border-[#e4e9e2] bg-white px-3.5 text-sm text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+/** Dropdown di form ini memakai panah buatan sendiri (lihat `SelectBox`). */
+const selectClass = `${SELECT_FIELD_CLASS} min-h-12 min-w-0 w-full rounded-xl border border-[#e4e9e2] bg-white pl-3.5 text-sm text-[#334436] outline-none transition focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10 sm:min-h-11`;
 
 function StarRatingInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -96,10 +99,10 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Nama pemancing<input className={inputClass} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={60} placeholder="Contoh: Budi" required /></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kota (opsional)<input className={inputClass} value={city} onChange={(event) => { markLocationTouched(); setCity(event.target.value); }} maxLength={60} placeholder="Contoh: Bogor" /></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Provinsi<select className={inputClass} value={province} onChange={(event) => { markLocationTouched(); setProvince(event.target.value); }}><option value="">Pilih provinsi</option>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Cuaca saat mencoba<select className={inputClass} value={weather} onChange={(event) => setWeather(event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kondisi air<select className={inputClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Jenis pemancingan<select className={inputClass} value={fishingType} onChange={(event) => setFishingType(event.target.value)}>{["Harian", "Lomba", "Galat"].map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Provinsi<SelectBox><select className={selectClass} value={province} onChange={(event) => { markLocationTouched(); setProvince(event.target.value); }}><option value="">Pilih provinsi</option>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></SelectBox></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Cuaca saat mencoba<SelectBox><select className={selectClass} value={weather} onChange={(event) => setWeather(event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kondisi air<SelectBox><select className={selectClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Jenis pemancingan<SelectBox><select className={selectClass} value={fishingType} onChange={(event) => setFishingType(event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Hasil tangkapan (opsional)<div className="relative"><input className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="0" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Ceritakan pengalaman<textarea className="min-h-28 min-w-0 w-full resize-y rounded-xl border border-[#e4e9e2] bg-white px-3.5 py-3 text-sm leading-6 text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10" value={comment} onChange={(event) => setComment(event.target.value)} minLength={12} maxLength={500} placeholder="Kondisi kolam, cara meracik, dan bagaimana hasilnya?" required /><span className="text-right text-[10px] font-medium text-[#9aa198]">{comment.length}/500</span></label>
       </div>

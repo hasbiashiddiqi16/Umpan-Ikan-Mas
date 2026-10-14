@@ -22,7 +22,7 @@ type RecipeForm = {
   title: string; slug: string; summary: string; category: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
 };
 
-const categoryOptions = ["Harian", "Lomba", "Galat", "Premium", "Ekonomis"];
+const categoryOptions = ["Harian", "Lomba", "Galatama", "Premium", "Ekonomis"];
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
 const imageOptions = [
@@ -279,7 +279,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Field label="Cuaca" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.weather} onChange={(event) => update("weather", event.target.value)} placeholder="Hujan, Mendung" /></Field>
                 <Field label="Kondisi air" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.water} onChange={(event) => update("water", event.target.value)} placeholder="Keruh, Hijau" /></Field>
-                <Field label="Jenis pemancingan"><input className={fieldClass} value={form.fishingTypes} onChange={(event) => update("fishingTypes", event.target.value)} placeholder="Harian, Lomba, Galat" /></Field>
+                <Field label="Jenis pemancingan"><input className={fieldClass} value={form.fishingTypes} onChange={(event) => update("fishingTypes", event.target.value)} placeholder="Harian, Lomba, Galatama" /></Field>
                 <Field label="Musim"><input className={fieldClass} value={form.seasons} onChange={(event) => update("seasons", event.target.value)} placeholder="Musim Hujan, Peralihan" /></Field>
                 <Field label="Provinsi terkait"><input className={fieldClass} value={form.provinces} onChange={(event) => update("provinces", event.target.value)} placeholder="Jawa Barat, Banten" /></Field>
                 <Field label="Tingkat kesulitan"><select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Mudah", "Menengah", "Tingkat lanjut"].map((item) => <option key={item}>{item}</option>)}</select></Field>

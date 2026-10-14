@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart, SlidersHorizontal } from "lucide-react";
-import { recipes, defaultPreferences } from "@/data/recipes";
+import { defaultPreferences, normalizeFishingType, recipes } from "@/data/recipes";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { SearchInput, EmptyState } from "@/components/shared";
@@ -16,7 +16,7 @@ import { searchRecipes } from "@/lib/search";
 import { useLocationAutofill } from "@/lib/use-location";
 import type { DetectedPlace } from "@/lib/location";
 
-const categories = ["Semua", "Harian", "Lomba", "Galat", "Premium", "Ekonomis"];
+const categories = ["Semua", "Harian", "Lomba", "Galatama", "Premium", "Ekonomis"];
 const FAVORITES_KEY = "umpan-mas-favorites";
 
 function readFavorites(): string[] {
@@ -90,7 +90,10 @@ export function CatalogView() {
     if (filters.weather !== "Semua cuaca") result = result.filter((recipe) => recipe.weather.includes(filters.weather as (typeof recipe.weather)[number]));
     if (filters.season !== "Semua musim") result = result.filter((recipe) => recipe.seasons.includes(filters.season));
     if (filters.water !== "Semua kondisi air") result = result.filter((recipe) => recipe.water.includes(filters.water as (typeof recipe.water)[number]));
-    if (filters.fishingType !== "Semua jenis") result = result.filter((recipe) => recipe.fishingTypes.includes(filters.fishingType as (typeof recipe.fishingTypes)[number]));
+    if (filters.fishingType !== "Semua jenis") {
+      const dipilih = normalizeFishingType(filters.fishingType);
+      result = result.filter((recipe) => recipe.fishingTypes.map(normalizeFishingType).includes(dipilih));
+    }
     if (filters.budget !== "Semua budget") result = filterRecipesByBudget(result, filters.budget);
     if (filters.difficulty !== "Semua tingkat") result = result.filter((recipe) => recipe.difficulty === filters.difficulty);
     if (favoritesOnly) result = result.filter((recipe) => favoriteSlugs.includes(recipe.slug));

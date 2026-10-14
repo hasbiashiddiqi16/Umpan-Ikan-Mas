@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
+import { normalizeFishingType } from "@/data/recipes";
 import { recipes } from "@/data/recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 
@@ -16,7 +17,14 @@ export async function GET(request: Request) {
     const rows = slug
       ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(50)
       : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(250);
-    return Response.json({ reviews: rows.map((review) => ({ ...review, date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(review.createdAt) })) }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({
+      reviews: rows.map((review) => ({
+        ...review,
+        // Ulasan lama bisa tersimpan dengan sebutan "Galat"; dibaca sebagai "Galatama".
+        fishingType: normalizeFishingType(review.fishingType),
+        date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(review.createdAt),
+      })),
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     // Katalog publik tetap tampil walau basis data belum tersambung.
     return Response.json({ reviews: [] });
@@ -35,7 +43,8 @@ export async function POST(request: Request) {
     const rating = Number(item.rating);
     const allowedWeather = ["Hujan", "Mendung", "Cerah", "Berawan", "Panas"];
     const allowedWater = ["Keruh", "Hijau", "Jernih", "Kekuningan"];
-    const allowedTypes = ["Harian", "Lomba", "Galat"];
+    // "Galat" masih diterima dari formulir lama, tetapi disimpan sebagai "Galatama".
+    const allowedTypes = ["Harian", "Lomba", "Galatama", "Galat"];
     if (!/^[a-z0-9-]{2,180}$/.test(recipeSlug) || name.length < 2 || name.length > 80 || location.length > 180 || comment.length < 12 || comment.length > 500 || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       return Response.json({ error: "Lengkapi nama, komentar, dan rating 1–5 dengan benar." }, { status: 400 });
     }
@@ -47,7 +56,7 @@ export async function POST(request: Request) {
     const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
     const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
-    const [created] = await db.insert(cmsReviews).values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: item.fishingType, catchCount, comment, status: "pending" }).returning({ id: cmsReviews.id });
+    const [created] = await db.insert(cmsReviews).values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: normalizeFishingType(item.fishingType), catchCount, comment, status: "pending" }).returning({ id: cmsReviews.id });
     return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
   } catch (error) {
     return databaseErrorResponse(error, "Ulasan terkirim secara lokal, tetapi server sedang tidak tersedia.");

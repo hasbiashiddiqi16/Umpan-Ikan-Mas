@@ -86,6 +86,16 @@ Kata sandi dashboard juga bisa diganti tanpa deploy dari **Studio → Keamanan**
 
 Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
 
+## Istilah jenis kolam: "Galatama"
+
+Situs memakai istilah **Galatama** untuk kolam galatama (jenis kolam yang memancingkan ikan mas hasil tebaran, bukan kolam harian atau kolam lomba). Sebelumnya situs memakai sebutan "Galat", yang tidak dikenal di dunia pemancingan; sebutan itu sudah tidak dipakai lagi di antarmuka.
+
+Sebutan lama tetap **dibaca** agar data yang sudah tersimpan (resep CMS dan ulasan) tidak hilang:
+
+- `normalizeFishingType` / `normalizeFishingTypes` di `src/data/recipes.ts` mengubah "Galat" menjadi "Galatama" saat data dibaca; `normalizeFishingText` melakukan hal yang sama untuk kalimat seperti "Kolam galat".
+- Validasi penyimpanan (`src/lib/cms.ts`, API ulasan) masih menerima "Galat" dari formulir/tautan lama, tetapi selalu menuliskan "Galatama".
+- Migrasi `netlify/database/migrations/20261014060000_rename_galat_to_galatama` merapikan nilai yang sudah ada di basis data (kategori, larik jenis, teks syarat, ringkasan resep, dan jenis ulasan). Migrasi ini aman dijalankan berulang karena hanya mengganti kata "Galat" utuh, bukan bagian dari "Galatama".
+
 ## Takaran kroto dan bahan amis
 
 Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` pada data bahan:
@@ -94,6 +104,15 @@ Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` 
 - **Ikan tuna kaleng amis `2 sdm`** bermerek **Deho / Sunbell Katsuo**, plus **minyak ikan amis `1 sdm`**. Baris tuna dilewati bila resep sudah memakai ikan kalengan (mis. Sarden).
 
 Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
+
+## Tinggi dan panah dropdown di ponsel
+
+Semua dropdown (<select>) di halaman publik memakai kelas bersama `select-field` (`src/app/globals.css`) plus padding dari `SELECT_FIELD_CLASS` di `src/components/form-fields.tsx`:
+
+- **Tinggi dari padding, bukan `min-height`.** iOS Safari (mis. iPhone 7) mengabaikan `min-height` pada `<select>`, sehingga field tampak pendek dan teks nyaris menempel ke tepi atas/bawah. Karena itu tingginya ditentukan `py-3` (dan `pr-11` untuk ruang panah), lalu `min-h-*` hanya jadi penyelaras di layar besar (`sm:py-2.5`).
+- **Panah digambar sendiri.** Tampilan bawaan peramban dimatikan (`appearance: none` lewat `.select-field`) karena panah bawaannya menempel ke tepi. Komponen `SelectBox` (`src/components/form-fields.tsx`) menaruh ikon `ChevronDown` di dalam field dengan jarak `right-3.5` (14px) dari tepi kanan dan `pointer-events-none`, jadi area klik tetap milik dropdown dan teks punya jarak 14px dari panah.
+- Dropdown publik yang memakainya: `filter-bar.tsx` (termasuk panel filter mobile), `province-explorer.tsx`, `quick-finder.tsx`, `expert-system.tsx`, `ai-wizard.tsx` (tetap ada ikon pin di kiri), dan `recipe-review-section.tsx`.
+- Dropdown di dashboard/admin sengaja **tidak** diubah (`fieldClass` di `appearance-manager.tsx`, `content-manager.tsx`, dan `security-manager.tsx`).
 
 ## Popup sambutan pengunjung baru
 
@@ -115,13 +134,16 @@ Popup ini murni informasi awal, jadi:
 
 **Kapan muncul**
 
-- Tampil **sekali per perangkat**, dibuka setelah halaman tenang dan ditunda selama pengunjung masih aktif berinteraksi.
+- Muncul pada **kunjungan pertama**, **setiap sesi peramban baru** (tab ditutup paksa lalu dibuka lagi — penanda sesi ikut terhapus), dan **lagi setelah lewat 24 jam** sejak terakhir dilihat. Jatah 24 jam juga berlaku untuk tab yang dibiarkan terbuka lama: begitu tab kembali aktif, popup tampil lagi.
+- Selama masa sembunyi itu — sesi yang sama dan belum 24 jam — pengunjung yang berpindah halaman tidak melihatnya berulang kali.
+- Dibuka setelah halaman tenang (± 1,4 detik) dan ditunda selama pengunjung masih aktif berinteraksi.
 - Tidak muncul di `/dashboard` dan `/login` (termasuk saat dipaksa lewat `?sambutan=1`).
-- Penanda disimpan berlapis: `localStorage` (kunci `umpan-mas-promo-welcome-seen-v1`), lalu `sessionStorage`, lalu memori. Jadi kalau penyimpanan diblokir — mode privat atau halaman dibuka di dalam iframe yang di-sandbox — popup tetap tampil sekali per muat halaman, bukan malah tidak pernah muncul.
+- Penanda disimpan berlapis: `localStorage` (kunci `umpan-mas-promo-welcome-seen-v1`, berisi waktu terakhir dilihat), lalu `sessionStorage`, lalu memori. Jadi kalau penyimpanan diblokir — mode privat atau halaman dibuka di dalam iframe yang di-sandbox — popup tetap tampil sekali per sesi, bukan malah tidak pernah muncul.
+- Penanda dari versi lama yang masih berbentuk `"1"` (tanpa waktu) dibaca sebagai "pernah dilihat", sehingga popup muncul sekali lagi lalu memakai penanda waktu yang baru.
 
 **Melihat ulang untuk pratinjau**
 
-Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
+Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Di dashboard, tombol **Tampilkan lagi** pada kartu popup menghapus penandanya di semua lapisan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 

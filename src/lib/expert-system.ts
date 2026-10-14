@@ -1,6 +1,6 @@
 import { fishingReports } from "@/data/fishingReports";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
-import { recipes, type Recipe } from "@/data/recipes";
+import { normalizeFishingType, recipes, type Recipe } from "@/data/recipes";
 import { reviews, type RecipeReview } from "@/data/reviews";
 import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
 
@@ -40,7 +40,11 @@ function getCommunityFit(recipe: Recipe, preferences: UserPreferences, community
     let matched = 0;
     if (preferences.weather) { checks += 1; if (review.weather === preferences.weather) matched += 1; }
     if (preferences.water) { checks += 1; if (review.water === preferences.water) matched += 1; }
-    if (preferences.fishingType && review.fishingType) { checks += 1; if (review.fishingType === preferences.fishingType) matched += 1; }
+    if (preferences.fishingType && review.fishingType) {
+      checks += 1;
+      // "Galat" (sebutan lama) dan "Galatama" dihitung sebagai jenis yang sama.
+      if (normalizeFishingType(review.fishingType) === normalizeFishingType(preferences.fishingType)) matched += 1;
+    }
     return checks ? matched / checks : 0.5;
   });
   const contextAverage = contextPoints.reduce((sum, value) => sum + value, 0) / contextPoints.length;

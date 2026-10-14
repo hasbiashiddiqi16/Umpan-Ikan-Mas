@@ -1,7 +1,7 @@
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
-import { validateCmsRecipeInput } from "@/lib/cms";
+import { normalizeCmsRecipeRecord, validateCmsRecipeInput } from "@/lib/cms";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { databaseErrorResponse } from "@/lib/database-status";
 
@@ -13,7 +13,8 @@ export async function GET() {
 
   try {
     const rows = await db.select().from(cmsRecipes).orderBy(desc(cmsRecipes.updatedAt));
-    return Response.json({ recipes: rows });
+    // Baris lama bisa masih memakai sebutan "Galat"; dibaca sebagai "Galatama".
+    return Response.json({ recipes: rows.map(normalizeCmsRecipeRecord) });
   } catch (error) {
     return databaseErrorResponse(error, "Konten belum dapat dimuat.");
   }

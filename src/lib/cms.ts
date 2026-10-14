@@ -1,4 +1,9 @@
-import type { Recipe } from "@/data/recipes";
+import {
+  normalizeFishingText,
+  normalizeFishingType,
+  normalizeFishingTypes,
+  type Recipe,
+} from "@/data/recipes";
 import type { CmsIngredient } from "@/db/schema";
 import { slugify } from "@/lib/utils";
 
@@ -35,12 +40,14 @@ export type CmsRecipeRecord = {
 
 export type CmsRecipeInput = Omit<CmsRecipeRecord, "id" | "rating" | "reviewCount" | "users" | "popularity" | "createdAt" | "updatedAt"> & { rating?: number; popularity?: number };
 
-const validCategories = ["Harian", "Lomba", "Galat", "Premium", "Ekonomis"];
+// "Galat" tetap diterima sebagai sebutan lama (data yang sudah tersimpan),
+// tetapi disimpan kembali sebagai "Galatama".
+const validCategories = ["Harian", "Lomba", "Galatama", "Galat", "Premium", "Ekonomis"];
 const validStatuses = ["draft", "published", "archived"];
 const validDifficulties = ["Mudah", "Menengah", "Tingkat lanjut"];
 const validWeather = ["Hujan", "Mendung", "Cerah", "Berawan", "Panas"];
 const validWater = ["Keruh", "Hijau", "Jernih", "Kekuningan"];
-const validTypes = ["Harian", "Lomba", "Galat"];
+const validTypes = ["Harian", "Lomba", "Galatama", "Galat"];
 const validSeasons = ["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"];
 
 function stringArray(value: unknown, allowed?: string[]): string[] | null {
@@ -73,17 +80,19 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const summary = typeof item.summary === "string" ? item.summary.trim() : "";
   if (title.length < 3 || title.length > 180) return { error: "Judul harus berisi 3–180 karakter." };
   if (summary.length < 15 || summary.length > 1500) return { error: "Ringkasan harus berisi 15–1.500 karakter." };
-  const category = typeof item.category === "string" && validCategories.includes(item.category) ? item.category : "Harian";
+  const category = typeof item.category === "string" && validCategories.includes(item.category)
+    ? normalizeFishingType(item.category)
+    : "Harian";
   const status = typeof item.status === "string" && validStatuses.includes(item.status) ? item.status : "draft";
   const difficulty = typeof item.difficulty === "string" && validDifficulties.includes(item.difficulty) ? item.difficulty : "Mudah";
   const weather = stringArray(item.weather, validWeather);
   const water = stringArray(item.water, validWater);
-  const fishingTypes = stringArray(item.fishingTypes, validTypes);
+  const fishingTypes = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType);
   const provinces = stringArray(item.provinces);
   const seasons = stringArray(item.seasons, validSeasons);
   const steps = stringArray(item.steps);
-  const suitable = stringArray(item.suitable);
-  const notSuitable = stringArray(item.notSuitable);
+  const suitable = stringArray(item.suitable)?.map(normalizeFishingText);
+  const notSuitable = stringArray(item.notSuitable)?.map(normalizeFishingText);
   const ingredients = ingredientArray(item.ingredients);
   if (!weather || !water || !fishingTypes || !provinces || !seasons || !steps || !suitable || !notSuitable || !ingredients) return { error: "Daftar kondisi, bahan, atau langkah tidak valid." };
   if (ingredients.length < 1) return { error: "Tambahkan minimal satu bahan resep." };
@@ -108,11 +117,27 @@ export function mergeRecipesBySlug(seedRecipes: Recipe[], managedRecipes: Recipe
   return [...merged.values()];
 }
 
+/**
+ * Menyeragamkan sebutan jenis kolam pada baris yang dibaca dari basis data.
+ * Data lama bisa masih berisi "Galat"; dibaca sebagai "Galatama" supaya
+ * antarmuka dan penyimpanan berikutnya memakai satu sebutan saja.
+ */
+export function normalizeCmsRecipeRecord<T extends CmsRecipeRecord>(record: T): T {
+  return {
+    ...record,
+    category: normalizeFishingType(record.category),
+    fishingTypes: normalizeFishingTypes(record.fishingTypes),
+    summary: normalizeFishingText(record.summary),
+    suitable: record.suitable.map(normalizeFishingText),
+    notSuitable: record.notSuitable.map(normalizeFishingText),
+  };
+}
+
 export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
   return {
     slug: record.slug,
     name: record.title,
-    category: record.category as Recipe["category"],
+    category: normalizeFishingType(record.category) as Recipe["category"],
     rating: record.rating / 10,
     reviewCount: record.reviewCount,
     users: record.users,
@@ -122,14 +147,14 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
     image: record.image,
     weather: record.weather as Recipe["weather"],
     water: record.water as Recipe["water"],
-    fishingTypes: record.fishingTypes as Recipe["fishingTypes"],
+    fishingTypes: normalizeFishingTypes(record.fishingTypes) as Recipe["fishingTypes"],
     provinces: record.provinces,
     seasons: record.seasons,
     popularity: record.popularity,
-    summary: record.summary,
+    summary: normalizeFishingText(record.summary),
     ingredients: record.ingredients,
     steps: record.steps,
-    suitable: record.suitable,
-    notSuitable: record.notSuitable,
+    suitable: record.suitable.map(normalizeFishingText),
+    notSuitable: record.notSuitable.map(normalizeFishingText),
   };
 }
