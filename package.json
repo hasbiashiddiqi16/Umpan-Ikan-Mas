@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
     "vercel-build": "node scripts/migrate.mjs --optional && next build",
-    "supabase:check": "node scripts/supabase-check.mjs"
+    "supabase:check": "node scripts/supabase-check.mjs",
+    "eval:rekomendasi": "node scripts/eval-rekomendasi.mjs"
   },
   "dependencies": {
     "@netlify/database": "^2.0.1",

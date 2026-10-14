@@ -2,6 +2,7 @@ import { Check, Clock3, Minus, X } from "lucide-react";
 import { OPTIONAL_ADDITIONS_NOTE, type Ingredient } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { Badge, Rating } from "@/components/shared";
+import { catchBadges } from "@/lib/catch-details";
 
 const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
 
@@ -140,7 +141,7 @@ export function ReviewCard({ review }: { review: RecipeReview }) {
         </div>
         <Rating value={review.rating} compact />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{review.weather === "Hujan" ? "🌧️" : review.weather === "Cerah" ? "☀️" : "☁️"} {review.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {review.water}</Badge>{review.fishingType && <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {review.fishingType}</Badge>}{typeof review.catchCount === "number" && <Badge tone="cream" className={cardMetaBadgeClass}>🐟 {review.catchCount} ekor</Badge>}</div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{review.weather === "Hujan" ? "🌧️" : review.weather === "Cerah" ? "☀️" : "☁️"} {review.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {review.water}</Badge>{review.waterBody && <Badge tone="cream" className={cardMetaBadgeClass}>🌊 {review.waterBody}</Badge>}{review.fishingType && <Badge tone="cream" className={cardMetaBadgeClass}>🎣 {review.fishingType}</Badge>}{catchBadges(review).map((badge) => <Badge key={badge.label} tone="cream" className={cardMetaBadgeClass}>{badge.emoji} {badge.label}</Badge>)}</div>
       <p className="mt-4 break-words text-sm leading-6 text-[#647064]">“{review.comment}”</p>
     </article>
   );

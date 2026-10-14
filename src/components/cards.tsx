@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { describeCatchSummary } from "@/lib/catch-details";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Cloud, CloudRain, CloudSun, MapPin, Sun, Users } from "lucide-react";
 import { recipes, type Recipe } from "@/data/recipes";
@@ -75,7 +76,7 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
           <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><Badge tone="cream" className="!text-[10px]">Data contoh</Badge></div><p className="mt-1 flex items-center gap-1 text-xs text-[#879087]"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{report.weather === "Hujan" ? "🌧️" : report.weather === "Cerah" ? "☀️" : "☁️"} {report.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {report.water}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>🎣 {report.fishingType}</Badge></div>
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{report.catchCount} ekor</p></div></div>
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{describeCatchSummary(report)}</p></div></div>
         <p className="mt-4 flex-1 text-sm leading-6 text-[#687268]">“{report.comment}”</p>
         <div className="mt-4 flex items-center justify-between border-t border-[#edf0eb] pt-3"><Rating value={report.rating} compact /><Link href={`/resep/${report.recipeSlug}`} className="text-xs font-bold text-[#35573a] hover:underline">Lihat detail <ArrowRight size={13} className="ml-1 inline" /></Link></div>
       </div>

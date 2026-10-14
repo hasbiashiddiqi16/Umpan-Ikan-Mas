@@ -136,8 +136,8 @@ export function describeRating(rating?: RecipeRating, sampleCount = 0) {
 }
 
 /** Rangkuman kondisi yang dipilih pengunjung, untuk menjelaskan asal skor kecocokan. */
-export function describePreferences(preferences: { province?: string; weather?: string; water?: string; fishingType?: string; season?: string; budget?: string }): string {
-  return [preferences.province, preferences.weather, preferences.water, preferences.fishingType, preferences.budget, preferences.season]
+export function describePreferences(preferences: { province?: string; weather?: string; water?: string; waterBody?: string; fishingType?: string; season?: string; budget?: string }): string {
+  return [preferences.province, preferences.waterBody, preferences.weather, preferences.water, preferences.fishingType, preferences.budget, preferences.season]
     .filter((value): value is string => Boolean(value))
     .join(" · ");
 }

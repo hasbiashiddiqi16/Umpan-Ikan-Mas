@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Filter, SlidersHorizontal, X } from "lucide-react";
 import { provinces } from "@/data/provinces";
 import { catalogCityNames } from "@/data/geo-cities";
+import { WATER_BODIES } from "@/data/recipes";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 
 export type CatalogFilters = {
@@ -14,6 +15,7 @@ export type CatalogFilters = {
   weather: string;
   season: string;
   water: string;
+  waterBody: string;
   fishingType: string;
   budget: string;
   difficulty: string;
@@ -27,6 +29,7 @@ export const defaultCatalogFilters: CatalogFilters = {
   weather: "Semua cuaca",
   season: "Semua musim",
   water: "Semua kondisi air",
+  waterBody: "Semua tipe air",
   fishingType: "Semua jenis",
   budget: "Semua budget",
   difficulty: "Semua tingkat",
@@ -44,6 +47,7 @@ export function FilterBar({ filters, onChange, resultCount, locationControl }: {
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Kota<SelectBox><select className={selectClass} value={filters.city} onChange={(event) => update("city", event.target.value)}>{["Semua kota", ...catalogCityNames].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Cuaca<SelectBox><select className={selectClass} value={filters.weather} onChange={(event) => update("weather", event.target.value)}>{["Semua cuaca", "Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Musim<SelectBox><select className={selectClass} value={filters.season} onChange={(event) => update("season", event.target.value)}>{["Semua musim", "Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+      <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Tipe air<SelectBox><select className={selectClass} value={filters.waterBody} onChange={(event) => update("waterBody", event.target.value)}>{["Semua tipe air", ...WATER_BODIES].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Kondisi air<SelectBox><select className={selectClass} value={filters.water} onChange={(event) => update("water", event.target.value)}>{["Semua kondisi air", "Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Jenis kolam<SelectBox><select className={selectClass} value={filters.fishingType} onChange={(event) => update("fishingType", event.target.value)}>{["Semua jenis", "Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       <label className="grid gap-1.5 text-[11px] font-bold text-[#7e897c]">Budget<SelectBox><select className={selectClass} value={filters.budget} onChange={(event) => update("budget", event.target.value)}>{["Semua budget", "< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>

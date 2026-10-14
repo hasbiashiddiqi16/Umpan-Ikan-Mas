@@ -1,9 +1,14 @@
 import {
+  DEFAULT_WATER_BODIES,
+  WATER_BODIES,
+  isWaterBody,
   normalizeFishingText,
   normalizeFishingType,
   orderFishingTypes,
   primaryFishingType,
+  waterBodiesFromText,
   type Recipe,
+  type WaterBody,
 } from "@/data/recipes";
 import type { CmsIngredient } from "@/db/schema";
 import { slugify } from "@/lib/utils";
@@ -27,6 +32,7 @@ export type CmsRecipeRecord = {
   popularity: number;
   weather: string[];
   water: string[];
+  waterBodies: string[];
   fishingTypes: string[];
   provinces: string[];
   seasons: string[];
@@ -84,6 +90,11 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const difficulty = typeof item.difficulty === "string" && validDifficulties.includes(item.difficulty) ? item.difficulty : "Mudah";
   const weather = stringArray(item.weather, validWeather);
   const water = stringArray(item.water, validWater);
+  // Tipe air boleh kosong (editor belum melabeli) — halaman publik menurunkan
+  // labelnya dari teks resep, sama seperti resep katalog.
+  const waterBodies = item.waterBodies === undefined || item.waterBodies === null
+    ? []
+    : stringArray(item.waterBodies, WATER_BODIES);
   const fishingTypesInput = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType) ?? null;
   // Kategori tidak lagi dipilih manual di dashboard: diturunkan dari jenis
   // pemancingan resep, dan jenis yang tertulis di judul diletakkan paling depan
@@ -96,6 +107,8 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const suitable = stringArray(item.suitable)?.map(normalizeFishingText);
   const notSuitable = stringArray(item.notSuitable)?.map(normalizeFishingText);
   const ingredients = ingredientArray(item.ingredients);
+  // Pesan khusus untuk tipe air, supaya editor tahu bagian mana yang salah.
+  if (waterBodies === null) return { error: "Tipe air hanya boleh berisi Kolam, Sungai, atau Danau." };
   if (!weather || !water || !fishingTypes || !provinces || !seasons || !steps || !suitable || !notSuitable || !ingredients) return { error: "Daftar kondisi, bahan, atau langkah tidak valid." };
   if (ingredients.length < 1) return { error: "Tambahkan minimal satu bahan resep." };
   if (steps.length < 1) return { error: "Tambahkan minimal satu langkah meracik." };
@@ -110,7 +123,7 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const rating = typeof item.rating === "number" && item.rating >= 0 && item.rating <= 5 ? Math.round(item.rating * 10) : undefined;
   const popularity = typeof item.popularity === "number" && item.popularity >= 0 && item.popularity <= 100 ? Math.round(item.popularity) : undefined;
 
-  return { data: { slug, title, summary, category, status, image, price, priceValue: Math.round(priceValue), difficulty, weather, water, fishingTypes, provinces, seasons, ingredients, steps, suitable, notSuitable, author, rating, popularity } };
+  return { data: { slug, title, summary, category, status, image, price, priceValue: Math.round(priceValue), difficulty, weather, water, waterBodies, fishingTypes, provinces, seasons, ingredients, steps, suitable, notSuitable, author, rating, popularity } };
 }
 
 export function mergeRecipesBySlug(seedRecipes: Recipe[], managedRecipes: Recipe[]): Recipe[] {
@@ -139,6 +152,19 @@ export function normalizeCmsRecipeRecord<T extends CmsRecipeRecord>(record: T): 
   };
 }
 
+/**
+ * Tipe air yang dipakai halaman publik untuk sebuah baris CMS.
+ *
+ * Urutannya: label yang ditulis editor → teks resepnya sendiri → label bawaan
+ * katalog (kolam). Tidak ada tebakan sungai/danau tanpa dasar.
+ */
+export function resolveWaterBodies(record: Pick<CmsRecipeRecord, "waterBodies" | "title" | "summary" | "suitable">): WaterBody[] {
+  const ditulisEditor = (record.waterBodies ?? []).filter(isWaterBody);
+  if (ditulisEditor.length) return [...new Set(ditulisEditor)];
+  const dariTeks = waterBodiesFromText(record.title, record.summary, record.suitable ?? []);
+  return dariTeks.length ? dariTeks : [...DEFAULT_WATER_BODIES];
+}
+
 export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
   return {
     slug: record.slug,
@@ -153,6 +179,7 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
     image: record.image,
     weather: record.weather as Recipe["weather"],
     water: record.water as Recipe["water"],
+    waterBodies: resolveWaterBodies(record),
     fishingTypes: orderFishingTypes(record.title, record.fishingTypes),
     provinces: record.provinces,
     seasons: record.seasons,

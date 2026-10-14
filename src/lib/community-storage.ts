@@ -1,3 +1,5 @@
+import { WATER_BODIES } from "@/data/recipes";
+import { ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import type { RecipeReview } from "@/data/reviews";
 
 export const COMMUNITY_REVIEWS_KEY = "umpan-mas-community-reviews-v1";
@@ -30,7 +32,10 @@ function isMemberReview(value: unknown): value is MemberReview {
     typeof item.rating === "number" && item.rating >= 1 && item.rating <= 5 &&
     typeof item.weather === "string" &&
     typeof item.water === "string" &&
+    (item.waterBody === undefined || WATER_BODIES.includes(item.waterBody as (typeof WATER_BODIES)[number])) &&
     (item.catchCount === undefined || (typeof item.catchCount === "number" && item.catchCount >= 0)) &&
+    (item.sessionMinutes === undefined || (typeof item.sessionMinutes === "number" && item.sessionMinutes >= SESSION_MIN_MINUTES && item.sessionMinutes <= SESSION_MAX_MINUTES)) &&
+    (item.rodCount === undefined || (typeof item.rodCount === "number" && item.rodCount >= ROD_MIN && item.rodCount <= ROD_MAX)) &&
     (item.serverId === undefined || (typeof item.serverId === "number" && Number.isSafeInteger(item.serverId) && item.serverId > 0)) &&
     (item.synced === undefined || typeof item.synced === "boolean") &&
     typeof item.date === "string" &&

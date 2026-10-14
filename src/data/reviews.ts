@@ -16,8 +16,14 @@ export type RecipeReview = {
   rating: number;
   weather: string;
   water: string;
+  /** Tipe perairan yang dicoba (Kolam/Sungai/Danau) — opsional, lihat `WaterBody`. */
+  waterBody?: string;
   fishingType?: string;
   catchCount?: number;
+  /** Durasi sesi dalam menit (0,5–24 jam) — opsional, dari ulasan pengunjung. */
+  sessionMinutes?: number;
+  /** Jumlah joran yang dipakai (1–10) — opsional. */
+  rodCount?: number;
   date: string;
   comment: string;
 };

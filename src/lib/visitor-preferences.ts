@@ -15,7 +15,7 @@ import type { UserPreferences } from "@/lib/recommendation";
 export const VISITOR_PREFERENCES_KEY = "umpan-mas-preferences-v1";
 export const VISITOR_PREFERENCES_EVENT = "umpan:preferences-change";
 
-const FIELDS = ["province", "weather", "water", "fishingType", "season", "budget"] as const;
+const FIELDS = ["province", "weather", "water", "waterBody", "fishingType", "season", "budget"] as const;
 
 function bersihkan(value: unknown): UserPreferences {
   if (!value || typeof value !== "object") return {};

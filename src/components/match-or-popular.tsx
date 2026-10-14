@@ -4,6 +4,7 @@ import { Flame } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
 import { calculateMatchScore } from "@/lib/recommendation";
 import { POPULAR_HINT, describeRating, describePreferences, isPopularRecipe } from "@/lib/rating-utils";
+import { MATCH_WEIGHTS_NOTE } from "@/lib/recommendation-config";
 import { useRecipeRatings } from "@/lib/use-ratings";
 import { useVisitorPreferences } from "@/lib/visitor-preferences";
 
@@ -42,7 +43,8 @@ export function MatchOrPopularBox({ recipe }: { recipe: Recipe }) {
             <p className="text-[10px] leading-4 text-[#8b9489]">{ringkasan || "Kondisi pilihanmu"}</p>
           </div>
         </div>
-        <p className="mt-2 text-[10px] leading-4 text-[#8b9489]">Dihitung dari kondisi yang kamu isi (air, cuaca, jenis pemancingan, provinsi, musim) — bukan dari data katalog.</p>
+        <p className="mt-2 text-[10px] leading-4 text-[#8b9489]">Dihitung dari kondisi yang kamu isi (tipe air, kondisi air, cuaca, jenis pemancingan, provinsi, musim) — bukan dari data katalog.</p>
+        <p className="mt-1 text-[10px] leading-4 text-[#9aa197]">{MATCH_WEIGHTS_NOTE}</p>
       </div>
     );
   }

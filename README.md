@@ -166,6 +166,7 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
 - **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
 - Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
+- **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Data contoh di `/komunitas` juga memakai format yang sama supaya jelas cara membacanya.
 - **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
 
 ## Kejujuran data ulasan dan laporan
@@ -197,7 +198,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Definisi "mencoba".** Tulisan "N pemancing mencoba" berarti **jumlah ulasan pengunjung** pada resep itu: satu ulasan = satu pemancing yang mencoba. Angkanya tidak pernah melebihi jumlah ulasan, dan selalu disertai penjelasan di halaman resep ("Satu ulasan berarti satu pemancing yang mencoba racikan ini…"). Kalimat penjelas yang sama dipakai pada atribut `title` kartu resep lewat `describeRating()` (`src/lib/rating-utils.ts`). Tombol "Saya coba" belum ada; kalau nanti ditambahkan, angkanya harus tetap berasal dari tabel yang sama.
 
-**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung**: air 30, cuaca 22, jenis pemancingan 22, provinsi 16, musim 10 (jumlahnya 100). Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
+**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung** (tipe air, kondisi air, cuaca, jenis pemancingan, musim, provinsi), dengan bobot yang tinggal di `src/lib/recommendation-config.ts` — lihat bagian "Bobot skor kecocokan" di bawah. Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
 
 **Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
 
@@ -223,6 +224,75 @@ Aturan yang menyertainya, agar tetap jujur:
 - **Urutan berbasis jumlah ulasan tidak berubah.** "Racikan Populer" (beranda), "Ulasan Terbanyak" (katalog), urutan pilihan di `/cuaca`, urutan resep provinsi, dan pemutus seri rekomendasi memakai **jumlah** ulasan lebih dulu; rata-rata di sana hanya pemutus seri pada jumlah yang sama — dan pada jumlah yang sama, urutan rata-rata setara dengan urutan skor Bayesian.
 - Pengunjung diberi tahu: saat memilih "Rating Tertinggi", katalog menampilkan catatan `BAYESIAN_HINT` yang menjelaskan mengapa resep berulasan sedikit tidak langsung melompat ke atas.
 - **Dashboard memakai angka yang sama.** `GET /api/admin/recipes` mengirim peta rating ulasan nyata, `global` (C), dan `minReviews` (m) — nilainya identik dengan `/api/public/reviews/summary`. Pustaka racikan di Content Studio punya pilihan urutan **"Skor rating (Bayesian)"** (default tetap "Terakhir diubah", karena urutan editorial tidak berubah) dan setiap baris menampilkan dua baris angka yang sengaja dipisah: "angka katalog ★ …" (angka kurasi, selalu berlabel) dan "Ulasan nyata ★ … dari N ulasan · skor peringkat …" atau "Belum ada ulasan pengunjung". Ikhtisar `/dashboard` juga menampilkan rumus, ambang `m`, dan nilai `C` dari data nyata (dari `GET /api/admin/analytics`) supaya editor tahu dari mana urutan katalog berasal. Antrean moderasi tetap urut waktu — memoderasi tidak pernah diurutkan dari rating.
+
+## Bobot skor kecocokan: satu berkas, status jujur, dan evaluasi hit-rate@3
+
+**Bobot tidak lagi ditulis di dalam kode.** Semua bobot skor kecocokan tinggal di `src/lib/recommendation-config.ts`, lengkap dengan alasan tiap bobot, versi (`sementara-1 (2026-10-14)`), dan status yang jujur: **masih dugaan awal, belum diuji data**. Bobot lama yang juga tidak pernah diuji disimpan sebagai `MATCH_WEIGHTS_LAMA` hanya untuk pembanding.
+
+| Kondisi | Bobot lama | Bobot sekarang | Alasan singkat |
+| --- | --- | --- | --- |
+| Tipe air (kolam/sungai/danau) | — | **25** | Karakter air berbeda antarkolam; satu provinsi punya banyak kolam yang tidak sama. |
+| Kondisi air (keruh/hijau/jernih/kekuningan) | 30 | 20 | Warna dan kejernihan air langsung memengaruhi pilihan aroma. |
+| Cuaca | 22 | 20 | Mengubah suhu dan keaktifan ikan saat sesi berjalan. |
+| Jenis pemancingan | 22 | 20 | Tekanan kolam saat harian, lomba, dan galatama berbeda. |
+| Musim | 10 | 10 | Lebih lambat berubah daripada kondisi harian. |
+| Provinsi | 16 | **5** | Hanya proksi administratif — pemancing memilih kolam, bukan provinsi. |
+
+Total selalu 100 (dijaga `MATCH_WEIGHTS_TOTAL`/`MATCH_WEIGHTS_BALANCED`), dan halaman `/sistem-pakar` menampilkan tabel bobot beserta alasannya lewat blok "Dari mana angka kecocokan ini?" — jadi pengunjung bisa melihat angkanya, bukan sekadar percaya.
+
+**Tipe air (kolam/sungai/danau).** Resep punya field `waterBodies` (`WaterBody` di `src/data/recipes.ts`), berbeda dari `water` yang berisi kondisi air. Label katalog **diturunkan dari teks resep** (`waterBodiesFromText`) dan tidak menebak: resep yang tidak menyebut sungai/danau tidak diberi label itu. Semua resep katalog saat ini berlabel **Kolam** karena setiap entri "cocok untuk" menyebut kolam; resep yang tidak menyebut apa pun memakai label bawaan katalog (`DEFAULT_WATER_BODIES`). Editor bisa mengubahnya dari kolom **"Tipe air"** di Content Studio (`cms_recipes.water_bodies`, migrasi `20261014180000_add_water_body`). Pengunjung bisa memilih tipe air di filter katalog ("Semua tipe air") dan di Sistem Pakar; pilihannya tersimpan bersama kondisi lain di `umpan-mas-preferences-v1`.
+
+**Ulasan ikut mencatat tipe air (opsional).** Formulir ulasan punya pilihan "Tipe air (opsional, Kolam/Sungai/Danau)" yang disimpan di `cms_reviews.water_body` dan divalidasi server. Ini yang membuat dimensi tipe air bisa dievaluasi nanti — tanpa data ini, bobotnya tidak akan pernah punya bukti.
+
+**Evaluasi hit-rate@3.** Pertanyaannya: kalau pengunjung melaporkan kondisi mancingnya dan resepnya **berhasil**, apakah resep itu muncul di 3 teratas? `TUNING_TARGET` (`src/lib/recommendation-config.ts`) menetapkan:
+
+- **rating tetap sinyal utama**: syarat pertama dan wajib adalah rating ≥ 4;
+- **"tangkapan tinggi" diukur sebagai laju** (`TUNING_TARGET.highCatchPerHourMin = 1,5 ekor/jam`), bukan angka mentah — karena 8 ekor dalam 8 jam tidak sama dengan 8 ekor dalam 2 jam. Laju hanya dihitung kalau durasi sesi diisi dan sesinya ≥ 60 menit (`minSessionMinutesForRate`), supaya sesi setengah jam tidak diekstrapolasi;
+- ulasan yang menyebut tangkapan **tanpa durasi** tidak dihitung sebagai "berhasil"; jumlahnya dilaporkan terpisah (`strictAbsoluteOnly`) supaya tidak ada yang disembunyikan;
+- laporan tetap menampilkan dua angka: **ketat** (rating ≥ 4 **dan** laju tinggi) dan **longgar** (rating ≥ 4 saja);
+- hit-rate@3 dihitung di `src/lib/recommendation-eval.ts` dengan **fungsi urutan yang sama** seperti situs (`getRecommendedRecipes` dengan bobot sebagai parameter — tidak ada rumus tandingan);
+- ulasan yang sedang diuji **dikeluarkan dari bukti pemutus seri** (leave-one-out), supaya resep tidak dibantu ulasan yang justru sedang dinilai;
+- hanya ulasan nyata yang sudah disetujui yang dihitung (ulasan contoh dan yang belum disetujui tidak pernah ikut);
+- **tuning hanya disarankan setelah ≥ 30 ulasan "berhasil"**. Di bawah itu laporan hanya menampilkan keadaan dan berkata "Belum bisa dituning" — bobot tidak diubah berdasarkan sampel tipis.
+
+Cara menjalankannya (server harus jalan; hitung ulang kapan saja):
+
+```
+ADMIN_PASSWORD="..." npm run eval:rekomendasi                    # server lokal :3000
+BASE_URL="https://situs-anda" ADMIN_PASSWORD="..." npm run eval:rekomendasi
+```
+
+Sumbernya `GET /api/admin/recommendation-eval`, dan panel **"Uji urutan rekomendasi · hit-rate@3"** di `/dashboard/analitik` menampilkan bobot aktif, nilai hit-rate, sampel, kandidat bobot yang diuji, serta status tuning. Kalau hasilnya menunjukkan kandidat lain lebih baik **dan** sampelnya sudah cukup, bobot baru ditulis di `src/lib/recommendation-config.ts` (satu tempat), lalu evaluasi dijalankan lagi.
+
+## Aturan komposisi, pengganti bahan, dan perkiraan biaya per wilayah
+
+Sebelumnya komposisi di `/sistem-pakar` hanya "menjumlahkan persentase mengikuti bobot bahan": tidak ada pembatas, jadi kombinasi tak lazim (mis. empat bahan aroma) lewat tanpa satu pun peringatan, penanda pilihan hanya berbunyi `0/6 dipilih` dari 12 bahan tanpa menjelaskan batasnya, dan budget cuma menyaring resep — tidak pernah menilai racikannya. Sekarang:
+
+**Tabel aturan rasio per peran.** `BLEND_ROLE_RULES` di `src/lib/blend-rules.ts`, dan tabelnya tampil apa adanya di halaman:
+
+| Peran | Rentang | Alasan |
+| --- | --- | --- |
+| Dasar | 40–60% | Fondasi adonan harus jadi porsi terbesar: di bawah 40% adonan mudah lepas, di atas 60% pengikat dan aroma tidak kebagian tempat. |
+| Pengikat | 10–25% | Cukup untuk menyatukan adonan, tetapi tidak sampai keras seperti karet. |
+| Protein | 5–20% | Tambahan berprotein sebagai daya tarik; berlebihan membuat adonan sulit dipulung. |
+| Aroma | 5–25% | Aroma bekerja sebagai penanda; kalau dominan, karakter bahan dasar justru tertutup. |
+| Pelembap | 5–20% | Menjaga adonan tidak kering; kelebihan cairan membuat adonan lepas dari kail. |
+
+**Cara porsi dihitung.** Bobot bahan tetap jadi titik awal, lalu porsi per peran dirapikan agar masuk rentang: proporsi bahan → dibatasi ke rentang peran (sisa dibagi ulang ke peran yang masih punya ruang) → dibulatkan ke bilangan bulat yang tetap berjumlah 100% → tiap bahan minimal **4%** (`MIN_INGREDIENT_PERCENT`) supaya tidak ada bahan yang cuma "titik" di adonan. Kalau rentang tidak bisa dipenuhi sekaligus — mis. hanya dua bahan sehingga Dasar tetap 75% sementara aturannya 40–60% — komposisi **tidak** dipaksa masuk aturan: yang tampil tetap proporsi pilihan pengunjung, disertai peringatan porsi mana yang keluar rentang, penyebabnya, dan apa yang bisa ditambah/dikurangi. Rentang ini titik awal yang bisa diperiksa, bukan formula baku.
+
+**Peringatan dan saran yang bisa diklik.** Setiap pelanggaran aturan jadi peringatan berisi angka (mis. "Porsi Aroma 100% — di atas aturan 5–25%"), termasuk peran yang belum terpakai. Saran di panel hasil bisa langsung dipakai: tombol **"Pakai X"** mengganti bahan seperan (atau menambah satu bahan untuk memperbaiki porsi), dan **"Terapkan versi hemat"** mengganti seluruh pilihan dengan bahan seperan yang lebih murah sekaligus.
+
+**Pengganti bahan seperan.** `src/data/ingredient-substitutes.ts` menyimpan catatan pengganti, dan penggantinya selalu diambil dari peran yang sama supaya rasio antar peran tidak rusak: tidak ada tapioka → terigu ("adonan sedikit lebih padat, kurangi 1–2 g"), pelet ↔ roti tawar, susu bubuk ↔ keju (mulai separuh takaran), telur ↔ santan (peran berbeda, jadi rasio ikut berubah — hal itu ditulis di saran). Bahan yang belum punya pengganti seperan (kroto) ditulis jujur: lewati saja, jangan diganti bahan berperan lain tanpa menghitung ulang rasio.
+
+**Harga bahan per wilayah.** `src/data/ingredient-prices.ts` menyimpan harga dasar nasional (pelet Rp 1.200/100 g, kroto Rp 12.000 per ons, roti tawar Rp 6.000/100 g, keju Rp 13.000/100 g, essen pandan dihitung per pemakaian) dikali **faktor wilayah**: Nasional 1,00 · Jawa 0,96 · Bali & Nusa Tenggara 1,04 · Sumatera 1,06 · Sulawesi 1,10 · Kalimantan 1,12 · Maluku & Papua 1,24. Provinsi pengunjung dipetakan ke wilayah (`WILAYAH_PROVINSI`); tanpa provinsi dipakai harga nasional. Semuanya berlabel **perkiraan harga pasar (Oktober 2026), bukan harga tetap**, ditampilkan lengkap di halaman supaya bisa diperiksa dan diperbarui di satu tempat. Bahan ber-mode "pakai" tidak dihitung per gram.
+
+**Estimasi biaya dihitung dari komposisi.** `hitungBiayaCampuran()` menjumlahkan gram tiap bahan (hasil komposisi) × harga wilayah, ditampilkan per 100 g adonan **dan** per sesi (± 250 g, `SESI_GRAM`), beserta rincian rupiah tiap bahan. Tidak ada bahan yang diam-diam dianggap gratis: bahan tanpa harga dihitung sebagai 0 dan jumlahnya dilaporkan.
+
+**Budget kini juga menilai komposisi.** Perkiraan biaya satu sesi dibandingkan dengan rentang budget yang dipilih; kalau melewati batas atasnya, muncul peringatan berisi angka + tawaran versi hemat (dan berapa rupiah lebih murahnya per sesi). Budget tetap menyaring resep seperti sebelumnya, jadi satu isian dipakai di dua tempat: pilihan resep dan biaya racikan.
+
+**Batas pilihan bahan diperjelas.** Bahan dikelompokkan per peran dengan judul seperti "Dasar · aturan 40–60% · 2 bahan" dan penghitung sendiri ("1 dipilih"); penghitung utama berbunyi `4/6 dipilih · sisa 2 slot` (atau "penuh"), bahan lain otomatis nonaktif saat pilihan penuh, dan halaman menyebut batasnya secara eksplisit: "Pilih 2–6 bahan dari 12 bahan yang tersedia, satu bahan minimal 4%".
+
+Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** aturan/pengganti/harga (termasuk 781 kombinasi bahan yang harus tetap berjumlah 100%), **40 uji interaktif jsdom** memakai komponen asli (klik bahan, "Pakai X", versi hemat, ubah provinsi ke Papua, ubah budget kecil/besar), dan **29 uji halaman tersaji + regresi** (semua halaman penting 200, `/dashboard` tetap 307 + noindex, API evaluasi tetap 401 tanpa sesi).
 
 ## Izin lokasi (opsional)
 
