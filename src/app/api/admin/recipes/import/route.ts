@@ -5,6 +5,7 @@ import { normalizeFishingText, normalizeFishingType, normalizeFishingTypes } fro
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { clampReviewCreatedAt } from "@/lib/review-dates";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,8 @@ function seedReviewDate(value: string) {
 /**
  * Sinkronisasi ini sengaja eksplisit dari Content Studio: resep sumber diperbarui
  * mengikuti katalog terkini dan ulasan contoh memakai seed_key agar aman dijalankan
- * berulang kali tanpa menduplikasi 5.000 data awal.
+ * berulang kali. Ulasan contoh sekarang hanya 3 per resep dan tanggalnya dipangkas
+ * agar tidak pernah melewati waktu server.
  */
 export async function POST() {
   const unauthorized = await requireAdminApi();
@@ -112,7 +114,8 @@ export async function POST() {
         catchCount: review.catchCount ?? null,
         comment: review.comment,
         status: "approved",
-        createdAt: seedReviewDate(review.date),
+        // Ulasan contoh tetap tidak boleh bertanggal masa depan.
+        createdAt: clampReviewCreatedAt(seedReviewDate(review.date)),
       };
     });
     let importedReviews = 0;

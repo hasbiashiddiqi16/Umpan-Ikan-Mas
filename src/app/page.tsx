@@ -38,11 +38,11 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl space-y-16 px-5 pt-8 sm:space-y-20 sm:px-8 sm:pt-12 lg:pt-14">
           <QuickFinder />
           <section>
-            <SectionHeader eyebrow="Pilihan komunitas" title="🏆 Rekomendasi Terbaik" subtitle="Racikan yang banyak dipilih dan mendapat rating tinggi dari pemancing." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Pilihan sistem" title="🏆 Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} />)}</div>
           </section>
           <section>
-            <SectionHeader eyebrow="Sering dicoba" title="🔥 Racikan Populer" subtitle="Favorit pemancing, dari umpan harian sampai racikan untuk lomba." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Kurasi redaksi" title="🔥 Racikan Pilihan" subtitle="Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
             <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} /></div>)}</div>
           </section>
           <section>

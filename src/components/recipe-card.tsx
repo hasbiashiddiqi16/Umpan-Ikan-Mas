@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Heart, Users } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
-import { Badge, Rating } from "@/components/shared";
-import { formatCount } from "@/lib/utils";
+import { Badge, RecipeRating } from "@/components/shared";
+import { useRecipeRatings } from "@/lib/use-ratings";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
 const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
@@ -23,6 +23,8 @@ function getStoredFavorites(): string[] {
 
 export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: Recipe; matchScore?: number; featured?: boolean }) {
   const [favorite, setFavorite] = useState(false);
+  // Rating katalog (angka editorial) tidak pernah ditampilkan; hanya ulasan asli.
+  const ratings = useRecipeRatings();
 
   useEffect(() => {
     const syncFavorite = () => setFavorite(getStoredFavorites().includes(recipe.slug));
@@ -64,7 +66,7 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={`/resep/${recipe.slug}`} className="line-clamp-1 text-[17px] font-extrabold tracking-tight text-[#223528] transition hover:text-[#55734d]">{recipe.name}</Link>
-            <div className="mt-1.5 flex items-center gap-2"><Rating value={recipe.rating} /><span className="text-xs text-[#929990]">· {formatCount(recipe.users)} pemancing</span></div>
+            <div className="mt-1.5 flex items-center gap-2"><RecipeRating rating={ratings[recipe.slug]} /></div>
           </div>
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>

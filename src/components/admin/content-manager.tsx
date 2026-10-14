@@ -418,7 +418,7 @@ export function ContentManager() {
           <p className="mt-2 text-sm text-[#7a8579]">Susun, tinjau, dan publikasikan racikan umpan ikan mas.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog & ulasan"}</button>
+          <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog + contoh ulasan"}</button>
           <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]"><Plus size={16} /> Tulis resep</button>
         </div>
       </div>

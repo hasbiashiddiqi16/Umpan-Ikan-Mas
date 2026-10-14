@@ -24,6 +24,20 @@ export function Rating({ value, count, compact = false }: { value: number; count
   );
 }
 
+/**
+ * Rating yang jujur: hanya dari ulasan asli pengunjung. Kalau belum ada ulasan,
+ * tampil "Belum ada rating" — bukan angka karangan dari data katalog.
+ */
+export function RecipeRating({ rating }: { rating?: { count: number; average: number } }) {
+  if (rating && rating.count > 0) return <Rating value={rating.average} count={rating.count} />;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8d968c]">
+      <Star size={13} className="text-[#c3cbc0]" aria-hidden="true" />
+      Belum ada rating
+    </span>
+  );
+}
+
 export function SectionHeader({
   eyebrow,
   title,

@@ -1,9 +1,10 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { normalizeFishingType } from "@/data/recipes";
 import { recipes } from "@/data/recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
+import { isFutureReviewDate } from "@/lib/review-dates";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,11 @@ export async function GET(request: Request) {
   if (slug && slug.length > 180) return Response.json({ reviews: [] });
   try {
     // Ulasan katalog dirender dari data statis pada detail resep. Hanya ulasan
-    // komunitas yang dikirimkan ke API agar seed yang tersinkron ke CMS tidak tampil ganda.
+    // komunitas yang dikirimkan ke API agar ulasan contoh (seed_key) tidak tampil ganda.
+    // Ulasan bertanggal masa depan tidak pernah dikirim ke halaman publik.
     const rows = slug
-      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(50)
-      : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey))).orderBy(desc(cmsReviews.createdAt)).limit(250);
+      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(50)
+      : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(250);
     return Response.json({
       reviews: rows.map((review) => ({
         ...review,
@@ -36,6 +38,11 @@ export async function POST(request: Request) {
     const body: unknown = await request.json();
     if (!body || typeof body !== "object") return Response.json({ error: "Data ulasan tidak valid." }, { status: 400 });
     const item = body as Record<string, unknown>;
+    // Tanggal ulasan selalu ditentukan server. Nilai bertanggal masa depan dari
+    // klien (mis. jam perangkat yang salah) ditolak, bukan disimpan apa adanya.
+    if (isFutureReviewDate(typeof item.createdAt === "string" ? item.createdAt : null)) {
+      return Response.json({ error: "Tanggal ulasan tidak boleh melewati waktu sekarang." }, { status: 400 });
+    }
     const recipeSlug = typeof item.recipeSlug === "string" ? item.recipeSlug : "";
     const name = typeof item.name === "string" ? item.name.trim() : "";
     const location = typeof item.location === "string" ? item.location.trim() : "";

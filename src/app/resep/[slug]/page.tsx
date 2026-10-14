@@ -58,7 +58,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const recipe = await findRecipe(slug);
   if (!recipe) notFound();
   const matchScore = calculateMatchScore(recipe, defaultPreferences);
-  const recipeReviews = reviews.filter((review) => review.recipeSlug === recipe.slug);
+  // Hanya contoh ulasan berlabel yang dikirim ke halaman: bukan bukti komunitas.
+  const sampleReviews = reviews.filter((review) => review.recipeSlug === recipe.slug && review.sample);
   const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
   const homeUrl = absoluteUrl("/");
   const catalogUrl = absoluteUrl("/katalog");
@@ -141,7 +142,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <section id="bahan" className="scroll-mt-24"><SectionHeader eyebrow="Siapkan sebelum berangkat" title="Bahan yang dibutuhkan" subtitle="Takaran untuk satu sesi. Sesuaikan kelembapan adonan sedikit demi sedikit." /><IngredientTable ingredients={recipe.ingredients} /></section>
             <section><SectionHeader eyebrow="Ikuti langkahnya" title="Cara meracik" subtitle="Persiapan sekitar 25 menit, termasuk waktu mengukus bila dibutuhkan." /><PreparationSteps steps={recipe.steps} /></section>
             <section><SectionHeader eyebrow="Catatan kondisi" title="Cocok untuk kondisi apa?" subtitle="Gunakan ini sebagai titik awal dan sesuaikan dengan karakter kolammu." /><ConditionTags suitable={recipe.suitable} notSuitable={recipe.notSuitable} /></section>
-            <RecipeReviewSection recipe={recipe} seedReviews={recipeReviews} />
+            <RecipeReviewSection recipe={recipe} sampleReviews={sampleReviews} />
           </div>
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
             <div className="min-w-0 rounded-[22px] border border-[#e1e8dd] bg-[#f4f8f1] p-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e6efe1] text-[#49694b]"><Sparkles size={19} /></span><h2 className="mt-4 text-lg font-extrabold text-[#304333]">Kenapa direkomendasikan?</h2><p className="mt-2 text-sm leading-6 text-[#69786a]">Skor kecocokan menghitung kesesuaian cuaca, air, jenis kolam, daerah, rating, dan popularitas. Ini panduan awal, bukan jaminan hasil.</p><div className="mt-4 flex items-center gap-2 rounded-xl bg-white px-3.5 py-3"><span className="text-2xl font-black text-[#31593a]">{matchScore}%</span><div><p className="text-xs font-bold text-[#415342]">Match pilihan awal</p><p className="text-[10px] text-[#8b9489]">Jawa Barat · Hujan · Keruh</p></div></div></div>

@@ -113,17 +113,22 @@ export function buildExpertBlend(
   return { title, ingredients: blend, warnings, reasoning, recipeMatches, evidenceCount };
 }
 
+/**
+ * Statistik basis pengetahuan. Angka ulasan **hanya** dari ulasan asli
+ * pengunjung (lokal + hasil moderasi); ulasan contoh tidak dihitung supaya
+ * tidak ada angka komunitas yang mengarang.
+ */
 export function getExpertKnowledgeStats(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0) {
   return {
     recipes: activeRecipeCount,
     ingredients: ingredientKnowledge.length,
-    reviews: reviews.length + localReviewCount + approvedReviewCount,
+    reviews: localReviewCount + approvedReviewCount,
     reports: fishingReports.length,
     sources: 3,
   };
 }
 
 export function getKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0): string {
-  const total = reviews.length + localReviewCount + approvedReviewCount;
-  return `${activeRecipeCount} resep terkurasi, ${total} ulasan, ${fishingReports.length} laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
+  const total = localReviewCount + approvedReviewCount;
+  return `${activeRecipeCount} resep terkurasi, ${total} ulasan pengunjung, ${fishingReports.length} contoh laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
 }

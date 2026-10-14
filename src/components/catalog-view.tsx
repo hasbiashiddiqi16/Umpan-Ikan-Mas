@@ -14,6 +14,7 @@ import { isCatalogCity, provinceForCatalogCity } from "@/data/geo-cities";
 import { calculateMatchScore, filterRecipesByBudget, getRecommendedRecipes } from "@/lib/recommendation";
 import { searchRecipes } from "@/lib/search";
 import { useLocationAutofill } from "@/lib/use-location";
+import { useRecipeRatings } from "@/lib/use-ratings";
 import type { DetectedPlace } from "@/lib/location";
 
 const categories = ["Semua", "Harian", "Lomba", "Galatama", "Premium", "Ekonomis"];
@@ -27,6 +28,8 @@ function readFavorites(): string[] {
 }
 
 export function CatalogView() {
+  // Rating dari ulasan asli; dipakai untuk urutan dan label kartu.
+  const ratings = useRecipeRatings();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
@@ -98,8 +101,9 @@ export function CatalogView() {
     if (filters.difficulty !== "Semua tingkat") result = result.filter((recipe) => recipe.difficulty === filters.difficulty);
     if (favoritesOnly) result = result.filter((recipe) => favoriteSlugs.includes(recipe.slug));
 
-    if (filters.sort === "Rating Tertinggi") return [...result].sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
-    if (filters.sort === "Terpopuler") return [...result].sort((a, b) => b.users - a.users);
+    // Urutan memakai rating ulasan asli. Resep tanpa ulasan tidak dikarang angkanya.
+    if (filters.sort === "Rating Tertinggi") return [...result].sort((a, b) => (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0) || (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
+    if (filters.sort === "Ulasan Terbanyak") return [...result].sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
     if (filters.sort === "Terbaru") return [...result].reverse();
     if (filters.sort === "Harga Terendah") return [...result].sort((a, b) => a.priceValue - b.priceValue);
     return getRecommendedRecipes(result, {
@@ -110,7 +114,7 @@ export function CatalogView() {
       fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType,
       season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season,
     });
-  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs]);
+  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs, ratings]);
 
   function selectCategory(category: string) {
     setFilters((current) => ({ ...current, category }));

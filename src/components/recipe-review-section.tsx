@@ -7,7 +7,7 @@ import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
 import { UseMyLocationButton } from "@/components/location-controls";
-import { Rating, SectionHeader } from "@/components/shared";
+import { Badge, Rating, RecipeRating, SectionHeader } from "@/components/shared";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { ReviewCard } from "@/components/recipe-details";
 import { useLocationAutofill } from "@/lib/use-location";
@@ -229,35 +229,66 @@ function useCommunityReviews(slug: string) {
   return { memberReviews, approvedReviews, refresh };
 }
 
-export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
-  useReviewOutboxRetry();
-  const { memberReviews, approvedReviews, refresh } = useCommunityReviews(recipe.slug);
-  const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
-  const count = recipe.reviewCount + memberReviews.length + remote.length;
-  const average = count ? (recipe.rating * recipe.reviewCount + memberReviews.reduce((sum, review) => sum + review.rating, 0) + remote.reduce((sum, review) => sum + review.rating, 0)) / count : recipe.rating;
-  return <span className="inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2"><Rating value={Math.round(average * 10) / 10} count={count} /><span className="text-xs text-[#879087]">{new Intl.NumberFormat("id-ID").format(recipe.users)} pemancing mencoba</span></span>;
+/**
+ * Ringkasan rating dari ulasan asli saja (kiriman pengunjung + hasil moderasi).
+ * Ulasan contoh tidak pernah ikut dihitung.
+ */
+function summarizeReviews(memberReviews: MemberReview[], remoteReviews: RecipeReview[]) {
+  const count = memberReviews.length + remoteReviews.length;
+  const total = memberReviews.reduce((sum, review) => sum + review.rating, 0) + remoteReviews.reduce((sum, review) => sum + review.rating, 0);
+  return { count, average: count ? Math.round((total / count) * 10) / 10 : 0 };
 }
 
-export function RecipeReviewSection({ recipe, seedReviews }: { recipe: Recipe; seedReviews: RecipeReview[] }) {
+export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
+  useReviewOutboxRetry();
+  const { memberReviews, approvedReviews } = useCommunityReviews(recipe.slug);
+  const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
+  const aggregate = summarizeReviews(memberReviews, remote);
+  return (
+    <span className="inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2">
+      {aggregate.count ? <Rating value={aggregate.average} count={aggregate.count} /> : <RecipeRating />}
+      <span className="text-xs text-[#879087]">
+        {aggregate.count ? `${new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan pengunjung` : "Belum ada ulasan"}
+      </span>
+    </span>
+  );
+}
+
+export function RecipeReviewSection({ recipe, sampleReviews = [] }: { recipe: Recipe; sampleReviews?: RecipeReview[] }) {
   const { memberReviews, approvedReviews, refresh } = useCommunityReviews(recipe.slug);
 
-  const visibleReviews = useMemo(() => {
-    const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
-    return [...memberReviews, ...remote, ...seedReviews];
-  }, [approvedReviews, memberReviews, seedReviews]);
-  const aggregate = useMemo(() => {
-    const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
-    const denominator = recipe.reviewCount + memberReviews.length + remote.length;
-    const score = denominator ? (recipe.rating * recipe.reviewCount + memberReviews.reduce((sum, review) => sum + review.rating, 0) + remote.reduce((sum, review) => sum + review.rating, 0)) / denominator : recipe.rating;
-    return { score: Math.round(score * 10) / 10, count: denominator };
-  }, [approvedReviews, memberReviews, recipe.rating, recipe.reviewCount]);
+  // Ulasan asli (kiriman pengunjung + hasil moderasi) dan ulasan contoh dipisah:
+  // contoh tidak pernah bercampur dengan kiriman pengunjung dan tidak dihitung.
+  const remoteReviews = useMemo(
+    () => approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment)),
+    [approvedReviews, memberReviews],
+  );
+  const visitorReviews = useMemo(() => [...memberReviews, ...remoteReviews], [memberReviews, remoteReviews]);
+  const aggregate = useMemo(() => summarizeReviews(memberReviews, remoteReviews), [memberReviews, remoteReviews]);
+  const examples = useMemo(() => sampleReviews.filter((review) => review.sample !== false), [sampleReviews]);
 
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Rating dan pengalaman menjadi masukan untuk rekomendasi. Hasil setiap kolam bisa berbeda." /><div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3"><div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{aggregate.score.toFixed(1)}</span><div><Rating value={aggregate.score} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} rating</p></div></div></div></div>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Rating baru muncul setelah ada ulasan yang disetujui editor." />
+        <div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3">
+          {aggregate.count ? (
+            <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{aggregate.average.toFixed(1)}</span><div><Rating value={aggregate.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan</p></div></div>
+          ) : (
+            <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#c6cdc3]">–</span><div><RecipeRating /><p className="mt-1 text-[10px] text-[#929a90]">Belum ada ulasan</p></div></div>
+          )}
+        </div>
+      </div>
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman terbaru</h3><span className="text-xs text-[#8a9389]">{visibleReviews.length} cerita ditampilkan</span></div>
-      {visibleReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visibleReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#7b857a]">Belum ada ulasan rinci untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#8a9389]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan</span></div>
+      {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#7b857a]">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
+      {examples.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div>
+          <p className="mt-2 text-xs leading-5 text-[#7b725d]">{examples.length} contoh di bawah dibuat tim redaksi sebagai gambaran format ulasan. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((review, index) => <ReviewCard key={`contoh-${review.seedKey ?? index}`} review={review} />)}</div>
+        </div>
+      )}
     </section>
   );
 }

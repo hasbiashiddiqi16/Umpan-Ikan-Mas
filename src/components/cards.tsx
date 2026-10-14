@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight, Cloud, CloudRain, CloudSun, MapPin, Sun, User
 import type { Recipe } from "@/data/recipes";
 import type { Province } from "@/data/provinces";
 import type { FishingReport } from "@/data/fishingReports";
-import { Badge, Rating } from "@/components/shared";
+import { Badge, Rating, RecipeRating } from "@/components/shared";
 import { formatCount } from "@/lib/utils";
 
 const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
@@ -46,7 +46,7 @@ export function ProvinceCard({ province, compact = false }: { province: Province
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#f7f8f4] text-[#607260] transition group-hover:bg-[#31593a] group-hover:text-white"><ArrowUpRight size={15} /></span>
       </div>
       {!compact && <div className="relative mt-4 flex items-center gap-1.5 text-[11px] text-[#838a80]"><MapPin size={12} /> Populer: <span className="truncate font-semibold text-[#536252]">{province.popularRecipe}</span></div>}
-      {compact && <p className="relative mt-3 text-[11px] font-semibold text-[#667166]">{formatCount(province.reviewCount)} cerita pemancing</p>}
+      {compact && <p className="relative mt-3 truncate text-[11px] font-semibold text-[#667166]">Populer: {province.popularRecipe}</p>}
     </Link>
   );
 }
@@ -59,7 +59,7 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-bold text-[#405543]" style={{ backgroundColor: report.color }}>{report.initials}</span>
-          <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><p className="mt-1 flex items-center gap-1 text-xs text-[#879087]"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
+          <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><Badge tone="cream" className="!text-[10px]">Data contoh</Badge></div><p className="mt-1 flex items-center gap-1 text-xs text-[#879087]"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}>{report.weather === "Hujan" ? "🌧️" : report.weather === "Cerah" ? "☀️" : "☁️"} {report.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>💧 {report.water}</Badge><Badge tone="cream" className={cardMetaBadgeClass}>🎣 {report.fishingType}</Badge></div>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8b9489]">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{report.catchCount} ekor</p></div></div>
@@ -70,7 +70,7 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
   );
 }
 
-export function RecommendationCard({ recipe, score, isPrimary = false }: { recipe: Recipe; score: number; isPrimary?: boolean }) {
+export function RecommendationCard({ recipe, score, isPrimary = false, rating }: { recipe: Recipe; score: number; isPrimary?: boolean; rating?: { count: number; average: number } }) {
   return (
     <article className={`overflow-hidden rounded-[26px] border bg-white ${isPrimary ? "border-[#d7e1d3] shadow-[0_18px_50px_rgba(39,68,44,.09)]" : "border-[#e8ebe5]"}`}>
       <div className={`grid md:grid-cols-[.88fr_1.12fr] ${isPrimary ? "" : ""}`}>
@@ -80,7 +80,7 @@ export function RecommendationCard({ recipe, score, isPrimary = false }: { recip
           <span className="absolute bottom-4 right-4 grid h-[66px] w-[66px] place-items-center rounded-full border-4 border-white bg-[#244732] text-center text-white shadow-lg"><span><strong className="block text-xl leading-none">{score}%</strong><small className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-white/75">match</small></span></span>
         </div>
         <div className="p-5 sm:p-7">
-          <div className="flex flex-wrap items-center gap-2"><Badge tone="gold">{isPrimary ? "Rekomendasi utama" : "Pilihan lain"}</Badge><Rating value={recipe.rating} count={recipe.reviewCount} /></div>
+          <div className="flex flex-wrap items-center gap-2"><Badge tone="gold">{isPrimary ? "Rekomendasi utama" : "Pilihan lain"}</Badge><RecipeRating rating={rating} /></div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-[#25372a] sm:text-3xl">{recipe.name}</h2>
           <p className="mt-2 text-sm leading-6 text-[#6c776c]">{recipe.summary}</p>
           {isPrimary && <div className="mt-4 rounded-xl bg-[#f3f7f1] p-3.5 text-sm leading-6 text-[#526653]">Racikan ini paling mendekati kondisi pilihanmu. Rekomendasi mempertimbangkan kecocokan cuaca, air, jenis kolam, daerah, rating, dan pengalaman komunitas.</div>}
@@ -91,7 +91,7 @@ export function RecommendationCard({ recipe, score, isPrimary = false }: { recip
             <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#949c92]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#293a2c]">{recipe.price}</p></div>
             <Link href={`/resep/${recipe.slug}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29]">Lihat Resep <ArrowRight size={16} /></Link>
           </div>
-          {isPrimary && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#919a90]"><Users size={13} /> Dicoba {formatCount(recipe.users)} pemancing</p>}
+          {isPrimary && rating && rating.count > 0 && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#919a90]"><Users size={13} /> {formatCount(rating.count)} ulasan pengunjung</p>}
         </div>
       </div>
     </article>

@@ -147,6 +147,18 @@ Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/kata
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
+## Kejujuran data ulasan dan laporan
+
+Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
+
+- **Ulasan contoh hanya 3 per resep dan selalu berlabel.** `src/data/reviews.ts` menyimpan contoh penulisan ulasan (`sample: true`, kunci `catalog:<slug>:01..03`) dengan tanggal yang dipatok di masa lampau dan kota yang berbeda-beda. Di halaman resep contoh ditaruh di blok "Contoh penulisan ulasan" berlabel **Data contoh**, dan dijelaskan bahwa contoh itu bukan kiriman pengunjung serta tidak dihitung.
+- **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved`, `seed_key` kosong (bukan contoh), dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
+- **Kalau belum ada ulasan, tulis apa adanya.** Kartu resep, halaman resep, dan bagian ulasan menampilkan **"Belum ada rating"** / **"Belum ada ulasan"** — bukan angka katalog.
+- **Angka katalog tidak lagi tampil.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` hanya dipakai internal (kurasi, urutan sistem, dan tampilan admin di Content Studio), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi" dan "Ulasan Terbanyak" di katalog memakai rating nyata.
+- **Tanggal masa depan ditolak.** `src/lib/review-dates.ts` menyediakan `isFutureReviewDate` (toleransi jam 60 detik) dan `clampReviewCreatedAt`. API publik menolak `POST` bertanggal masa depan (400), API baca (`/api/public/reviews`, `/api/admin/reviews`, ringkasan) menyaring `created_at <= now()`, dan sinkronisasi katalog memangkas tanggal contoh yang melewati waktu server.
+- **Laporan mancing di halaman komunitas diberi label "Data contoh"** (`src/data/fishingReports.ts` memakai tanggal relatif seperti "2 hari lalu", jadi tidak pernah bertanggal masa depan).
+- Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
