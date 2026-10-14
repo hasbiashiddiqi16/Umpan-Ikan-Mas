@@ -1,4 +1,4 @@
-import type { Recipe } from "@/data/recipes";
+import { normalizeFishingType, type Recipe } from "@/data/recipes";
 
 export type UserPreferences = {
   province?: string;
@@ -21,7 +21,9 @@ export function calculateMatchScore(recipe: Recipe, preferences: UserPreferences
   const points =
     (preferences.water && recipe.water.includes(preferences.water as Recipe["water"][number]) ? 25 : 0) +
     (preferences.weather && recipe.weather.includes(preferences.weather as Recipe["weather"][number]) ? 20 : 0) +
-    (preferences.fishingType && recipe.fishingTypes.includes(preferences.fishingType as Recipe["fishingTypes"][number]) ? 20 : 0) +
+    (preferences.fishingType && recipe.fishingTypes
+      .map(normalizeFishingType)
+      .includes(normalizeFishingType(preferences.fishingType)) ? 20 : 0) +
     (preferences.province && recipe.provinces.includes(preferences.province) ? 15 : 0) +
     (preferences.season && recipe.seasons.includes(preferences.season) ? 10 : 0) +
     (recipe.rating / 5) * 5 +

@@ -86,6 +86,16 @@ Kata sandi dashboard juga bisa diganti tanpa deploy dari **Studio → Keamanan**
 
 Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
 
+## Istilah jenis kolam: "Galatama"
+
+Situs memakai istilah **Galatama** untuk kolam galatama (jenis kolam yang memancingkan ikan mas hasil tebaran, bukan kolam harian atau kolam lomba). Sebelumnya situs memakai sebutan "Galat", yang tidak dikenal di dunia pemancingan; sebutan itu sudah tidak dipakai lagi di antarmuka.
+
+Sebutan lama tetap **dibaca** agar data yang sudah tersimpan (resep CMS dan ulasan) tidak hilang:
+
+- `normalizeFishingType` / `normalizeFishingTypes` di `src/data/recipes.ts` mengubah "Galat" menjadi "Galatama" saat data dibaca; `normalizeFishingText` melakukan hal yang sama untuk kalimat seperti "Kolam galat".
+- Validasi penyimpanan (`src/lib/cms.ts`, API ulasan) masih menerima "Galat" dari formulir/tautan lama, tetapi selalu menuliskan "Galatama".
+- Migrasi `netlify/database/migrations/20261014060000_rename_galat_to_galatama` merapikan nilai yang sudah ada di basis data (kategori, larik jenis, teks syarat, ringkasan resep, dan jenis ulasan). Migrasi ini aman dijalankan berulang karena hanya mengganti kata "Galat" utuh, bukan bagian dari "Galatama".
+
 ## Takaran kroto dan bahan amis
 
 Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` pada data bahan:

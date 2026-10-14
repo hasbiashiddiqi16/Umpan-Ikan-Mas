@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
+import { normalizeCmsRecipeRecord } from "@/lib/cms";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export async function GET() {
       db.select().from(cmsRecipes).where(eq(cmsRecipes.status, "published")).orderBy(desc(cmsRecipes.updatedAt)),
       db.select({ slug: cmsRecipes.slug }).from(cmsRecipes),
     ]);
-    return Response.json({ recipes: rows, shadowedSlugs: managedSlugs.map((row) => row.slug) }, { headers: { "Cache-Control": "no-store" } });
+    // Baris lama bisa masih memakai sebutan "Galat"; dikirim sebagai "Galatama".
+    return Response.json({ recipes: rows.map(normalizeCmsRecipeRecord), shadowedSlugs: managedSlugs.map((row) => row.slug) }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "Katalog tambahan sedang tidak tersedia.", recipes: [] }, { status: 503 });
   }

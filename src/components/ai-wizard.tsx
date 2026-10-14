@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Cloud, CloudRain, CloudSun, Droplets, MapPin, RotateCcw, Sparkles, Sun, Waves } from "lucide-react";
-import { defaultPreferences, recipes, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
+import { defaultPreferences, normalizeFishingType, recipes, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { reviews, type RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
@@ -33,7 +33,7 @@ const waterOptions: { label: WaterCondition; emoji: string; note: string }[] = [
 const typeOptions: { label: FishingType; emoji: string; note: string }[] = [
   { label: "Harian", emoji: "🎣", note: "Mancing santai" },
   { label: "Lomba", emoji: "🏆", note: "Kompetisi / lomba" },
-  { label: "Galat", emoji: "🔥", note: "Kolam galatama" },
+  { label: "Galatama", emoji: "🔥", note: "Kolam galatama" },
 ];
 const budgetOptions = ["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"];
 const steps = ["Lokasi", "Cuaca", "Kondisi air", "Jenis kolam", "Budget"];
@@ -98,7 +98,8 @@ export function AIWizard() {
           province: provinceParam ?? "",
           weather,
           water: params.get("water") ?? defaultPreferences.water,
-          fishingType: params.get("type") ?? defaultPreferences.fishingType,
+          // Tautan lama bisa membawa type=Galat; diseragamkan ke "Galatama".
+          fishingType: normalizeFishingType(params.get("type") ?? defaultPreferences.fishingType),
           budget: params.get("budget") ?? defaultPreferences.budget,
           season: seasonFor(weather),
         });

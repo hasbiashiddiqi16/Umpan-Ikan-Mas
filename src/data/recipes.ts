@@ -2,7 +2,41 @@ import { provinceDirectory } from "@/data/province-directory";
 
 export type Weather = "Hujan" | "Mendung" | "Cerah" | "Berawan" | "Panas";
 export type WaterCondition = "Keruh" | "Hijau" | "Jernih" | "Kekuningan";
-export type FishingType = "Harian" | "Lomba" | "Galat";
+export type FishingType = "Harian" | "Lomba" | "Galatama";
+
+/** Pilihan jenis kolam/pemancingan yang tampil di seluruh situs. */
+export const FISHING_TYPES: FishingType[] = ["Harian", "Lomba", "Galatama"];
+
+/**
+ * Sebutan lama untuk kolam galatama yang sempat terlanjur dipakai di situs
+ * (dan tersimpan di basis data). Tetap dibaca sebagai "Galatama" agar resep
+ * dan ulasan lama tidak hilang saat penyebutannya diperbaiki.
+ */
+const LEGACY_FISHING_TYPE = "Galat";
+
+/** Menyeragamkan sebutan: "Galat" lama dibaca sebagai "Galatama". */
+export function normalizeFishingType(value: string): string {
+  return value === LEGACY_FISHING_TYPE ? "Galatama" : value;
+}
+
+/** Sama seperti di atas, untuk daftar jenis (mis. `fishingTypes` sebuah resep). */
+export function normalizeFishingTypes(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => normalizeFishingType(value.trim())).filter(Boolean))];
+}
+
+/** Apakah nilai ini salah satu jenis yang dikenal (termasuk sebutan lama)? */
+export function isFishingType(value: string): boolean {
+  return (FISHING_TYPES as string[]).includes(normalizeFishingType(value.trim()));
+}
+
+/**
+ * Menyeragamkan sebutan di dalam kalimat, mis. "Kolam galatama" -> "Kolam
+ * galatama" dan "Kolam Galat" -> "Kolam Galatama". Hanya dipakai pada teks
+ * data resep/ulasan, bukan pada pesan galat (arti "error") di antarmuka.
+ */
+export function normalizeFishingText(value: string): string {
+  return value.replace(/\bgalat\b/gi, (match) => (match === "Galat" ? "Galatama" : "galatama"));
+}
 export type RecipeCategory = FishingType | "Premium" | "Ekonomis";
 
 export type Ingredient = {
@@ -85,7 +119,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Cerah", "Berawan", "Panas"],
     water: ["Hijau", "Jernih"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Jawa Tengah", "Jawa Timur", "DI Yogyakarta", "Jawa Barat"],
     seasons: ["Musim Panas", "Kemarau"],
     popularity: 94,
@@ -154,7 +188,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-jagung.jpg",
     weather: ["Mendung", "Berawan", "Cerah"],
     water: ["Hijau", "Kekuningan"],
-    fishingTypes: ["Lomba", "Galat"],
+    fishingTypes: ["Lomba", "Galatama"],
     provinces: ["Banten", "DKI Jakarta", "Jawa Barat"],
     seasons: ["Musim Panas", "Peralihan"],
     popularity: 80,
@@ -177,7 +211,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Hujan", "Mendung"],
     water: ["Keruh", "Hijau"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Riau", "Sumatera Selatan", "Jawa Barat"],
     seasons: ["Musim Hujan"],
     popularity: 76,
@@ -190,7 +224,7 @@ const coreRecipes: Recipe[] = [
   {
     slug: "amis-udang-bawang",
     name: "Amis Udang Bawang",
-    category: "Galat",
+    category: "Galatama",
     rating: 4.6,
     reviewCount: 77,
     users: 721,
@@ -200,14 +234,14 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-putih.jpg",
     weather: ["Hujan", "Berawan"],
     water: ["Keruh", "Kekuningan"],
-    fishingTypes: ["Galat", "Lomba"],
+    fishingTypes: ["Galatama", "Lomba"],
     provinces: ["Jawa Timur", "Sumatera Utara", "Kalimantan Selatan"],
     seasons: ["Musim Hujan", "Peralihan"],
     popularity: 71,
     summary: "Karakter amis udang dengan sentuhan bawang, sering dipilih untuk kolam yang ramai.",
     ingredients: [{ name: "Pelet udang", brand: "Sakura", amount: "50 g" }, { name: "Udang rebon", brand: "Kering", amount: "10 g" }, { name: "Bawang putih", brand: "Segar", amount: "1 siung" }, { name: "Tepung roti", brand: "-", amount: "20 g" }],
     steps: ["Haluskan bawang putih dan udang rebon.", "Campur dengan pelet udang.", "Tambahkan tepung roti dan air hangat.", "Uleni sampai tidak lengket."],
-    suitable: ["Kolam galat", "Air keruh", "Ikan aktif makan"],
+    suitable: ["Kolam galatama", "Air keruh", "Ikan aktif makan"],
     notSuitable: ["Air sangat jernih", "Kolam alami"],
   },
   {
@@ -246,7 +280,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Hujan", "Mendung"],
     water: ["Keruh", "Hijau"],
-    fishingTypes: ["Lomba", "Galat"],
+    fishingTypes: ["Lomba", "Galatama"],
     provinces: ["Jawa Barat", "Jawa Timur", "Banten"],
     seasons: ["Musim Hujan"],
     popularity: 73,
@@ -269,7 +303,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-jagung.jpg",
     weather: ["Cerah", "Panas", "Berawan"],
     water: ["Jernih", "Kekuningan"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Jawa Tengah", "Jawa Timur", "Bali"],
     seasons: ["Musim Panas", "Kemarau"],
     popularity: 63,
@@ -315,7 +349,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Cerah", "Berawan", "Panas"],
     water: ["Hijau", "Kekuningan"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Riau", "Jambi", "Kalimantan Barat"],
     seasons: ["Musim Panas", "Kemarau"],
     popularity: 54,
@@ -374,7 +408,7 @@ const coreRecipes: Recipe[] = [
   {
     slug: "essen-mangga-pelet",
     name: "Essen Mangga Pelet",
-    category: "Galat",
+    category: "Galatama",
     rating: 4.4,
     reviewCount: 28,
     users: 275,
@@ -384,14 +418,14 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Cerah", "Panas", "Berawan"],
     water: ["Hijau", "Jernih"],
-    fishingTypes: ["Galat", "Harian"],
+    fishingTypes: ["Galatama", "Harian"],
     provinces: ["Kalimantan Timur", "Sulawesi Selatan", "Jawa Tengah"],
     seasons: ["Musim Panas", "Kemarau"],
     popularity: 43,
     summary: "Sentuhan buah tropis yang ringan untuk menciptakan variasi aroma pelet.",
     ingredients: [{ name: "Pelet halus", brand: "781", amount: "60 g" }, { name: "Tepung tapioka", brand: "-", amount: "15 g" }, { name: "Essen mangga", brand: "-", amount: "2 tetes" }],
     steps: ["Lunakkan pelet dengan air hangat.", "Tambahkan tepung tapioka.", "Teteskan essen sedikit demi sedikit dan aduk rata."],
-    suitable: ["Cuaca cerah", "Air hijau", "Kolam galat"],
+    suitable: ["Cuaca cerah", "Air hijau", "Kolam galatama"],
     notSuitable: ["Air keruh pekat", "Hujan lebat"],
   },
   {
@@ -430,7 +464,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-pelet.jpg",
     weather: ["Hujan", "Mendung"],
     water: ["Keruh", "Kekuningan"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Jawa Timur", "Sumatera Selatan", "Sulawesi Selatan"],
     seasons: ["Musim Hujan"],
     popularity: 42,
@@ -453,7 +487,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-putih.jpg",
     weather: ["Hujan", "Berawan"],
     water: ["Keruh", "Hijau"],
-    fishingTypes: ["Lomba", "Galat"],
+    fishingTypes: ["Lomba", "Galatama"],
     provinces: ["Jawa Barat", "Kalimantan Timur", "Sumatera Utara"],
     seasons: ["Musim Hujan", "Peralihan"],
     popularity: 39,
@@ -476,7 +510,7 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-jagung.jpg",
     weather: ["Cerah", "Berawan"],
     water: ["Kekuningan", "Hijau"],
-    fishingTypes: ["Harian", "Galat"],
+    fishingTypes: ["Harian", "Galatama"],
     provinces: ["Bali", "Jawa Timur", "Nusa Tenggara Barat"],
     seasons: ["Musim Panas", "Peralihan"],
     popularity: 36,
@@ -489,7 +523,7 @@ const coreRecipes: Recipe[] = [
   {
     slug: "amis-kuning-telur",
     name: "Amis Kuning Telur",
-    category: "Galat",
+    category: "Galatama",
     rating: 4.4,
     reviewCount: 14,
     users: 148,
@@ -499,34 +533,34 @@ const coreRecipes: Recipe[] = [
     image: "/images/recipe-jagung.jpg",
     weather: ["Hujan", "Mendung"],
     water: ["Keruh", "Kekuningan"],
-    fishingTypes: ["Galat", "Harian"],
+    fishingTypes: ["Galatama", "Harian"],
     provinces: ["Kalimantan Selatan", "Jawa Tengah", "Riau"],
     seasons: ["Musim Hujan"],
     popularity: 34,
-    summary: "Kuning telur menambah aroma gurih yang akrab digunakan untuk racikan kolam galat.",
+    summary: "Kuning telur menambah aroma gurih yang akrab digunakan untuk racikan kolam galatama.",
     ingredients: [{ name: "Pelet ikan", brand: "Lokal", amount: "50 g" }, { name: "Kuning telur", brand: "Ayam", amount: "1 butir" }, { name: "Tepung roti", brand: "-", amount: "20 g" }],
     steps: ["Pisahkan kuning telur.", "Campur dengan pelet dan tepung roti.", "Uleni hingga adonan kalis.", "Diamkan sebentar sebelum dipakai."],
-    suitable: ["Kolam galat", "Air keruh", "Cuaca mendung"],
+    suitable: ["Kolam galatama", "Air keruh", "Cuaca mendung"],
     notSuitable: ["Air bening", "Cuaca sangat panas"],
   },
 ];
 
 const curatedAdditionalRecipeNames = [
   "Pelet Pisang Ambon", "Roti Pandan Susu", "Ubi Madu Kroto", "Tahu Putih Keju", "Sarden Pelet Lomba",
-  "Singkong Kelapa Gurih", "Jagung Susu Manis", "Tempe Pandan Halus", "Kacang Hijau Santan", "Pelet Belut Galat",
+  "Singkong Kelapa Gurih", "Jagung Susu Manis", "Tempe Pandan Halus", "Kacang Hijau Santan", "Pelet Belut Galatama",
   "Telur Asin Keju", "Roti Tawar Pandan", "Ubi Ungu Susu", "Biskuit Keju Kroto", "Pelet Udang Rebon",
   "Jagung Nangka Harian", "Tahu Sutra Vanila", "Susu Jagung Lembut", "Kelapa Madu Kuning", "Pelet Cokelat Santan",
   "Roti Sari Pandan", "Pisang Keju Kolam", "Ubi Talas Gurih", "Kacang Merah Susu", "Pelet Durian Lomba",
   "Sarden Telur Bebek", "Jagung Tahu Putih", "Tepung Beras Kroto", "Roti Kukus Vanila", "Singkong Keju Manis",
-  "Pelet Pandan Galat", "Ubi Madu Kelapa", "Tahu Susu Harian", "Jagung Cokelat Lembut", "Kacang Tanah Kroto",
+  "Pelet Pandan Galatama", "Ubi Madu Kelapa", "Tahu Susu Harian", "Jagung Cokelat Lembut", "Kacang Tanah Kroto",
   "Roti Kelapa Gurih", "Pelet Nanas Segar", "Pisang Susu Lomba", "Ubi Kuning Pandan", "Tahu Telur Amis",
   "Jagung Sarden Gurih", "Pelet Keju Susu", "Roti Kacang Harian", "Singkong Pandan Wangi", "Ubi Ungu Keju",
-  "Tempe Telur Lomba", "Pelet Madu Jagung", "Kelapa Susu Lembut", "Biskuit Pandan Hemat", "Sarden Kroto Galat",
+  "Tempe Telur Lomba", "Pelet Madu Jagung", "Kelapa Susu Lembut", "Biskuit Pandan Hemat", "Sarden Kroto Galatama",
   "Tahu Keju Ekonomis", "Jagung Kelapa Manis", "Pelet Vanila Putih", "Roti Pisang Gurih", "Ubi Susu Pandan",
   "Kacang Hijau Keju", "Tempe Sarden Harian", "Pelet Talas Wangi", "Jagung Madu Lomba", "Roti Susu Putih",
-  "Singkong Kroto Galat", "Ubi Keju Kukus", "Pelet Belimbing Harian", "Tahu Pandan Lembut", "Jagung Telur Bebek",
+  "Singkong Kroto Galatama", "Ubi Keju Kukus", "Pelet Belimbing Harian", "Tahu Pandan Lembut", "Jagung Telur Bebek",
   "Kacang Santan Hijau", "Roti Sarden Gurih", "Pelet Pisang Keju", "Ubi Nangka Manis", "Tempe Madu Kolam",
-  "Jagung Pandan Galat", "Tahu Kroto Lomba", "Pelet Kelapa Gurih", "Roti Jagung Hemat", "Singkong Susu Putih",
+  "Jagung Pandan Galatama", "Tahu Kroto Lomba", "Pelet Kelapa Gurih", "Roti Jagung Hemat", "Singkong Susu Putih",
   "Ubi Cokelat Wangi", "Kacang Keju Lomba", "Tempe Pandan Harian", "Pelet Susu Kroto",
 ] as const;
 
@@ -535,7 +569,7 @@ const expansionProfiles = ["Pandan Wangi", "Susu Gurih", "Keju Lembut", "Kroto S
 const expansionRecipeNames = expansionBases.flatMap((base) => expansionProfiles.map((profile) => `Racikan ${base} ${profile}`)).slice(0, 101);
 const additionalRecipeNames = [...curatedAdditionalRecipeNames, ...expansionRecipeNames];
 
-const catalogCategories: Recipe["category"][] = ["Harian", "Ekonomis", "Lomba", "Premium", "Galat"];
+const catalogCategories: Recipe["category"][] = ["Harian", "Ekonomis", "Lomba", "Premium", "Galatama"];
 const catalogDifficulties: Recipe["difficulty"][] = ["Mudah", "Mudah", "Menengah", "Menengah", "Tingkat lanjut"];
 const catalogSummaries = [
   "Racikan seimbang dengan aroma lembut untuk sesi mancing santai dan kondisi kolam yang berubah.",
