@@ -8,6 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
 import { recipes, defaultPreferences, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
+import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { reviews, type RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
@@ -18,7 +19,7 @@ import { Badge, SectionHeader } from "@/components/shared";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { useLocationAutofill } from "@/lib/use-location";
 
-const selectClass = "min-h-11 w-full rounded-xl border border-[#e3e8e1] bg-white px-3 text-sm font-semibold text-[#3d4d3f] outline-none transition focus:border-[#718b70] focus:ring-4 focus:ring-[#365b3a]/10";
+const selectClass = `${SELECT_FIELD_CLASS} min-h-12 w-full min-w-0 rounded-xl border border-[#e3e8e1] bg-white pl-3.5 text-sm font-semibold text-[#3d4d3f] outline-none transition focus:border-[#718b70] focus:ring-4 focus:ring-[#365b3a]/10 sm:min-h-11`;
 const ratioColors = ["bg-[#315b3c]", "bg-[#638363]", "bg-[#a7b78d]", "bg-[#d3b45f]", "bg-[#9a7449]", "bg-[#839d9a]"];
 const initialIngredients = ["pelet-ikan", "tepung-tapioka", "kroto", "susu-bubuk"];
 
@@ -124,12 +125,12 @@ export function ExpertSystem() {
             <UseMyLocationButton onPlace={(place) => updatePreference("province", place.province)} label="Isi provinsi dari lokasi saya" />
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Field label="Provinsi" icon={MapPin}><select className={selectClass} value={preferences.province} onChange={(event) => updatePreference("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></Field>
-            <Field label="Cuaca" icon={Sparkles}><select className={selectClass} value={preferences.weather} onChange={(event) => updatePreference("weather", event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-            <Field label="Kondisi air" icon={Droplets}><select className={selectClass} value={preferences.water} onChange={(event) => updatePreference("water", event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-            <Field label="Jenis pemancingan" icon={Fish}><select className={selectClass} value={preferences.fishingType} onChange={(event) => updatePreference("fishingType", event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-            <Field label="Budget racikan" icon={Beaker}><select className={selectClass} value={preferences.budget} onChange={(event) => updatePreference("budget", event.target.value)}>{["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-            <Field label="Musim" icon={Waves}><select className={selectClass} value={preferences.season} onChange={(event) => updatePreference("season", event.target.value)}>{["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"].map((item) => <option key={item}>{item}</option>)}</select></Field>
+            <Field label="Provinsi" icon={MapPin}><SelectBox><select className={selectClass} value={preferences.province} onChange={(event) => updatePreference("province", event.target.value)}><option value="">Pilih provinsi</option>{provinces.map((province) => <option key={province.slug}>{province.name}</option>)}</select></SelectBox></Field>
+            <Field label="Cuaca" icon={Sparkles}><SelectBox><select className={selectClass} value={preferences.weather} onChange={(event) => updatePreference("weather", event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
+            <Field label="Kondisi air" icon={Droplets}><SelectBox><select className={selectClass} value={preferences.water} onChange={(event) => updatePreference("water", event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
+            <Field label="Jenis pemancingan" icon={Fish}><SelectBox><select className={selectClass} value={preferences.fishingType} onChange={(event) => updatePreference("fishingType", event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
+            <Field label="Budget racikan" icon={Beaker}><SelectBox><select className={selectClass} value={preferences.budget} onChange={(event) => updatePreference("budget", event.target.value)}>{["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
+            <Field label="Musim" icon={Waves}><SelectBox><select className={selectClass} value={preferences.season} onChange={(event) => updatePreference("season", event.target.value)}>{["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
           </div>
           <div className="mb-3 mt-7 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Langkah 2 · Bahan</p><h2 className="mt-1 text-lg font-extrabold text-[#2d3f31]">Apa yang tersedia?</h2></div><span className="rounded-full bg-[#eef3e9] px-3 py-1.5 text-xs font-bold text-[#507151]">{selectedIds.length}/6 dipilih</span></div>
           <p className="mb-4 text-xs leading-5 text-[#879085]">Pilih minimal 2 bahan. Sistem mengelompokkan fungsi bahan lalu menyeimbangkan komposisi untuk contoh adonan 100 g.</p>

@@ -32,6 +32,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 3px;
 }
 ::selection { color: #173326; background: #e6d095; }
+
+@layer components {
+  /**
+   * Dropdown publik. Tampilan bawaan peramban dimatikan karena di iOS Safari
+   * `<select>` mengabaikan `min-height` dan panahnya menempel ke tepi. Tinggi
+   * field ditentukan padding, dan panahnya digambar komponen `SelectBox`
+   * (lihat src/components/form-fields.tsx) supaya jarak tepinya bisa diatur.
+   */
+  .select-field {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: left;
+  }
+}
+
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 

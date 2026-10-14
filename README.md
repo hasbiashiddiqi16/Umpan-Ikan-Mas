@@ -105,6 +105,15 @@ Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` 
 
 Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
 
+## Tinggi dan panah dropdown di ponsel
+
+Semua dropdown (<select>) di halaman publik memakai kelas bersama `select-field` (`src/app/globals.css`) plus padding dari `SELECT_FIELD_CLASS` di `src/components/form-fields.tsx`:
+
+- **Tinggi dari padding, bukan `min-height`.** iOS Safari (mis. iPhone 7) mengabaikan `min-height` pada `<select>`, sehingga field tampak pendek dan teks nyaris menempel ke tepi atas/bawah. Karena itu tingginya ditentukan `py-3` (dan `pr-11` untuk ruang panah), lalu `min-h-*` hanya jadi penyelaras di layar besar (`sm:py-2.5`).
+- **Panah digambar sendiri.** Tampilan bawaan peramban dimatikan (`appearance: none` lewat `.select-field`) karena panah bawaannya menempel ke tepi. Komponen `SelectBox` (`src/components/form-fields.tsx`) menaruh ikon `ChevronDown` di dalam field dengan jarak `right-3.5` (14px) dari tepi kanan dan `pointer-events-none`, jadi area klik tetap milik dropdown dan teks punya jarak 14px dari panah.
+- Dropdown publik yang memakainya: `filter-bar.tsx` (termasuk panel filter mobile), `province-explorer.tsx`, `quick-finder.tsx`, `expert-system.tsx`, `ai-wizard.tsx` (tetap ada ikon pin di kiri), dan `recipe-review-section.tsx`.
+- Dropdown di dashboard/admin sengaja **tidak** diubah (`fieldClass` di `appearance-manager.tsx`, `content-manager.tsx`, dan `security-manager.tsx`).
+
 ## Popup sambutan pengunjung baru
 
 Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
