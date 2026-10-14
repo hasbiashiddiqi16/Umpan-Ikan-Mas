@@ -184,9 +184,10 @@ export function AppearanceManager() {
   }
 
   const logo = state?.logo;
+  const footerLogo = state?.footerLogo;
   const media = state?.popup.media;
   const previewAppearance: AppearanceState | undefined = state && media
-    ? { logo: state.logo, popup: { ...form, media } }
+    ? { logo: state.logo, footerLogo: state.footerLogo, popup: { ...form, media } }
     : undefined;
 
   return (
@@ -247,6 +248,49 @@ export function AppearanceManager() {
               </button>
             </div>
             <p className={hintClass}>Favicon/ikon aplikasi masih aset tetap di repo (<code>src/app/icon.png</code>), jadi mengikuti logo hanya setelah deploy ulang.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Logo footer — berkas terpisah dari logo navbar. */}
+      <section className="mb-6 overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#344638]">Logo footer</h2>
+            <p className="mt-1 text-[10px] text-[#929a91]">Hanya dipakai di footer. Navbar tetap memakai logo situs di atas, jadi keduanya bisa berbeda berkas.</p>
+          </div>
+          {footerLogo && <Badge tone={footerLogo.custom ? "sage" : "cream"}>{footerLogo.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+        </header>
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr]">
+          <div className="grid content-start gap-3">
+            <div className="grid place-items-center gap-2 rounded-2xl bg-[#172d22] p-4">
+              <Image
+                src={`${footerLogo?.url ?? "/api/media/logo-footer"}?v=${footerLogo?.updatedAt ?? "bawaan"}`}
+                alt="Pratinjau logo footer"
+                width={64}
+                height={64}
+                unoptimized
+                className="h-16 w-16 object-contain"
+              />
+              <span className="text-lg font-extrabold tracking-tight text-white">UMPAN MAS</span>
+            </div>
+            <p className="text-center text-[10px] leading-4 text-[#929a91]">Contoh di atas latar hijau footer · diperbarui {formatDate(footerLogo?.updatedAt ?? null)}</p>
+          </div>
+          <div className="grid content-start gap-3">
+            <p className={hintClass}>
+              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES["logo-footer"])}. Latar transparan (PNG) paling bagus.
+              Bawaannya berkas <code>public/images/logo-footer.png</code> — bisa diganti langsung di GitHub, atau diunggah di sini agar berlaku tanpa deploy ulang.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <input ref={(node) => { fileInputs.current["logo-footer"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("logo-footer", file); }} />
+              <button type="button" disabled={busy === "logo-footer"} onClick={() => fileInputs.current["logo-footer"]?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "logo-footer" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo footer
+              </button>
+              <button type="button" disabled={busy === "logo-footer" || !footerLogo?.custom} onClick={() => void resetMedia("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                <RotateCcw size={14} /> Kembalikan bawaan
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -437,6 +481,7 @@ export function AppearanceManager() {
 /** Menukar satu berkas media pada keadaan tampilan tanpa memuat ulang seluruhnya. */
 function applyMedia(state: AppearanceState, media: AppearanceState["logo"]): AppearanceState {
   if (media.key === "logo") return { ...state, logo: media };
+  if (media.key === "logo-footer") return { ...state, footerLogo: media };
   return {
     ...state,
     popup: {
