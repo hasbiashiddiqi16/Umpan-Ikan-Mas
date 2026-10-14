@@ -82,6 +82,8 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 `ADMIN_SESSION_SECRET` opsional; jika tidak diatur, password admin digunakan untuk menandatangani sesi. Gunakan password yang panjang dan unik untuk deployment publik.
 
+Kata sandi dashboard juga bisa diganti tanpa deploy dari **Studio → Keamanan** di dalam dashboard. Kata sandi baru disimpan sebagai hash scrypt di tabel `cms_settings` (kunci `admin_password`) dan menimpa `ADMIN_PASSWORD` selama ada. Setiap penggantian menaikkan nomor versi yang ikut ditanamkan ke cookie sesi, sehingga sesi di perangkat lain otomatis berakhir sementara perangkat yang mengganti tetap masuk. Tombol "Pakai password server lagi" menghapus penimpa tersebut sehingga `ADMIN_PASSWORD` berlaku kembali. Bila Anda lupa kata sandi yang dipasang di dashboard: ubah `ADMIN_PASSWORD` di host lalu deploy ulang, masuk dengan nilai baru itu, dan pasang kata sandi pilihan Anda lagi. Jangan menghapus `ADMIN_PASSWORD` dari environment — ia adalah kunci cadangan sekaligus penanda tangan sesi bila `ADMIN_SESSION_SECRET` kosong.
+
 Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
 
 ## Takaran kroto dan bahan amis
