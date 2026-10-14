@@ -4,6 +4,7 @@ import { cmsRecipes } from "@/db/schema";
 import { normalizeCmsRecipeRecord, validateCmsRecipeInput } from "@/lib/cms";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { databaseErrorResponse } from "@/lib/database-status";
+import { getRatingSummary } from "@/lib/review-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,12 @@ export async function GET() {
 
   try {
     const rows = await db.select().from(cmsRecipes).orderBy(desc(cmsRecipes.updatedAt));
+    // Ringkasan ulasan nyata ikut dikirim supaya dashboard bisa mengurutkan dan
+    // menilai resep dengan angka yang sama seperti pemeringkatan publik
+    // ("Rating Tertinggi" memakai rata-rata Bayesian dari ringkasan ini).
+    const { ratings, global, minReviews } = await getRatingSummary();
     // Baris lama bisa masih memakai sebutan "Galat"; dibaca sebagai "Galatama".
-    return Response.json({ recipes: rows.map(normalizeCmsRecipeRecord) });
+    return Response.json({ recipes: rows.map(normalizeCmsRecipeRecord), reviews: ratings, global, minReviews });
   } catch (error) {
     return databaseErrorResponse(error, "Konten belum dapat dimuat.");
   }

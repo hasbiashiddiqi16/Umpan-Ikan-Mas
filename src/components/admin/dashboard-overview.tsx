@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Clock3, Eye, FileText, MessageSquareText, Plus, RefreshCw, Send, TrendingUp } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { BAYESIAN_MIN_REVIEWS } from "@/lib/rating-utils";
 import { ChartHeading, ContentDonutChart, TopPagesChart, TrafficLineChart, type DailyAnalytic, type TopPage } from "@/components/admin/analytics-charts";
 import { Badge } from "@/components/shared";
 
@@ -17,6 +18,11 @@ export type AnalyticsPayload = {
   archived: number;
   pendingReviews: number;
   approvedReviews: number;
+  /** Ulasan pengunjung sungguhan (tanpa ulasan contoh) — sumber angka peringkat katalog. */
+  visitorReviewCount: number;
+  visitorReviewAverage: number;
+  /** Ambang m pada skor Bayesian yang dipakai pemeringkatan. */
+  minReviews: number;
   daily: DailyAnalytic[];
   topPages: TopPage[];
   range: string;
@@ -83,6 +89,11 @@ export function DashboardOverview() {
         <MetricCard title="Konten tayang" value={data?.published ?? 0} description="Terlihat di katalog publik" icon={Send} tone="bg-[#e9f1ee] text-[#4d786b]" />
         <MetricCard title="Ulasan siap tampil" value={data?.approvedReviews ?? 0} description={data?.pendingReviews ? `${numberFormat.format(data.pendingReviews)} perlu tinjauan editor` : "Termasuk ulasan katalog tersinkron"} icon={MessageSquareText} tone="bg-[#f7ece7] text-[#9a654c]" />
       </div>
+
+      <p className="mt-4 rounded-xl border border-[#e7ebe5] bg-white px-4 py-3 text-[10px] leading-5 text-[#7e897c]">
+        <strong className="font-extrabold text-[#4b5b4d]">Cara peringkat “Rating Tertinggi” dihitung:</strong> rata-rata Bayesian <span className="font-semibold">v/(v+m)·R + m/(v+m)·C</span> dengan ambang m={data?.minReviews ?? BAYESIAN_MIN_REVIEWS}
+        {data && data.visitorReviewCount > 0 ? ` dan rata-rata seluruh ulasan pengunjung (C) ${data.visitorReviewAverage.toFixed(2)} dari ${numberFormat.format(data.visitorReviewCount)} ulasan` : loading ? " — sedang memuat rata-rata seluruh ulasan pengunjung (C) dari database" : " — belum ada ulasan pengunjung, jadi belum ada skor yang bisa dihitung"}. Urutan ini bisa dilihat dan dipakai di <Link href="/dashboard/konten" className="font-bold text-[#4e704d] underline-offset-2 hover:underline">Pustaka racikan</Link> lewat pilihan “Skor rating (Bayesian)”.
+      </p>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[1.65fr_1fr]">
         <section className="rounded-[20px] border border-[#e7ebe5] bg-white p-4 sm:p-5"><ChartHeading icon={TrendingUp} label="Tren kunjungan" note="Pergerakan halaman publik setiap hari" /><TrafficLineChart data={data?.daily ?? []} /></section>

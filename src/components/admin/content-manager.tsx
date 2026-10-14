@@ -10,6 +10,13 @@ import { Badge } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { primaryFishingType, recipes as seedRecipes, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
+import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
+import type { RecipeRatingMap } from "@/lib/review-summary";
+import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
+
+/** Pilihan urutan pustaka konten. "skor" memakai rumus yang sama dengan katalog publik. */
+const urutanKonten = ["Terakhir diubah", "Skor rating (Bayesian)", "Ulasan terbanyak", "Judul A–Z"] as const;
+type UrutanKonten = (typeof urutanKonten)[number];
 
 export type ManagedRecipe = {
   id: number; slug: string; title: string; summary: string; category: string; status: string; image: string; price: string; priceValue: number; difficulty: string; rating: number; reviewCount: number; users: number; popularity: number; weather: string[]; water: string[]; fishingTypes: string[]; provinces: string[]; seasons: string[]; ingredients: { name: string; brand: string; amount: string; optional?: boolean }[]; steps: string[]; suitable: string[]; notSuitable: string[]; author: string; createdAt: string; updatedAt: string;
@@ -339,6 +346,13 @@ export function ContentManager() {
   const [items, setItems] = useState<ManagedRecipe[]>([]);
   const [filter, setFilter] = useState("Semua");
   const [query, setQuery] = useState("");
+  const [urut, setUrut] = useState<UrutanKonten>("Terakhir diubah");
+  /**
+   * Ulasan nyata (tabel ulasan) — angka yang sama dengan yang dipakai katalog
+   * publik. Angka katalog pada baris tabel tetap ditampilkan terpisah dan
+   * berlabel "angka katalog", jadi keduanya tidak pernah tertukar.
+   */
+  const [ulasan, setUlasan] = useState<{ ratings: RecipeRatingMap; globalAverage: number; minReviews: number }>({ ratings: {}, globalAverage: 0, minReviews: 20 });
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedRecipe | undefined>();
   const [loading, setLoading] = useState(true);
@@ -349,9 +363,14 @@ export function ContentManager() {
 
   async function load(signal?: AbortSignal) {
     const response = await fetch("/api/admin/recipes", { cache: "no-store", signal });
-    const body = await response.json() as { recipes?: ManagedRecipe[]; error?: string };
+    const body = await response.json() as { recipes?: ManagedRecipe[]; error?: string; reviews?: RecipeRatingMap; global?: { average?: number }; minReviews?: number };
     if (!response.ok) throw new Error(body.error ?? "Konten tidak dapat dimuat.");
     setItems(body.recipes ?? []);
+    setUlasan({
+      ratings: body.reviews ?? {},
+      globalAverage: typeof body.global?.average === "number" ? body.global.average : 0,
+      minReviews: typeof body.minReviews === "number" ? body.minReviews : 20,
+    });
   }
 
   useEffect(() => {
@@ -363,7 +382,17 @@ export function ContentManager() {
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, []);
 
-  const filtered = useMemo(() => items.filter((item) => (filter === "Semua" || item.status === filter) && `${item.title} ${item.slug} ${item.category} ${item.author}`.toLocaleLowerCase("id-ID").includes(query.trim().toLocaleLowerCase("id-ID"))), [items, filter, query]);
+  // Daftar diurutkan di sini memakai angka yang sama dengan katalog publik:
+  // "Skor rating (Bayesian)" memakai rata-rata Bayesian (m dari server), bukan
+  // rata-rata mentah, supaya editor melihat urutan yang benar-benar tampil.
+  const rankerRating = useMemo(() => ratingScoreRanker(ulasan.ratings, ulasan.globalAverage || null, ulasan.minReviews), [ulasan]);
+  const filtered = useMemo(() => {
+    const hasil = items.filter((item) => (filter === "Semua" || item.status === filter) && `${item.title} ${item.slug} ${item.category} ${item.author}`.toLocaleLowerCase("id-ID").includes(query.trim().toLocaleLowerCase("id-ID")));
+    if (urut === "Skor rating (Bayesian)") return [...hasil].sort(rankerRating);
+    if (urut === "Ulasan terbanyak") return [...hasil].sort((a, b) => (ulasan.ratings[b.slug]?.count ?? 0) - (ulasan.ratings[a.slug]?.count ?? 0) || rankerRating(a, b));
+    if (urut === "Judul A–Z") return [...hasil].sort((a, b) => a.title.localeCompare(b.title, "id-ID"));
+    return hasil;
+  }, [items, filter, query, urut, rankerRating, ulasan.ratings]);
   const counts = useMemo(() => ({ all: items.length, published: items.filter((item) => item.status === "published").length, draft: items.filter((item) => item.status === "draft").length, archived: items.filter((item) => item.status === "archived").length }), [items]);
   const missingSeeds = useMemo(() => seedRecipes.filter((seed) => !items.some((item) => item.slug === seed.slug)).length, [items]);
 
@@ -440,8 +469,12 @@ export function ContentManager() {
         <div className="flex flex-col gap-3 border-b border-[#eef0ec] p-4 sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div><h2 className="text-sm font-extrabold text-[#344638]">Pustaka racikan</h2><p className="mt-1 text-[10px] text-[#929a91]">{filtered.length} dari {items.length} resep CMS</p></div>
-            <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72"><Search size={15} className="text-[#929a91]" /><span className="sr-only">Cari konten</span><input className="w-full bg-transparent text-xs outline-none placeholder:text-[#a0a79f]" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul, slug, kategori…" /></label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72"><Search size={15} className="text-[#929a91]" /><span className="sr-only">Cari konten</span><input className="w-full bg-transparent text-xs outline-none placeholder:text-[#a0a79f]" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul, slug, kategori…" /></label>
+              <label className="flex items-center gap-2 text-[10px] font-bold text-[#7e897c]">Urutkan<SelectBox><select className={`${SELECT_FIELD_CLASS} min-h-12 rounded-xl border border-[#e4e9e2] bg-white pl-3 text-xs font-semibold text-[#3b493e] outline-none focus:border-[#748f70] sm:min-h-10`} value={urut} onChange={(event) => setUrut(event.target.value as UrutanKonten)}>{urutanKonten.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+            </div>
           </div>
+          {urut === "Skor rating (Bayesian)" && <p className="rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[10px] leading-5 text-[#7a8479]">{BAYESIAN_HINT} Resep tanpa ulasan selalu di bawah resep yang sudah diulas.</p>}
           <div className="flex gap-2 overflow-x-auto">
             {statusFilters.map((item) => (
               <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-h-8 shrink-0 rounded-full px-3 text-[10px] font-bold transition ${filter === item ? "bg-[#294b34] text-white" : "bg-[#f3f5f1] text-[#667366] hover:bg-[#e8eee5]"}`}>
@@ -470,6 +503,12 @@ export function ContentManager() {
                         <div className="min-w-0">
                           <p className="max-w-[270px] truncate text-xs font-extrabold text-[#37483a]">{item.title}</p>
                           <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog ★ {(item.rating / 10).toFixed(1)} · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
+                          <p className="mt-0.5 max-w-[270px] truncate text-[9px] font-semibold text-[#7d8b7e]">{(() => {
+                            const rating = ulasan.ratings[item.slug];
+                            if (!rating || rating.count <= 0) return "Belum ada ulasan pengunjung";
+                            const skor = bayesianRatingScore(rating, ulasan.globalAverage || null, ulasan.minReviews);
+                            return `Ulasan nyata ★ ${rating.average.toFixed(1)} dari ${new Intl.NumberFormat("id-ID").format(rating.count)} ulasan${skor === null ? "" : ` · skor peringkat ${skor.toFixed(2)}`}`;
+                          })()}</p>
                         </div>
                       </div>
                     </td>
