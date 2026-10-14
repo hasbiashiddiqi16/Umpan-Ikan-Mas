@@ -21,6 +21,12 @@ export const cmsRecipes = pgTable("cms_recipes", {
   popularity: integer("popularity").notNull().default(0),
   weather: jsonb("weather").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   water: jsonb("water").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /**
+   * Tipe perairan resep: "Kolam", "Sungai", "Danau" (lihat `WaterBody`). Kosong
+   * berarti belum dilabeli editor; halaman publik menurunkan labelnya dari teks
+   * resep seperti resep katalog (lihat `waterBodiesFromText`).
+   */
+  waterBodies: jsonb("water_bodies").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   fishingTypes: jsonb("fishing_types").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   provinces: jsonb("provinces").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   seasons: jsonb("seasons").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
@@ -46,6 +52,8 @@ export const cmsReviews = pgTable("cms_reviews", {
   rating: integer("rating").notNull(),
   weather: varchar("weather", { length: 30 }).notNull(),
   water: varchar("water", { length: 30 }).notNull(),
+  /** Tipe perairan yang dipakai pengirim: "Kolam", "Sungai", "Danau" (opsional). */
+  waterBody: varchar("water_body", { length: 30 }),
   fishingType: varchar("fishing_type", { length: 30 }).notNull(),
   catchCount: integer("catch_count"),
   comment: text("comment").notNull(),

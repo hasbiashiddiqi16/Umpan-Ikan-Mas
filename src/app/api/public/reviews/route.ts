@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
-import { normalizeFishingType } from "@/data/recipes";
+import { WATER_BODIES, normalizeFishingType } from "@/data/recipes";
 import { recipes } from "@/data/recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { isFutureReviewDate } from "@/lib/review-dates";
@@ -74,13 +74,19 @@ export async function POST(request: Request) {
     if (typeof item.weather !== "string" || !allowedWeather.includes(item.weather) || typeof item.water !== "string" || !allowedWater.includes(item.water) || typeof item.fishingType !== "string" || !allowedTypes.includes(item.fishingType)) {
       return Response.json({ error: "Kondisi mancing tidak valid." }, { status: 400 });
     }
+    // Tipe air opsional: pengirim boleh tidak menyebutkannya. Kalau diisi, harus
+    // salah satu tipe yang dikenal supaya data yang masuk ke evaluasi bersih.
+    const waterBody = typeof item.waterBody === "string" && item.waterBody.trim() ? item.waterBody.trim() : null;
+    if (waterBody && !(WATER_BODIES as string[]).includes(waterBody)) {
+      return Response.json({ error: "Tipe air hanya boleh Kolam, Sungai, atau Danau." }, { status: 400 });
+    }
     const catchCount = item.catchCount === undefined || item.catchCount === null ? null : Number(item.catchCount);
     if (catchCount !== null && (!Number.isInteger(catchCount) || catchCount < 0 || catchCount > 999)) return Response.json({ error: "Jumlah tangkapan tidak valid." }, { status: 400 });
     const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
     const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
     // Sidik jari isi kiriman + penjagaan anti-spam (24 jam per resep per perangkat).
-    const payloadHash = reviewPayloadHash([recipeSlug, name, location, rating, item.weather, item.water, item.fishingType, catchCount, comment]);
+    const payloadHash = reviewPayloadHash([recipeSlug, name, location, rating, item.weather, item.water, waterBody, item.fishingType, catchCount, comment]);
     const hit = await checkReviewLimits({ deviceId: device.id, ipHash: hashReviewValue(`ip:${ip}`), recipeSlug, payloadHash });
     if (hit) {
       // Kiriman ulang yang identik (mis. percobaan ulang jaringan) dijawab dengan
@@ -94,7 +100,7 @@ export async function POST(request: Request) {
     }
     const [created] = await db
       .insert(cmsReviews)
-      .values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, fishingType: normalizeFishingType(item.fishingType), catchCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash })
+      .values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash })
       .returning({ id: cmsReviews.id });
     return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
   } catch (error) {

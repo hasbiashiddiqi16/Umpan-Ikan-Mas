@@ -40,7 +40,7 @@ export function CatalogView() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
-  const filterAktif = filters.province !== "Semua provinsi" || filters.city !== "Semua kota" || filters.weather !== "Semua cuaca" || filters.season !== "Semua musim" || filters.water !== "Semua kondisi air" || filters.fishingType !== "Semua jenis" || filters.budget !== "Semua budget" || filters.difficulty !== "Semua tingkat" || Boolean(query);
+  const filterAktif = filters.province !== "Semua provinsi" || filters.city !== "Semua kota" || filters.weather !== "Semua cuaca" || filters.season !== "Semua musim" || filters.water !== "Semua kondisi air" || filters.waterBody !== "Semua tipe air" || filters.fishingType !== "Semua jenis" || filters.budget !== "Semua budget" || filters.difficulty !== "Semua tingkat" || Boolean(query);
 
   function applyLocationToFilters(place: DetectedPlace) {
     saveVisitorPreferences({ province: place.province });
@@ -105,6 +105,7 @@ export function CatalogView() {
     if (filters.weather !== "Semua cuaca") result = result.filter((recipe) => recipe.weather.includes(filters.weather as (typeof recipe.weather)[number]));
     if (filters.season !== "Semua musim") result = result.filter((recipe) => recipe.seasons.includes(filters.season));
     if (filters.water !== "Semua kondisi air") result = result.filter((recipe) => recipe.water.includes(filters.water as (typeof recipe.water)[number]));
+    if (filters.waterBody !== "Semua tipe air") result = result.filter((recipe) => recipe.waterBodies.includes(filters.waterBody as (typeof recipe.waterBodies)[number]));
     if (filters.fishingType !== "Semua jenis") {
       const dipilih = normalizeFishingType(filters.fishingType);
       result = result.filter((recipe) => recipe.fishingTypes.map(normalizeFishingType).includes(dipilih));
@@ -157,6 +158,7 @@ export function CatalogView() {
               province: next.province !== "Semua provinsi" ? next.province : undefined,
               weather: next.weather !== "Semua cuaca" ? next.weather : undefined,
               water: next.water !== "Semua kondisi air" ? next.water : undefined,
+              waterBody: next.waterBody !== "Semua tipe air" ? next.waterBody : undefined,
               fishingType: next.fishingType !== "Semua jenis" ? next.fishingType : undefined,
               season: next.season !== "Semua musim" ? next.season : undefined,
             });
@@ -179,7 +181,7 @@ export function CatalogView() {
       </div>
       <div className="mb-5 mt-7 flex items-center justify-between gap-4"><div><p className="text-sm font-extrabold text-[#344538]">{filteredRecipes.length} racikan ditemukan</p><p className="mt-1 text-xs text-[#8b9389]">{filters.sort === "Rating Tertinggi" ? "Diurutkan dari skor rating ulasan pengunjung (rata-rata Bayesian)" : "Disusun berdasarkan kecocokan dan masukan komunitas"}</p></div><span className="hidden items-center gap-1.5 text-xs text-[#91998f] sm:inline-flex"><SlidersHorizontal size={13} /> Hasil diperbarui langsung</span></div>
       {filters.sort === "Rating Tertinggi" && <p className="mb-5 -mt-2 rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[11px] leading-5 text-[#7a8479]">{BAYESIAN_HINT}</p>}
-      {filteredRecipes.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredRecipes.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={filterAktif ? calculateMatchScore(recipe, { ...defaultPreferences, province: filters.province === "Semua provinsi" ? defaultPreferences.province : filters.province, weather: filters.weather === "Semua cuaca" ? defaultPreferences.weather : filters.weather, water: filters.water === "Semua kondisi air" ? defaultPreferences.water : filters.water, fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType, season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season }) : undefined} />)}</div> : <EmptyState title={query ? "Umpan tidak ditemukan." : favoritesOnly ? "Belum ada resep favorit." : "Belum ada resep yang sesuai."} description={favoritesOnly ? "Simpan resep dengan mengetuk ikon hati. Favorit tersimpan di perangkat ini." : query ? "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." : "Coba ubah filter provinsi, kondisi air, atau budget untuk melihat racikan lainnya."} />}
+      {filteredRecipes.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredRecipes.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={filterAktif ? calculateMatchScore(recipe, { ...defaultPreferences, province: filters.province === "Semua provinsi" ? defaultPreferences.province : filters.province, weather: filters.weather === "Semua cuaca" ? defaultPreferences.weather : filters.weather, water: filters.water === "Semua kondisi air" ? defaultPreferences.water : filters.water, waterBody: filters.waterBody === "Semua tipe air" ? undefined : filters.waterBody, fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType, season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season }) : undefined} />)}</div> : <EmptyState title={query ? "Umpan tidak ditemukan." : favoritesOnly ? "Belum ada resep favorit." : "Belum ada resep yang sesuai."} description={favoritesOnly ? "Simpan resep dengan mengetuk ikon hati. Favorit tersimpan di perangkat ini." : query ? "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." : "Coba ubah filter provinsi, kondisi air, atau budget untuk melihat racikan lainnya."} />}
     </div>
   );
 }

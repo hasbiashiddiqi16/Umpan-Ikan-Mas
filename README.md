@@ -197,7 +197,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Definisi "mencoba".** Tulisan "N pemancing mencoba" berarti **jumlah ulasan pengunjung** pada resep itu: satu ulasan = satu pemancing yang mencoba. Angkanya tidak pernah melebihi jumlah ulasan, dan selalu disertai penjelasan di halaman resep ("Satu ulasan berarti satu pemancing yang mencoba racikan ini…"). Kalimat penjelas yang sama dipakai pada atribut `title` kartu resep lewat `describeRating()` (`src/lib/rating-utils.ts`). Tombol "Saya coba" belum ada; kalau nanti ditambahkan, angkanya harus tetap berasal dari tabel yang sama.
 
-**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung**: air 30, cuaca 22, jenis pemancingan 22, provinsi 16, musim 10 (jumlahnya 100). Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
+**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung** (tipe air, kondisi air, cuaca, jenis pemancingan, musim, provinsi), dengan bobot yang tinggal di `src/lib/recommendation-config.ts` — lihat bagian "Bobot skor kecocokan" di bawah. Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
 
 **Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
 
@@ -223,6 +223,42 @@ Aturan yang menyertainya, agar tetap jujur:
 - **Urutan berbasis jumlah ulasan tidak berubah.** "Racikan Populer" (beranda), "Ulasan Terbanyak" (katalog), urutan pilihan di `/cuaca`, urutan resep provinsi, dan pemutus seri rekomendasi memakai **jumlah** ulasan lebih dulu; rata-rata di sana hanya pemutus seri pada jumlah yang sama — dan pada jumlah yang sama, urutan rata-rata setara dengan urutan skor Bayesian.
 - Pengunjung diberi tahu: saat memilih "Rating Tertinggi", katalog menampilkan catatan `BAYESIAN_HINT` yang menjelaskan mengapa resep berulasan sedikit tidak langsung melompat ke atas.
 - **Dashboard memakai angka yang sama.** `GET /api/admin/recipes` mengirim peta rating ulasan nyata, `global` (C), dan `minReviews` (m) — nilainya identik dengan `/api/public/reviews/summary`. Pustaka racikan di Content Studio punya pilihan urutan **"Skor rating (Bayesian)"** (default tetap "Terakhir diubah", karena urutan editorial tidak berubah) dan setiap baris menampilkan dua baris angka yang sengaja dipisah: "angka katalog ★ …" (angka kurasi, selalu berlabel) dan "Ulasan nyata ★ … dari N ulasan · skor peringkat …" atau "Belum ada ulasan pengunjung". Ikhtisar `/dashboard` juga menampilkan rumus, ambang `m`, dan nilai `C` dari data nyata (dari `GET /api/admin/analytics`) supaya editor tahu dari mana urutan katalog berasal. Antrean moderasi tetap urut waktu — memoderasi tidak pernah diurutkan dari rating.
+
+## Bobot skor kecocokan: satu berkas, status jujur, dan evaluasi hit-rate@3
+
+**Bobot tidak lagi ditulis di dalam kode.** Semua bobot skor kecocokan tinggal di `src/lib/recommendation-config.ts`, lengkap dengan alasan tiap bobot, versi (`sementara-1 (2026-10-14)`), dan status yang jujur: **masih dugaan awal, belum diuji data**. Bobot lama yang juga tidak pernah diuji disimpan sebagai `MATCH_WEIGHTS_LAMA` hanya untuk pembanding.
+
+| Kondisi | Bobot lama | Bobot sekarang | Alasan singkat |
+| --- | --- | --- | --- |
+| Tipe air (kolam/sungai/danau) | — | **25** | Karakter air berbeda antarkolam; satu provinsi punya banyak kolam yang tidak sama. |
+| Kondisi air (keruh/hijau/jernih/kekuningan) | 30 | 20 | Warna dan kejernihan air langsung memengaruhi pilihan aroma. |
+| Cuaca | 22 | 20 | Mengubah suhu dan keaktifan ikan saat sesi berjalan. |
+| Jenis pemancingan | 22 | 20 | Tekanan kolam saat harian, lomba, dan galatama berbeda. |
+| Musim | 10 | 10 | Lebih lambat berubah daripada kondisi harian. |
+| Provinsi | 16 | **5** | Hanya proksi administratif — pemancing memilih kolam, bukan provinsi. |
+
+Total selalu 100 (dijaga `MATCH_WEIGHTS_TOTAL`/`MATCH_WEIGHTS_BALANCED`), dan halaman `/sistem-pakar` menampilkan tabel bobot beserta alasannya lewat blok "Dari mana angka kecocokan ini?" — jadi pengunjung bisa melihat angkanya, bukan sekadar percaya.
+
+**Tipe air (kolam/sungai/danau).** Resep punya field `waterBodies` (`WaterBody` di `src/data/recipes.ts`), berbeda dari `water` yang berisi kondisi air. Label katalog **diturunkan dari teks resep** (`waterBodiesFromText`) dan tidak menebak: resep yang tidak menyebut sungai/danau tidak diberi label itu. Semua resep katalog saat ini berlabel **Kolam** karena setiap entri "cocok untuk" menyebut kolam; resep yang tidak menyebut apa pun memakai label bawaan katalog (`DEFAULT_WATER_BODIES`). Editor bisa mengubahnya dari kolom **"Tipe air"** di Content Studio (`cms_recipes.water_bodies`, migrasi `20261014180000_add_water_body`). Pengunjung bisa memilih tipe air di filter katalog ("Semua tipe air") dan di Sistem Pakar; pilihannya tersimpan bersama kondisi lain di `umpan-mas-preferences-v1`.
+
+**Ulasan ikut mencatat tipe air (opsional).** Formulir ulasan punya pilihan "Tipe air (opsional, Kolam/Sungai/Danau)" yang disimpan di `cms_reviews.water_body` dan divalidasi server. Ini yang membuat dimensi tipe air bisa dievaluasi nanti — tanpa data ini, bobotnya tidak akan pernah punya bukti.
+
+**Evaluasi hit-rate@3.** Pertanyaannya: kalau pengunjung melaporkan kondisi mancingnya dan resepnya **berhasil**, apakah resep itu muncul di 3 teratas? `TUNING_TARGET` (`src/lib/recommendation-config.ts`) menetapkan:
+
+- **berhasil** = rating ≥ 4 **dan** tangkapan ≥ 5 ekor (kolom hasil tangkapan bersifat opsional, jadi laporan selalu menampilkan dua angka: **ketat** dan **longgar** untuk rating ≥ 4 saja);
+- hit-rate@3 dihitung di `src/lib/recommendation-eval.ts` dengan **fungsi urutan yang sama** seperti situs (`getRecommendedRecipes` dengan bobot sebagai parameter — tidak ada rumus tandingan);
+- ulasan yang sedang diuji **dikeluarkan dari bukti pemutus seri** (leave-one-out), supaya resep tidak dibantu ulasan yang justru sedang dinilai;
+- hanya ulasan nyata yang sudah disetujui yang dihitung (ulasan contoh dan yang belum disetujui tidak pernah ikut);
+- **tuning hanya disarankan setelah ≥ 30 ulasan "berhasil"**. Di bawah itu laporan hanya menampilkan keadaan dan berkata "Belum bisa dituning" — bobot tidak diubah berdasarkan sampel tipis.
+
+Cara menjalankannya (server harus jalan; hitung ulang kapan saja):
+
+```
+ADMIN_PASSWORD="..." npm run eval:rekomendasi                    # server lokal :3000
+BASE_URL="https://situs-anda" ADMIN_PASSWORD="..." npm run eval:rekomendasi
+```
+
+Sumbernya `GET /api/admin/recommendation-eval`, dan panel **"Uji urutan rekomendasi · hit-rate@3"** di `/dashboard/analitik` menampilkan bobot aktif, nilai hit-rate, sampel, kandidat bobot yang diuji, serta status tuning. Kalau hasilnya menunjukkan kandidat lain lebih baik **dan** sampelnya sudah cukup, bobot baru ditulis di `src/lib/recommendation-config.ts` (satu tempat), lalu evaluasi dijalankan lagi.
 
 ## Izin lokasi (opsional)
 

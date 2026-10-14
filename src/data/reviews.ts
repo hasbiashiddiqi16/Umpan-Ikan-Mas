@@ -16,6 +16,8 @@ export type RecipeReview = {
   rating: number;
   weather: string;
   water: string;
+  /** Tipe perairan yang dicoba (Kolam/Sungai/Danau) — opsional, lihat `WaterBody`. */
+  waterBody?: string;
   fishingType?: string;
   catchCount?: number;
   date: string;

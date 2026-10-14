@@ -19,14 +19,14 @@ const urutanKonten = ["Terakhir diubah", "Skor rating (Bayesian)", "Ulasan terba
 type UrutanKonten = (typeof urutanKonten)[number];
 
 export type ManagedRecipe = {
-  id: number; slug: string; title: string; summary: string; category: string; status: string; image: string; price: string; priceValue: number; difficulty: string; rating: number; reviewCount: number; users: number; popularity: number; weather: string[]; water: string[]; fishingTypes: string[]; provinces: string[]; seasons: string[]; ingredients: { name: string; brand: string; amount: string; optional?: boolean }[]; steps: string[]; suitable: string[]; notSuitable: string[]; author: string; createdAt: string; updatedAt: string;
+  id: number; slug: string; title: string; summary: string; category: string; status: string; image: string; price: string; priceValue: number; difficulty: string; rating: number; reviewCount: number; users: number; popularity: number; weather: string[]; water: string[]; waterBodies: string[]; fishingTypes: string[]; provinces: string[]; seasons: string[]; ingredients: { name: string; brand: string; amount: string; optional?: boolean }[]; steps: string[]; suitable: string[]; notSuitable: string[]; author: string; createdAt: string; updatedAt: string;
 };
 
 /** Satu baris bahan di editor: bentuknya sama dengan yang tampil di halaman publik. */
 type IngredientRow = { name: string; brand: string; amount: string; optional: boolean };
 
 type RecipeForm = {
-  title: string; slug: string; summary: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
+  title: string; slug: string; summary: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
 };
 
 const statuses = ["draft", "published", "archived"];
@@ -39,7 +39,7 @@ const imageOptions = [
 
 const blankForm: RecipeForm = {
   title: "", slug: "", summary: "", status: "draft", image: "/images/recipe-putih.jpg",
-  price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh",
+  price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
   fishingTypes: "Harian", provinces: "Jawa Barat", seasons: "Musim Hujan",
   ingredients: [
     { name: "Pelet ikan", brand: "Pelet Jitu", amount: "50 g", optional: false },
@@ -68,7 +68,7 @@ function formFromRecipe(recipe: ManagedRecipe): RecipeForm {
   return {
     title: recipe.title, slug: recipe.slug, summary: recipe.summary, status: recipe.status, image: recipe.image,
     price: recipe.price, priceValue: String(recipe.priceValue), difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
-    water: recipe.water.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
+    water: recipe.water.join(", "), waterBodies: recipe.waterBodies.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
     seasons: recipe.seasons.join(", "),
     ingredients: recipe.ingredients.map((item) => ({ name: item.name, brand: item.brand, amount: item.amount, optional: Boolean(item.optional) })),
     steps: recipe.steps.join("\n"), suitable: recipe.suitable.join("\n"), notSuitable: recipe.notSuitable.join("\n"), author: recipe.author,
@@ -85,6 +85,7 @@ function toPayload(form: RecipeForm, status = form.status) {
     priceValue: Number(form.priceValue),
     weather: listFrom(form.weather),
     water: listFrom(form.water),
+    waterBodies: listFrom(form.waterBodies),
     fishingTypes: listFrom(form.fishingTypes),
     provinces: listFrom(form.provinces),
     seasons: listFrom(form.seasons),
@@ -288,7 +289,8 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Kondisi & harga</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Field label="Cuaca" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.weather} onChange={(event) => update("weather", event.target.value)} placeholder="Hujan, Mendung" /></Field>
-                <Field label="Kondisi air" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.water} onChange={(event) => update("water", event.target.value)} placeholder="Keruh, Hijau" /></Field>
+                <Field label="Kondisi air" hint="Warna air: pisahkan dengan koma"><input className={fieldClass} value={form.water} onChange={(event) => update("water", event.target.value)} placeholder="Keruh, Hijau" /></Field>
+                <Field label="Tipe air" hint="Kolam, Sungai, atau Danau"><input className={fieldClass} value={form.waterBodies} onChange={(event) => update("waterBodies", event.target.value)} placeholder="Kolam" /></Field>
                 <Field label="Jenis pemancingan"><input className={fieldClass} value={form.fishingTypes} onChange={(event) => update("fishingTypes", event.target.value)} placeholder="Harian, Lomba, Galatama" /></Field>
                 <Field label="Musim"><input className={fieldClass} value={form.seasons} onChange={(event) => update("seasons", event.target.value)} placeholder="Musim Hujan, Peralihan" /></Field>
                 <Field label="Provinsi terkait"><input className={fieldClass} value={form.provinces} onChange={(event) => update("provinces", event.target.value)} placeholder="Jawa Barat, Banten" /></Field>
@@ -516,6 +518,7 @@ export function ContentManager() {
                       <div className="flex max-w-[260px] flex-wrap gap-1.5">
                         {item.weather.slice(0, 1).map((weather) => <Badge key={weather} className={chipClass}>{weather === "Hujan" ? "🌧️" : weather === "Cerah" ? "☀️" : "☁️"} {weather}</Badge>)}
                         {item.water.slice(0, 1).map((water) => <Badge key={water} tone="cream" className={chipClass}>💧 {water}</Badge>)}
+                        {item.waterBodies.slice(0, 1).map((body) => <Badge key={body} tone="cream" className={chipClass}>🌊 {body}</Badge>)}
                         {item.fishingTypes.slice(0, 1).map((type) => <Badge key={type} tone="cream" className={chipClass}>🎣 {type}</Badge>)}
                       </div>
                       <p className="mt-1.5 text-[9px] font-semibold text-[#969d94]">{item.ingredients.filter((entry) => !entry.optional).length} bahan · {item.ingredients.filter((entry) => entry.optional).length} opsional</p>

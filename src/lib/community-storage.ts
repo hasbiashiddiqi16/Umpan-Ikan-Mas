@@ -1,3 +1,4 @@
+import { WATER_BODIES } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 
 export const COMMUNITY_REVIEWS_KEY = "umpan-mas-community-reviews-v1";
@@ -30,6 +31,7 @@ function isMemberReview(value: unknown): value is MemberReview {
     typeof item.rating === "number" && item.rating >= 1 && item.rating <= 5 &&
     typeof item.weather === "string" &&
     typeof item.water === "string" &&
+    (item.waterBody === undefined || WATER_BODIES.includes(item.waterBody as (typeof WATER_BODIES)[number])) &&
     (item.catchCount === undefined || (typeof item.catchCount === "number" && item.catchCount >= 0)) &&
     (item.serverId === undefined || (typeof item.serverId === "number" && Number.isSafeInteger(item.serverId) && item.serverId > 0)) &&
     (item.synced === undefined || typeof item.synced === "boolean") &&

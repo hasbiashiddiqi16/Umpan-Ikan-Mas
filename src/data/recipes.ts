@@ -71,6 +71,47 @@ export function normalizeFishingText(value: string): string {
   return value.replace(/\bgalat\b/gi, (match) => (match === "Galat" ? "Galatama" : "galatama"));
 }
 /**
+ * Tipe air tempat resep dipakai: kolam, sungai, atau danau. Ini **beda** dari
+ * kondisi air (keruh/hijau/jernih/kekuningan) — kondisi air berubah dari hari
+ * ke hari, sedangkan tipe air adalah jenis perairannya.
+ *
+ * Dipakai sebagai salah satu pertimbangan skor kecocokan (lihat
+ * `@/lib/recommendation-config`), karena karakter air tiap perairan berbeda:
+ * provinsi yang sama tidak menjamin kolam yang sama.
+ */
+export type WaterBody = "Kolam" | "Sungai" | "Danau";
+
+export const WATER_BODIES: WaterBody[] = ["Kolam", "Sungai", "Danau"];
+
+export function isWaterBody(value: string): value is WaterBody {
+  return (WATER_BODIES as string[]).includes(value);
+}
+
+/**
+ * Tipe air hanya ditulis kalau teks resepnya memang menyebutkannya. Fungsi ini
+ * sengaja tidak menebak: resep yang tidak menyebut sungai/danau tidak diberi
+ * label itu. Teks `notSuitable` tidak ikut dibaca karena isinya justru kondisi
+ * yang **tidak** cocok.
+ */
+export function waterBodiesFromText(...texts: (string | readonly string[] | undefined)[]): WaterBody[] {
+  const gabungan = texts
+    .flatMap((text) => (Array.isArray(text) ? text : [text]))
+    .filter((text): text is string => typeof text === "string")
+    .join(" ")
+    .toLocaleLowerCase("id-ID");
+  return WATER_BODIES.filter((body) => new RegExp(`\\b${body.toLowerCase()}\\b`).test(gabungan));
+}
+
+/**
+ * Katalog ini disusun untuk pemancingan kolam (harian, lomba, galatama), dan
+ * setiap entri "cocok untuk" pada resep inti menyebut kolam. Jadi resep yang
+ * teksnya tidak menyebut tipe air mana pun memakai label bawaan ini, bukan
+ * tebakan sungai/danau. Editor bisa mengubahnya dari dashboard kalau memang ada
+ * resep khusus sungai atau danau.
+ */
+export const DEFAULT_WATER_BODIES: WaterBody[] = ["Kolam"];
+
+/**
  * Kategori resep = jenis pemancingan resep itu. Nilainya **diturunkan** dari
  * `fishingTypes` (lihat `primaryFishingType`), bukan ditulis manual per resep,
  * supaya badge di kartu dan tag kondisi tidak pernah bertentangan.
@@ -101,6 +142,8 @@ export type Recipe = {
   image: string;
   weather: Weather[];
   water: WaterCondition[];
+  /** Tipe perairan (kolam/sungai/danau) — lihat `waterBodiesFromText`. */
+  waterBodies: WaterBody[];
   fishingTypes: FishingType[];
   provinces: string[];
   seasons: string[];
@@ -112,7 +155,12 @@ export type Recipe = {
   notSuitable: string[];
 };
 
-type CoreRecipe = Omit<Recipe, "category">;
+/**
+ * Resep inti dan turunan belum memuat dua field yang **diturunkan** saat katalog
+ * dirakit: `category` (dari jenis pemancingan) dan `waterBodies` (dari teks
+ * resep, lihat `waterBodiesFromText`).
+ */
+type CoreRecipe = Omit<Recipe, "category" | "waterBodies">;
 
 const coreRecipes: CoreRecipe[] = [
   {
@@ -711,8 +759,16 @@ function withOptionalAdditions(recipe: Recipe, fromCatalog: boolean): Recipe {
  */
 export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes].map((recipe, index) => {
   const fishingTypes = orderFishingTypes(recipe.name, recipe.fishingTypes);
+  const waterBodies = waterBodiesFromText(recipe.name, recipe.summary, recipe.suitable);
   return withOptionalAdditions(
-    { ...recipe, fishingTypes, category: fishingTypes[0] },
+    {
+      ...recipe,
+      fishingTypes,
+      category: fishingTypes[0],
+      // Label tipe air hanya dari teks resep; sisanya memakai label bawaan
+      // katalog kolam (lihat DEFAULT_WATER_BODIES).
+      waterBodies: waterBodies.length ? waterBodies : [...DEFAULT_WATER_BODIES],
+    },
     index < normalizedCoreRecipes.length,
   );
 });
@@ -725,6 +781,9 @@ export const defaultPreferences = {
   province: "Jawa Barat",
   weather: "Hujan" as Weather,
   water: "Keruh" as WaterCondition,
+  // Sengaja kosong: tipe air tidak boleh diisi diam-diam, karena pengunjung
+  // yang belum memilih tipe air tidak sedang mengklaim apa pun.
+  waterBody: "",
   fishingType: "Harian" as FishingType,
   budget: "Rp15.000–30.000",
   season: "Musim Hujan",

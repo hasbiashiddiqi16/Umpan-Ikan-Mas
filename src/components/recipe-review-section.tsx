@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, MessageSquareText, Send, Star } from "lucide-react";
-import type { Recipe } from "@/data/recipes";
+import { WATER_BODIES, type Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
@@ -41,6 +41,8 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
   const [rating, setRating] = useState(0);
   const [weather, setWeather] = useState("Hujan");
   const [water, setWater] = useState("Keruh");
+  // Opsional: pengirim tidak wajib menyebut tipe perairannya.
+  const [waterBody, setWaterBody] = useState("");
   const [fishingType, setFishingType] = useState("Harian");
   const [catchCount, setCatchCount] = useState("");
   const [comment, setComment] = useState("");
@@ -73,6 +75,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       rating,
       weather,
       water,
+      waterBody: waterBody || undefined,
       fishingType,
       catchCount: catchCount ? Math.min(999, Math.max(0, Number(catchCount))) : undefined,
       date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(now),
@@ -134,6 +137,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kota (opsional)<input className={inputClass} value={city} onChange={(event) => { markLocationTouched(); setCity(event.target.value); }} maxLength={60} placeholder="Contoh: Bogor" /></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Provinsi<SelectBox><select className={selectClass} value={province} onChange={(event) => { markLocationTouched(); setProvince(event.target.value); }}><option value="">Pilih provinsi</option>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Cuaca saat mencoba<SelectBox><select className={selectClass} value={weather} onChange={(event) => setWeather(event.target.value)}>{["Hujan", "Mendung", "Cerah", "Berawan", "Panas"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+        <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Tipe air (opsional)<SelectBox><select className={selectClass} value={waterBody} onChange={(event) => setWaterBody(event.target.value)}><option value="">Belum dipilih</option>{WATER_BODIES.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kondisi air<SelectBox><select className={selectClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Jenis pemancingan<SelectBox><select className={selectClass} value={fishingType} onChange={(event) => setFishingType(event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Hasil tangkapan (opsional)<div className="relative"><input className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="0" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div></label>
@@ -163,7 +167,7 @@ function useReviewOutboxRetry() {
         if (controller.signal.aborted) return;
         const result = await postReviewToServer({
           recipeSlug: review.recipeSlug, name: review.name, location: review.location, rating: review.rating,
-          weather: review.weather, water: review.water, fishingType: review.fishingType,
+          weather: review.weather, water: review.water, waterBody: review.waterBody, fishingType: review.fishingType,
           catchCount: review.catchCount, comment: review.comment,
         });
         if (result.ok) {
