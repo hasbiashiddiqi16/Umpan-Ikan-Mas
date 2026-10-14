@@ -67,6 +67,11 @@ export function getRecommendedRecipes<T extends Recipe>(
   });
 }
 
+/** Rentang rupiah untuk satu pilihan budget (null bila budget kosong/tak dikenal). */
+export function budgetRangeFor(budget?: string): [number, number] | null {
+  return budget ? budgetRanges[budget] ?? null : null;
+}
+
 export function filterRecipesByBudget<T extends Recipe>(recipes: T[], budget?: string): T[] {
   const range = budget ? budgetRanges[budget] : undefined;
   if (!range) return recipes;

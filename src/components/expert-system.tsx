@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Beaker, BookOpenCheck, BrainCircuit, Check, Droplets, Fish, Info, MapPin, MessageSquareText, Sparkles, Waves } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
+import { PRICE_FACTOR_NOTE, PRICE_NOTE, PRICE_UPDATED_AT, SESI_NOTE, WILAYAH_FACTOR, formatRupiah, tabelHarga, wilayahLabel, wilayahUntukProvinsi } from "@/data/ingredient-prices";
 import { WATER_BODIES, recipes, defaultPreferences, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { MATCH_WEIGHT_ENTRIES, MATCH_WEIGHTS_NOTE, MATCH_WEIGHTS_VERSION } from "@/lib/recommendation-config";
 import { provinces } from "@/data/provinces";
@@ -14,6 +15,7 @@ import type { RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
+import { BLEND_LIMITS_SUMMARY, BLEND_ROLE_RULES, BLEND_RULES_SUMMARY, MAX_BLEND_INGREDIENTS, MIN_BLEND_INGREDIENTS, MIN_INGREDIENT_PERCENT, namaBahan, ruleRangeLabel, type BlendSuggestion, type RoleShareStatus } from "@/lib/blend-rules";
 import { buildExpertBlend, getExpertKnowledgeStats, getKnowledgeEvidenceDescription } from "@/lib/expert-system";
 import type { UserPreferences } from "@/lib/recommendation";
 import { Badge, SectionHeader } from "@/components/shared";
@@ -22,15 +24,22 @@ import { useLocationAutofill } from "@/lib/use-location";
 import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 
 const selectClass = `${SELECT_FIELD_CLASS} min-h-12 w-full min-w-0 rounded-xl border border-[#e3e8e1] bg-white pl-3.5 text-sm font-semibold text-[#3d4d3f] outline-none transition focus:border-[#718b70] focus:ring-4 focus:ring-[#365b3a]/10 sm:min-h-11`;
+const STATUS_PERAN: Record<RoleShareStatus, string> = {
+  sesuai: "sesuai aturan",
+  kurang: "di bawah aturan",
+  lebih: "di atas aturan",
+  "tidak-dipakai": "belum dipakai",
+};
+
 const ratioColors = ["bg-[#315b3c]", "bg-[#638363]", "bg-[#a7b78d]", "bg-[#d3b45f]", "bg-[#9a7449]", "bg-[#839d9a]"];
 
 function Field({ label, icon: Icon, children }: { label: string; icon: LucideIcon; children: ReactNode }) {
   return <label className="grid gap-1.5 text-xs font-bold text-[#738071]"><span className="inline-flex items-center gap-1.5"><Icon size={13} /> {label}</span>{children}</label>;
 }
 
-function IngredientOption({ item, selected, onClick }: { item: IngredientKnowledge; selected: boolean; onClick: () => void }) {
+function IngredientOption({ item, selected, disabled = false, onClick }: { item: IngredientKnowledge; selected: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={selected} className={`relative min-h-[98px] rounded-2xl border p-3.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31593a] ${selected ? "border-[#5c7f59] bg-[#f1f6ee] shadow-[0_0_0_2px_rgba(63,103,63,.07)]" : "border-[#e7ebe5] bg-white hover:border-[#cbd8c8] hover:bg-[#fafcf9]"}`}>
+    <button type="button" onClick={onClick} aria-pressed={selected} disabled={disabled} aria-disabled={disabled} title={disabled ? `Sudah ${MAX_BLEND_INGREDIENTS} bahan dipilih — lepas satu dulu untuk menambah bahan lain.` : undefined} className={`relative min-h-[98px] rounded-2xl border p-3.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31593a] ${selected ? "border-[#5c7f59] bg-[#f1f6ee] shadow-[0_0_0_2px_rgba(63,103,63,.07)]" : disabled ? "cursor-not-allowed border-[#eceeea] bg-[#f7f8f5] opacity-60" : "border-[#e7ebe5] bg-white hover:border-[#cbd8c8] hover:bg-[#fafcf9]"}`}>
       <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full border border-[#dce4d9] bg-white">{selected && <Check size={12} className="text-[#3d6941]" />}</span>
       <span className="text-xl" aria-hidden="true">{item.emoji}</span><span className="mt-2 block pr-5 text-sm font-extrabold text-[#344638]">{item.name}</span><span className="mt-1 inline-flex rounded-full bg-[#f2f4ef] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.08em] text-[#7d887a]">{item.role}</span>
     </button>
@@ -97,6 +106,9 @@ export function ExpertSystem() {
   // ulasan contoh tidak ikut analisis, hanya tampil sebagai contoh berlabel.
   const allReviews = useMemo(() => [...localReviews, ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
   const result = useMemo(() => buildExpertBlend(selectedIds, preferences, allReviews, allRecipes), [selectedIds, preferences, allReviews, allRecipes]);
+  // Wilayah harga mengikuti provinsi pengunjung; tanpa provinsi dipakai harga dasar nasional.
+  const wilayah = useMemo(() => wilayahUntukProvinsi(preferences.province), [preferences.province]);
+  const hargaTabel = useMemo(() => tabelHarga(wilayah), [wilayah]);
   const stats = getExpertKnowledgeStats(localReviews.length, allRecipes.length, serverOnlyReviews.length);
 
   function updatePreference(key: keyof UserPreferences, value: string) {
@@ -109,14 +121,39 @@ export function ExpertSystem() {
     setNotice("");
     setSelectedIds((current) => {
       if (current.includes(id)) return current.filter((item) => item !== id);
-      if (current.length >= 6) { setNotice("Pilih maksimal 6 bahan agar komposisi tetap mudah dievaluasi."); return current; }
+      if (current.length >= MAX_BLEND_INGREDIENTS) { setNotice(`Pilih maksimal ${MAX_BLEND_INGREDIENTS} bahan agar komposisi tetap mudah dievaluasi. Lepas satu bahan dulu kalau ingin menambah yang lain.`); return current; }
       return [...current, id];
     });
   }
 
   function analyze() {
-    if (selectedIds.length < 2) { setNotice("Pilih minimal 2 bahan untuk melihat contoh campuran."); return; }
+    if (selectedIds.length < MIN_BLEND_INGREDIENTS) { setNotice(`Pilih minimal ${MIN_BLEND_INGREDIENTS} bahan untuk melihat contoh campuran.`); return; }
     setNotice("Analisis diperbarui dari pilihan bahan, resep, dan ulasan yang tersedia.");
+    setAnalysisCount((current) => current + 1);
+  }
+
+  // Saran bisa berupa penggantian (peran sama, rasio aman) atau penambahan bahan
+  // untuk memperbaiki porsi peran yang keluar dari aturan.
+  function pakaiSaran(saran: BlendSuggestion, id: string) {
+    if (!id) return;
+    setNotice("");
+    setSelectedIds((current) => {
+      // Saran pengganti menukar bahan yang sama perannya; saran aturan menambah
+      // satu bahan saja (tombol lain di saran yang sama tetap pilihan terpisah).
+      if (saran.untukId && current.includes(saran.untukId)) {
+        return [...new Set(current.map((bahanId) => (bahanId === saran.untukId ? id : bahanId)))];
+      }
+      if (current.includes(id) || current.length >= MAX_BLEND_INGREDIENTS) return current;
+      return [...current, id];
+    });
+    setNotice(saran.untukId ? "Bahan pengganti dipakai; komposisi dihitung ulang otomatis." : "Saran bahan ditambahkan; komposisi dihitung ulang otomatis.");
+    setAnalysisCount((current) => current + 1);
+  }
+
+  function pakaiHemat() {
+    if (!result?.hemat) return;
+    setSelectedIds(result.hemat.ids);
+    setNotice("Versi hemat dipakai: bahan seperan yang lebih murah. Cek lagi tekstur dan aromanya saat mengaduk.");
     setAnalysisCount((current) => current + 1);
   }
 
@@ -136,7 +173,7 @@ export function ExpertSystem() {
             <Field label="Tipe air" icon={Waves}><SelectBox><select className={selectClass} value={preferences.waterBody ?? ""} onChange={(event) => updatePreference("waterBody", event.target.value)}><option value="">Belum dipilih</option>{WATER_BODIES.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
             <Field label="Kondisi air" icon={Droplets}><SelectBox><select className={selectClass} value={preferences.water} onChange={(event) => updatePreference("water", event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
             <Field label="Jenis pemancingan" icon={Fish}><SelectBox><select className={selectClass} value={preferences.fishingType} onChange={(event) => updatePreference("fishingType", event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
-            <Field label="Budget racikan" icon={Beaker}><SelectBox><select className={selectClass} value={preferences.budget} onChange={(event) => updatePreference("budget", event.target.value)}>{["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
+            <Field label="Budget racikan" icon={Beaker}><SelectBox><select title="Dipakai menyaring alternatif resep sekaligus menilai perkiraan biaya racikan dari komposisi." className={selectClass} value={preferences.budget} onChange={(event) => updatePreference("budget", event.target.value)}>{["< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
             <Field label="Musim" icon={Waves}><SelectBox><select className={selectClass} value={preferences.season} onChange={(event) => updatePreference("season", event.target.value)}>{["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></Field>
           </div>
           <details className="mt-5 rounded-2xl border border-[#e6eae3] bg-[#fbfcf9] px-4 py-3">
@@ -147,9 +184,44 @@ export function ExpertSystem() {
             </ul>
             <p className="mt-3 rounded-xl bg-[#f5f2e8] px-3 py-2 text-[10px] leading-5 text-[#7c7259]">{MATCH_WEIGHTS_NOTE}</p>
           </details>
-          <div className="mb-3 mt-7 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Langkah 2 · Bahan</p><h2 className="mt-1 text-lg font-extrabold text-[#2d3f31]">Apa yang tersedia?</h2></div><span className="rounded-full bg-[#eef3e9] px-3 py-1.5 text-xs font-bold text-[#507151]">{selectedIds.length}/6 dipilih</span></div>
-          <p className="mb-4 text-xs leading-5 text-[#879085]">Pilih minimal 2 bahan. Sistem mengelompokkan fungsi bahan lalu menyeimbangkan komposisi untuk contoh adonan 100 g.</p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">{ingredientKnowledge.map((item) => <IngredientOption key={item.id} item={item} selected={selectedIds.includes(item.id)} onClick={() => toggleIngredient(item.id)} />)}</div>
+          <div className="mb-3 mt-7 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Langkah 2 · Bahan</p><h2 className="mt-1 text-lg font-extrabold text-[#2d3f31]">Apa yang tersedia?</h2></div><span className={`rounded-full px-3 py-1.5 text-xs font-bold ${selectedIds.length >= MAX_BLEND_INGREDIENTS ? "bg-[#f6ecd9] text-[#8a6d33]" : "bg-[#eef3e9] text-[#507151]"}`}>{selectedIds.length}/{MAX_BLEND_INGREDIENTS} dipilih{selectedIds.length < MAX_BLEND_INGREDIENTS ? ` · sisa ${MAX_BLEND_INGREDIENTS - selectedIds.length} slot` : " · penuh"}</span></div>
+          <p className="mb-4 text-xs leading-5 text-[#879085]">{BLEND_LIMITS_SUMMARY} Tiap peran punya rentang rasio sendiri supaya adonan tidak didominasi satu fungsi.</p>
+          <div className="grid gap-4">
+            {BLEND_ROLE_RULES.map((rule) => {
+              const bahanPeran = ingredientKnowledge.filter((item) => item.role === rule.role);
+              if (!bahanPeran.length) return null;
+              const dipilihPeran = bahanPeran.filter((item) => selectedIds.includes(item.id));
+              return (
+                <div key={rule.role}>
+                  <div className="flex items-center justify-between gap-2"><p className="text-[11px] font-extrabold text-[#5f6f5f]">{rule.role} <span className="font-semibold text-[#98a096]">· aturan {ruleRangeLabel(rule)} · {bahanPeran.length} bahan</span></p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${dipilihPeran.length ? "bg-[#eef3e9] text-[#507151]" : "bg-[#f4f4f1] text-[#9aa197]"}`}>{dipilihPeran.length} dipilih</span></div>
+                  <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{bahanPeran.map((item) => <IngredientOption key={item.id} item={item} selected={selectedIds.includes(item.id)} disabled={!selectedIds.includes(item.id) && selectedIds.length >= MAX_BLEND_INGREDIENTS} onClick={() => toggleIngredient(item.id)} />)}</div>
+                </div>
+              );
+            })}
+          </div>
+          <details className="mt-5 rounded-2xl border border-[#e6eae3] bg-[#fbfcf9] px-4 py-3">
+            <summary className="cursor-pointer text-xs font-extrabold text-[#405341]">Aturan rasio per peran &amp; batas pilihan bahan</summary>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[430px] border-collapse text-left text-[11px]">
+                <thead><tr className="text-[10px] uppercase tracking-[.08em] text-[#8b9489]"><th className="pb-1.5 pr-2 font-bold">Peran</th><th className="pb-1.5 pr-2 font-bold">Rasio</th><th className="pb-1.5 font-bold">Alasannya</th></tr></thead>
+                <tbody>{BLEND_ROLE_RULES.map((rule) => <tr key={rule.role} className="border-t border-[#ecefe9] align-top"><td className="py-2 pr-2 font-extrabold text-[#405341]">{rule.role}</td><td className="py-2 pr-2 font-bold text-[#587458]">{rule.minPercent}–{rule.maxPercent}%</td><td className="py-2 text-[#6c776c]">{rule.alasan}</td></tr>)}</tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-[10px] leading-5 text-[#7d887b]">{BLEND_RULES_SUMMARY}</p>
+            <p className="mt-2 text-[10px] leading-5 text-[#7d887b]">Batas pilihan: {MIN_BLEND_INGREDIENTS}–{MAX_BLEND_INGREDIENTS} bahan dari {ingredientKnowledge.length} bahan yang tersedia, satu bahan minimal {MIN_INGREDIENT_PERCENT}% supaya berpengaruh nyata. Sistem mengelompokkan bahan per peran, bukan menjumlahkan persentase satu per satu.</p>
+          </details>
+          <details className="mt-3 rounded-2xl border border-[#e6eae3] bg-[#fbfcf9] px-4 py-3">
+            <summary className="cursor-pointer text-xs font-extrabold text-[#405341]">Perkiraan harga bahan per wilayah</summary>
+            <p className="mt-2 text-[11px] leading-5 text-[#7d887b]">Estimasi biaya di panel hasil dihitung dari komposisi memakai tabel ini ({PRICE_UPDATED_AT}). {PRICE_FACTOR_NOTE}</p>
+            <p className="mt-2 text-[11px] font-bold text-[#405341]">{wilayahLabel(wilayah)} · faktor harga {WILAYAH_FACTOR[wilayah].toFixed(2)}×</p>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full min-w-[430px] border-collapse text-left text-[11px]">
+                <thead><tr className="text-[10px] uppercase tracking-[.08em] text-[#8b9489]"><th className="pb-1.5 pr-2 font-bold">Bahan</th><th className="pb-1.5 pr-2 font-bold">Satuan</th><th className="pb-1.5 pr-2 font-bold">Dasar (nasional)</th><th className="pb-1.5 font-bold">Di wilayah ini</th></tr></thead>
+                <tbody>{hargaTabel.map((baris) => <tr key={baris.id} className="border-t border-[#ecefe9]"><td className="py-1.5 pr-2 font-bold text-[#405341]">{namaBahan(baris.id)}</td><td className="py-1.5 pr-2 text-[#7d887b]">{baris.satuan}</td><td className="py-1.5 pr-2 text-[#6c776c]">{formatRupiah(baris.nasional)}</td><td className="py-1.5 font-bold text-[#587458]">{formatRupiah(baris.wilayah)}</td></tr>)}</tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[10px] leading-5 text-[#7c7259]">{PRICE_NOTE}</p>
+          </details>
           <button type="button" onClick={analyze} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-extrabold text-white transition hover:bg-[#203d29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#294b34]"><Sparkles size={16} /> Analisis racikan saya</button>
           {notice && <p role="status" className="mt-3 rounded-xl bg-[#f1f5ee] px-3.5 py-2.5 text-xs font-semibold text-[#506a50]">{notice}{analysisCount > 0 && selectedIds.length >= 2 ? ` · Analisis ${analysisCount}` : ""}</p>}
           <p className="mt-3 text-[10px] leading-5 text-[#9aa197]">Rasio adalah titik awal untuk uji kecil, bukan formula universal. Cairan ditambahkan perlahan sampai tekstur sesuai.</p>
@@ -157,8 +229,12 @@ export function ExpertSystem() {
 
         <section className="space-y-5">
           <div className="overflow-hidden rounded-[25px] border border-[#dfe7db] bg-white shadow-[0_12px_36px_rgba(38,55,40,.07)]">
-            <div className="bg-[#f3f7f0] px-5 py-5 sm:px-6"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#829180]">Hasil sistem pakar · contoh 100 g</p><h2 className="mt-1 text-xl font-black tracking-tight text-[#2b3c2e]">{result?.title ?? "Pilih minimal dua bahan"}</h2></div><span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-[#537251]"><Beaker size={20} /></span></div><p className="mt-2 text-xs leading-5 text-[#7d887b]">Komposisi dinormalisasi berdasarkan fungsi bahan. Cek ketersediaan dan kondisi adonan sebelum meracik.</p></div>
-            {result ? <div className="p-5 sm:p-6"><div className="space-y-3">{result.ingredients.map((item, index) => <div key={item.id}><div className="mb-1.5 flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><span aria-hidden="true">{item.emoji}</span><span className="truncate text-sm font-bold text-[#3b4d3e]">{item.name}</span><span className="hidden rounded-full bg-[#f3f5f1] px-2 py-0.5 text-[9px] font-semibold text-[#828b80] sm:inline">{item.role}</span></div><span className="shrink-0 text-sm font-extrabold text-[#405341]">{item.grams} g <span className="text-xs font-semibold text-[#91998f]">({item.percent}%)</span></span></div><div className="h-2 overflow-hidden rounded-full bg-[#eef1eb]"><div className={`h-full rounded-full ${ratioColors[index % ratioColors.length]}`} style={{ width: `${item.percent}%` }} /></div></div>)}</div><div className="mt-4 flex items-center justify-between rounded-xl bg-[#f5f7f3] px-3.5 py-3"><span className="text-xs font-bold text-[#667365]">Total campuran kering</span><span className="text-sm font-black text-[#31593a]">100 g</span></div>
+            <div className="bg-[#f3f7f0] px-5 py-5 sm:px-6"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#829180]">Hasil sistem pakar · contoh 100 g</p><h2 className="mt-1 text-xl font-black tracking-tight text-[#2b3c2e]">{result?.title ?? "Pilih minimal dua bahan"}</h2></div><span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-[#537251]"><Beaker size={20} /></span></div><p className="mt-2 text-xs leading-5 text-[#7d887b]">Porsi per peran dibagi ulang agar masuk rentang aturan, lalu diperiksa terhadap budget dan perkiraan harga bahan di wilayahmu. Cek ketersediaan dan kondisi adonan sebelum meracik.</p></div>
+            {result ? <div className="p-5 sm:p-6"><div className="space-y-3">{result.ingredients.map((item, index) => <div key={item.id}><div className="mb-1.5 flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><span aria-hidden="true">{item.emoji}</span><span className="truncate text-sm font-bold text-[#3b4d3e]">{item.name}</span><span className="hidden rounded-full bg-[#f3f5f1] px-2 py-0.5 text-[9px] font-semibold text-[#828b80] sm:inline">{item.role}</span></div><span className="shrink-0 text-sm font-extrabold text-[#405341]">{item.grams} g <span className="text-xs font-semibold text-[#91998f]">({item.percent}%)</span></span></div><div className="h-2 overflow-hidden rounded-full bg-[#eef1eb]"><div className={`h-full rounded-full ${ratioColors[index % ratioColors.length]}`} style={{ width: `${item.percent}%` }} /></div>{item.rupiah > 0 && <p className="mt-1 text-[10px] text-[#98a096]">≈ {formatRupiah(item.rupiah)} untuk porsi ini</p>}</div>)}</div>
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f5f7f3] px-3.5 py-3"><span className="text-xs font-bold text-[#667365]">Total campuran kering</span><span className="text-sm font-black text-[#31593a]">{result.basisGram} g</span></div>
+              <div className="mt-2 rounded-xl bg-[#f5f7f3] px-3.5 py-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-[#667365]">Perkiraan biaya dari komposisi</span><span className="text-sm font-black text-[#31593a]">{formatRupiah(result.cost100g.total)}</span></div><p className="mt-1 text-[10px] leading-5 text-[#98a096]">{result.wilayahLabel} · satu sesi (± {result.sesiGram} g) ≈ {formatRupiah(result.costSesi.total)}. {result.cost100g.catatan} {SESI_NOTE}</p></div>
+              <div className="mt-4 rounded-2xl border border-[#e9ede6] bg-white p-3.5"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#839080]">Porsi per peran vs aturan</p><div className="mt-2.5 space-y-2.5">{result.roleShares.map((share) => <div key={share.role} className="grid grid-cols-[86px_1fr_auto] items-center gap-2"><span className="text-[11px] font-bold text-[#405341]">{share.role}</span><div className="h-1.5 overflow-hidden rounded-full bg-[#eef1eb]"><div className={`h-full rounded-full ${share.status === "sesuai" ? "bg-[#5c7f59]" : share.status === "tidak-dipakai" ? "bg-[#d9ded6]" : "bg-[#d3b45f]"}`} style={{ width: `${share.percent}%` }} /></div><span className={`text-[10px] font-bold ${share.status === "sesuai" ? "text-[#507151]" : share.status === "tidak-dipakai" ? "text-[#9aa197]" : "text-[#96712e]"}`}>{share.percent}% · aturan {share.min}–{share.max}% · {STATUS_PERAN[share.status]}</span></div>)}</div></div>
+              {result.suggestions.length > 0 && <div className="mt-4 rounded-2xl border border-[#e4eae0] bg-[#fbfcf8] p-3.5"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#839080]">Saran pengganti &amp; komposisi lain</p><ul className="mt-2.5 space-y-2.5">{result.suggestions.map((saran, index) => <li key={`${saran.jenis}-${index}`} className="rounded-xl bg-white p-3"><p className="text-xs font-extrabold text-[#38483a]">{saran.judul}</p>{saran.detail && <p className="mt-1 text-[11px] leading-5 text-[#778276]">{saran.detail}</p>}{saran.penggantiIds.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{saran.penggantiIds.map((id) => <button key={id} type="button" onClick={() => pakaiSaran(saran, id)} className="inline-flex items-center gap-1 rounded-full border border-[#cfdcc9] bg-[#f4f8f1] px-2.5 py-1 text-[10px] font-bold text-[#4c6b4d] transition hover:border-[#9dba97] hover:bg-[#eaf2e6]">Pakai {namaBahan(id)}</button>)}</div>}</li>)}</ul>{result.hemat && <button type="button" onClick={pakaiHemat} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#cfdcc9] bg-white px-4 text-xs font-extrabold text-[#3f5f42] transition hover:bg-[#f4f8f1]">Terapkan versi hemat · {formatRupiah(result.hemat.totalSesi)} per sesi (hemat {formatRupiah(result.hemat.selisihSesi)})</button>}</div>}
               {result.warnings.map((warning) => <p key={warning} className="mt-3 flex items-start gap-2 rounded-xl border border-[#f0e7d6] bg-[#fcf9f1] px-3.5 py-3 text-xs leading-5 text-[#776b53]"><Info size={14} className="mt-0.5 shrink-0 text-[#a08249]" />{warning}</p>)}
             </div> : <div className="p-6 text-sm text-[#788378]">Tentukan bahan pilihanmu untuk melihat simulasi campuran.</div>}
           </div>

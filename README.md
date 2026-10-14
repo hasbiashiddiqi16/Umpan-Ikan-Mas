@@ -264,6 +264,36 @@ BASE_URL="https://situs-anda" ADMIN_PASSWORD="..." npm run eval:rekomendasi
 
 Sumbernya `GET /api/admin/recommendation-eval`, dan panel **"Uji urutan rekomendasi · hit-rate@3"** di `/dashboard/analitik` menampilkan bobot aktif, nilai hit-rate, sampel, kandidat bobot yang diuji, serta status tuning. Kalau hasilnya menunjukkan kandidat lain lebih baik **dan** sampelnya sudah cukup, bobot baru ditulis di `src/lib/recommendation-config.ts` (satu tempat), lalu evaluasi dijalankan lagi.
 
+## Aturan komposisi, pengganti bahan, dan perkiraan biaya per wilayah
+
+Sebelumnya komposisi di `/sistem-pakar` hanya "menjumlahkan persentase mengikuti bobot bahan": tidak ada pembatas, jadi kombinasi tak lazim (mis. empat bahan aroma) lewat tanpa satu pun peringatan, penanda pilihan hanya berbunyi `0/6 dipilih` dari 12 bahan tanpa menjelaskan batasnya, dan budget cuma menyaring resep — tidak pernah menilai racikannya. Sekarang:
+
+**Tabel aturan rasio per peran.** `BLEND_ROLE_RULES` di `src/lib/blend-rules.ts`, dan tabelnya tampil apa adanya di halaman:
+
+| Peran | Rentang | Alasan |
+| --- | --- | --- |
+| Dasar | 40–60% | Fondasi adonan harus jadi porsi terbesar: di bawah 40% adonan mudah lepas, di atas 60% pengikat dan aroma tidak kebagian tempat. |
+| Pengikat | 10–25% | Cukup untuk menyatukan adonan, tetapi tidak sampai keras seperti karet. |
+| Protein | 5–20% | Tambahan berprotein sebagai daya tarik; berlebihan membuat adonan sulit dipulung. |
+| Aroma | 5–25% | Aroma bekerja sebagai penanda; kalau dominan, karakter bahan dasar justru tertutup. |
+| Pelembap | 5–20% | Menjaga adonan tidak kering; kelebihan cairan membuat adonan lepas dari kail. |
+
+**Cara porsi dihitung.** Bobot bahan tetap jadi titik awal, lalu porsi per peran dirapikan agar masuk rentang: proporsi bahan → dibatasi ke rentang peran (sisa dibagi ulang ke peran yang masih punya ruang) → dibulatkan ke bilangan bulat yang tetap berjumlah 100% → tiap bahan minimal **4%** (`MIN_INGREDIENT_PERCENT`) supaya tidak ada bahan yang cuma "titik" di adonan. Kalau rentang tidak bisa dipenuhi sekaligus — mis. hanya dua bahan sehingga Dasar tetap 75% sementara aturannya 40–60% — komposisi **tidak** dipaksa masuk aturan: yang tampil tetap proporsi pilihan pengunjung, disertai peringatan porsi mana yang keluar rentang, penyebabnya, dan apa yang bisa ditambah/dikurangi. Rentang ini titik awal yang bisa diperiksa, bukan formula baku.
+
+**Peringatan dan saran yang bisa diklik.** Setiap pelanggaran aturan jadi peringatan berisi angka (mis. "Porsi Aroma 100% — di atas aturan 5–25%"), termasuk peran yang belum terpakai. Saran di panel hasil bisa langsung dipakai: tombol **"Pakai X"** mengganti bahan seperan (atau menambah satu bahan untuk memperbaiki porsi), dan **"Terapkan versi hemat"** mengganti seluruh pilihan dengan bahan seperan yang lebih murah sekaligus.
+
+**Pengganti bahan seperan.** `src/data/ingredient-substitutes.ts` menyimpan catatan pengganti, dan penggantinya selalu diambil dari peran yang sama supaya rasio antar peran tidak rusak: tidak ada tapioka → terigu ("adonan sedikit lebih padat, kurangi 1–2 g"), pelet ↔ roti tawar, susu bubuk ↔ keju (mulai separuh takaran), telur ↔ santan (peran berbeda, jadi rasio ikut berubah — hal itu ditulis di saran). Bahan yang belum punya pengganti seperan (kroto) ditulis jujur: lewati saja, jangan diganti bahan berperan lain tanpa menghitung ulang rasio.
+
+**Harga bahan per wilayah.** `src/data/ingredient-prices.ts` menyimpan harga dasar nasional (pelet Rp 1.200/100 g, kroto Rp 12.000 per ons, roti tawar Rp 6.000/100 g, keju Rp 13.000/100 g, essen pandan dihitung per pemakaian) dikali **faktor wilayah**: Nasional 1,00 · Jawa 0,96 · Bali & Nusa Tenggara 1,04 · Sumatera 1,06 · Sulawesi 1,10 · Kalimantan 1,12 · Maluku & Papua 1,24. Provinsi pengunjung dipetakan ke wilayah (`WILAYAH_PROVINSI`); tanpa provinsi dipakai harga nasional. Semuanya berlabel **perkiraan harga pasar (Oktober 2026), bukan harga tetap**, ditampilkan lengkap di halaman supaya bisa diperiksa dan diperbarui di satu tempat. Bahan ber-mode "pakai" tidak dihitung per gram.
+
+**Estimasi biaya dihitung dari komposisi.** `hitungBiayaCampuran()` menjumlahkan gram tiap bahan (hasil komposisi) × harga wilayah, ditampilkan per 100 g adonan **dan** per sesi (± 250 g, `SESI_GRAM`), beserta rincian rupiah tiap bahan. Tidak ada bahan yang diam-diam dianggap gratis: bahan tanpa harga dihitung sebagai 0 dan jumlahnya dilaporkan.
+
+**Budget kini juga menilai komposisi.** Perkiraan biaya satu sesi dibandingkan dengan rentang budget yang dipilih; kalau melewati batas atasnya, muncul peringatan berisi angka + tawaran versi hemat (dan berapa rupiah lebih murahnya per sesi). Budget tetap menyaring resep seperti sebelumnya, jadi satu isian dipakai di dua tempat: pilihan resep dan biaya racikan.
+
+**Batas pilihan bahan diperjelas.** Bahan dikelompokkan per peran dengan judul seperti "Dasar · aturan 40–60% · 2 bahan" dan penghitung sendiri ("1 dipilih"); penghitung utama berbunyi `4/6 dipilih · sisa 2 slot` (atau "penuh"), bahan lain otomatis nonaktif saat pilihan penuh, dan halaman menyebut batasnya secara eksplisit: "Pilih 2–6 bahan dari 12 bahan yang tersedia, satu bahan minimal 4%".
+
+Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** aturan/pengganti/harga (termasuk 781 kombinasi bahan yang harus tetap berjumlah 100%), **40 uji interaktif jsdom** memakai komponen asli (klik bahan, "Pakai X", versi hemat, ubah provinsi ke Papua, ubah budget kecil/besar), dan **29 uji halaman tersaji + regresi** (semua halaman penting 200, `/dashboard` tetap 307 + noindex, API evaluasi tetap 401 tanpa sesi).
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.

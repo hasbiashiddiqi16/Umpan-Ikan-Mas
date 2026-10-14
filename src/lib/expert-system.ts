@@ -1,11 +1,14 @@
 import { fishingReports } from "@/data/fishingReports";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
+import { SESI_GRAM, formatRupiah, wilayahLabel, wilayahUntukProvinsi, type BlendCost, type Wilayah } from "@/data/ingredient-prices";
 import { normalizeFishingType, recipes, type Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
-import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
+import { BLEND_ROLE_RULES, balanceBlend, type BlendHemat, type BlendItem, type BlendSuggestion, type RoleShare } from "@/lib/blend-rules";
+import { budgetRangeFor, calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
+
+export type { BlendItem } from "@/lib/blend-rules";
 
 export type ExpertRecipeResult = { recipe: Recipe; score: number; ingredientFit: number; communityFit: number; contextScore: number };
-export type BlendItem = IngredientKnowledge & { percent: number; grams: number };
 export type ExpertBlendResult = {
   title: string;
   ingredients: BlendItem[];
@@ -13,6 +16,17 @@ export type ExpertBlendResult = {
   reasoning: string[];
   recipeMatches: ExpertRecipeResult[];
   evidenceCount: number;
+  /** Porsi per peran + status terhadap aturan min–maks. */
+  roleShares: RoleShare[];
+  suggestions: BlendSuggestion[];
+  hemat: BlendHemat | null;
+  cost100g: BlendCost;
+  costSesi: BlendCost;
+  wilayah: Wilayah;
+  wilayahLabel: string;
+  basisGram: number;
+  sesiGram: number;
+  substituteNote: string;
 };
 
 const normalise = (value: string) => value.toLocaleLowerCase("id-ID").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -86,23 +100,25 @@ export function buildExpertBlend(
   const selected = uniqueIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
   if (selected.length < 2) return null;
 
-  const totalWeight = selected.reduce((sum, item) => sum + item.weight, 0);
-  const rawParts = selected.map((item) => ({ item, exact: (item.weight / totalWeight) * 100 }));
-  const parts = rawParts.map(({ item, exact }) => ({ item, amount: Math.floor(exact), remainder: exact - Math.floor(exact) }));
-  let remaining = 100 - parts.reduce((sum, part) => sum + part.amount, 0);
-  [...parts].sort((a, b) => b.remainder - a.remainder).forEach((part) => {
-    if (remaining > 0) { part.amount += 1; remaining -= 1; }
-  });
-  const blend: BlendItem[] = parts.map(({ item, amount }) => ({ ...item, percent: amount, grams: amount }));
-  const roles = new Set(selected.map((item) => item.role));
-  const warnings: string[] = [];
-  if (!roles.has("Dasar")) warnings.push("Belum ada bahan dasar. Tambahkan pelet ikan atau roti tawar agar campuran punya fondasi.");
-  if (!roles.has("Pengikat")) warnings.push("Belum ada bahan pengikat. Sedikit tapioka, terigu, atau telur dapat membantu tekstur lebih menyatu.");
-  if (!roles.has("Pelembap")) warnings.push("Tambahkan air atau santan sedikit demi sedikit saat mengaduk; takaran cairan tidak perlu dihabiskan.");
-  if (selected.some((item) => item.id === "pandan")) warnings.push("Jika pandan yang dipakai berupa essen, takar dalam tetes terpisah—jangan dihitung sebagai gram adonan.");
+  // Wilayah dipakai untuk perkiraan harga bahan: provinsi pengunjung dipetakan
+  // ke wilayah, dan tanpa provinsi dipakai harga dasar nasional.
+  const wilayah = wilayahUntukProvinsi(preferences.province);
+  const balance = balanceBlend(selected, wilayah);
+  if (!balance) return null;
 
+  const warnings = [...balance.warnings];
+  // Budget tidak lagi hanya menyaring resep: perkiraan biaya campuran (dihitung
+  // dari komposisi) dibandingkan dengan rentang budget yang dipilih.
+  const budget = budgetRangeFor(preferences.budget);
+  if (budget && balance.costSesi.total > budget[1]) {
+    const hemat = balance.hemat ? ` Versi hemat memperkirakan ${formatRupiah(balance.hemat.selisihSesi)} lebih murah per sesi.` : "";
+    warnings.push(`Perkiraan biaya satu sesi (± ${SESI_GRAM} g) ${formatRupiah(balance.costSesi.total)} — di atas batas atas budget ${preferences.budget} (${formatRupiah(budget[1])}).${hemat}`);
+  }
+
+  const roles = new Set(selected.map((item) => item.role));
   const reasoning: string[] = [
     `Basis racikan memakai ${selected.filter((item) => item.role === "Dasar").map((item) => item.name.toLowerCase()).join(" dan ") || "bahan pilihanmu"}.`,
+    `Porsi antar peran dibagi ulang agar masuk aturan (${BLEND_ROLE_RULES.map((rule) => `${rule.role} ${rule.minPercent}–${rule.maxPercent}%`).join(", ")}), jadi satu fungsi tidak bisa mendominasi adonan.`,
     roles.has("Pengikat") ? "Bahan pengikat sudah dipilih; uleni perlahan dan sesuaikan kelembapan." : "Kombinasi belum memiliki pengikat, jadi tekstur mungkin lebih mudah lepas.",
   ];
   if (preferences.water === "Keruh") reasoning.push("Air keruh dipilih: mulai dari karakter aroma yang mudah dikenali, lalu uji sedikit demi sedikit di kolam.");
@@ -110,14 +126,38 @@ export function buildExpertBlend(
   else if (preferences.water) reasoning.push(`Kondisi air ${preferences.water.toLowerCase()} menjadi konteks; karakter air nyata tiap kolam tetap perlu diamati.`);
   if (preferences.weather === "Hujan") reasoning.push("Cuaca hujan: cek perubahan suhu dan arus, lalu atur adonan agar cukup melekat pada kail.");
   if (preferences.fishingType === "Lomba") reasoning.push("Untuk lomba, ubah satu variabel setiap percobaan agar respons racikan lebih mudah dibandingkan.");
-  if (preferences.budget) reasoning.push(`Budget ${preferences.budget} dipakai untuk menyaring alternatif resep yang mendekati pilihanmu.`);
+  reasoning.push(`Perkiraan biaya bahan dihitung dari komposisi memakai harga ${wilayahLabel(wilayah)}: ${formatRupiah(balance.cost100g.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`);
+  reasoning.push(
+    budget
+      ? balance.costSesi.total > budget[1]
+        ? `Budget ${preferences.budget} juga menilai komposisi — perkiraan biaya sekarang melewatinya, lihat peringatan di panel komposisi.`
+        : `Budget ${preferences.budget} juga menilai komposisi; perkiraan biaya sekarang masih di dalam rentang itu.`
+      : "Budget belum dipilih, jadi komposisi dinilai dari aturan peran dan saran pengganti saja.",
+  );
 
   const recipeMatches = rankExpertRecipes(preferences, uniqueIds, communityReviews, sourceRecipes).slice(0, 3);
   const evidenceCount = communityReviews.filter((review) => recipeMatches.some((match) => match.recipe.slug === review.recipeSlug)).length;
   const aroma = selected.find((item) => item.role === "Aroma" || item.role === "Protein");
   const base = selected.find((item) => item.role === "Dasar");
   const title = aroma && base ? `Racikan ${base.name.replace(/ ikan/i, "")} ${aroma.name}` : base ? `Racikan Seimbang ${base.name.replace(/ ikan/i, "")}` : `Campuran ${selected[0].name} & ${selected[1].name}`;
-  return { title, ingredients: blend, warnings, reasoning, recipeMatches, evidenceCount };
+  return {
+    title,
+    ingredients: balance.items,
+    warnings,
+    reasoning,
+    recipeMatches,
+    evidenceCount,
+    roleShares: balance.roleShares,
+    suggestions: balance.suggestions,
+    hemat: balance.hemat,
+    cost100g: balance.cost100g,
+    costSesi: balance.costSesi,
+    wilayah,
+    wilayahLabel: wilayahLabel(wilayah),
+    basisGram: balance.basisGram,
+    sesiGram: balance.sesiGram,
+    substituteNote: balance.substituteNote,
+  };
 }
 
 /**
