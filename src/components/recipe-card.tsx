@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, Heart, Users } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
 import { Badge, RecipeRating } from "@/components/shared";
+import { MatchOrPopularBadge } from "@/components/match-or-popular";
 import { useRecipeRatings } from "@/lib/use-ratings";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
@@ -59,7 +60,7 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
         <button type="button" onClick={toggleFavorite} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#b65b42]" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
           <Heart size={18} fill={favorite ? "currentColor" : "none"} />
         </button>
-        {matchScore !== undefined && <div className="absolute bottom-3.5 right-3.5 rounded-xl border border-white/25 bg-[#17372a]/85 px-3 py-2 text-white shadow-sm backdrop-blur-md"><p className="text-[9px] font-bold uppercase tracking-[.13em] text-white/70">Match</p><p className="text-lg font-black leading-none">{matchScore}%</p></div>}
+        <MatchOrPopularBadge recipe={recipe} matchScore={matchScore} />
         <div className="pointer-events-none absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan pemancing</p><p className="text-xs font-bold">Ikan mas</p></div>
       </div>
       <div className="flex flex-1 flex-col p-4 sm:p-5">

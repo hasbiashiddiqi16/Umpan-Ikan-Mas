@@ -14,6 +14,7 @@ import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-s
 import { rankExpertRecipes } from "@/lib/expert-system";
 import { RecommendationCard } from "@/components/cards";
 import { useRecipeRatings } from "@/lib/use-ratings";
+import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 import { FavoriteButton } from "@/components/favorite-button";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Badge, SectionHeader } from "@/components/shared";
@@ -118,7 +119,8 @@ export function AIWizard() {
     return mergeRecipesBySlug(recipes.filter((recipe) => !hidden.has(recipe.slug)), publishedRecipes);
   }, [publishedRecipes, shadowedSlugs]);
   const expertResults = useMemo(
-    () => rankExpertRecipes(preferences, [], [...reviews, ...memberReviews, ...extraReviews], recommendationRecipes),
+    // Ulasan contoh tidak dipakai sebagai bukti; hanya ulasan pengunjung asli.
+    () => rankExpertRecipes(preferences, [], [...memberReviews, ...extraReviews], recommendationRecipes),
     [preferences, memberReviews, extraReviews, recommendationRecipes],
   );
   // Rating nyata untuk kartu rekomendasi (bukan angka katalog).
@@ -129,6 +131,7 @@ export function AIWizard() {
   function update(key: keyof UserPreferences, value: string) {
     if (key === "province") markLocationTouched();
     setPreferences((current) => ({ ...current, [key]: value, ...(key === "weather" ? { season: seasonFor(value) } : {}) }));
+    saveVisitorPreferences({ [key]: value, ...(key === "weather" ? { season: seasonFor(value) } : {}) });
   }
 
   function continueFlow() {

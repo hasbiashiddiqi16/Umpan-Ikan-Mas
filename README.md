@@ -159,6 +159,18 @@ Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
 - **Laporan mancing di halaman komunitas diberi label "Data contoh"** (`src/data/fishingReports.ts` memakai tanggal relatif seperti "2 hari lalu", jadi tidak pernah bertanggal masa depan).
 - Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
 
+## Satu sumber angka, skor kecocokan, dan label "Populer"
+
+**Satu sumber angka.** Semua angka komunitas di halaman publik berasal dari satu tempat: tabel `cms_reviews`. `getRecipeRatings()` (`src/lib/review-summary.ts`) menghitung jumlah dan rata-rata rating hanya dari ulasan pengunjung yang sudah disetujui (`seed_key` kosong) dan tidak bertanggal masa depan. Angka katalog `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` tidak pernah ditampilkan sebagai statistik komunitas — hanya dipakai internal (kurasi dan urutan sistem) serta tampilan Content Studio.
+
+**Definisi "mencoba".** Tulisan "N pemancing mencoba" berarti **jumlah ulasan pengunjung** pada resep itu: satu ulasan = satu pemancing yang mencoba. Angkanya tidak pernah melebihi jumlah ulasan, dan selalu disertai penjelasan di halaman resep ("Satu ulasan berarti satu pemancing yang mencoba racikan ini…"). Kalimat penjelas yang sama dipakai pada atribut `title` kartu resep lewat `describeRating()` (`src/lib/rating-utils.ts`). Tombol "Saya coba" belum ada; kalau nanti ditambahkan, angkanya harus tetap berasal dari tabel yang sama.
+
+**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung**: air 30, cuaca 22, jenis pemancingan 22, provinsi 16, musim 10 (jumlahnya 100). Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
+
+**Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
+
+**Sistem pakar & AI Umpan.** Analisis sistem pakar baru muncul setelah pengunjung memilih minimal 2 bahan, dan hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.

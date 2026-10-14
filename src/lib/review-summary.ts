@@ -2,8 +2,9 @@ import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
 
-export type RecipeRating = { count: number; average: number };
-export type RecipeRatingMap = Record<string, RecipeRating>;
+import type { RecipeRating, RecipeRatingMap } from "@/lib/rating-utils";
+
+export type { RecipeRating, RecipeRatingMap } from "@/lib/rating-utils";
 
 export const EMPTY_RATING: RecipeRating = { count: 0, average: 0 };
 

@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/shared";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { LocationConsentBanner, UseMyLocationButton } from "@/components/location-controls";
 import { useLocationAutofill } from "@/lib/use-location";
+import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 
 const controlClass = `${SELECT_FIELD_CLASS} min-h-12 w-full min-w-0 rounded-xl border border-[#e5e9e2] bg-white pl-3.5 text-sm font-medium text-[#304035] outline-none transition focus:border-[#6d896f] focus:ring-4 focus:ring-[#365b3d]/10`;
 
@@ -19,13 +20,19 @@ export function QuickFinder() {
   const [water, setWater] = useState("Keruh");
   const [fishingType, setFishingType] = useState("Harian");
   const [budget, setBudget] = useState("Rp15.000–30.000");
-  const { markTouched } = useLocationAutofill((place) => setProvince(place.province));
+  const { markTouched } = useLocationAutofill((place) => {
+    setProvince(place.province);
+    saveVisitorPreferences({ province: place.province });
+  });
 
   function submitFinder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const params = new URLSearchParams({ weather, water, type: fishingType, budget, recommend: "1" });
     // Tanpa izin lokasi, provinsi dibiarkan kosong dan tidak ikut dikirim.
     if (province) params.set("province", province);
+    // Pilihan ini dipakai halaman lain untuk menampilkan skor kecocokan —
+    // skor hanya boleh muncul kalau pengunjung sudah mengisi sesuatu.
+    saveVisitorPreferences({ province: province || undefined, weather, water, fishingType, budget });
     router.push(`/ai-umpan?${params.toString()}`);
   }
 

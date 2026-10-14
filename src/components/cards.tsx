@@ -5,6 +5,7 @@ import type { Recipe } from "@/data/recipes";
 import type { Province } from "@/data/provinces";
 import type { FishingReport } from "@/data/fishingReports";
 import { Badge, Rating, RecipeRating } from "@/components/shared";
+import { describeRating } from "@/lib/rating-utils";
 import { formatCount } from "@/lib/utils";
 
 const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
@@ -37,7 +38,7 @@ export function WeatherCard({ index = 0 }: { index?: number }) {
   );
 }
 
-export function ProvinceCard({ province, compact = false }: { province: Province; compact?: boolean }) {
+export function ProvinceCard({ province, compact = false, popularRecipe }: { province: Province; compact?: boolean; popularRecipe?: string }) {
   return (
     <Link href={`/provinsi/${province.slug}`} className={`group relative flex h-full min-h-[126px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#e5e9e2] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#cbd8c9] hover:shadow-[0_12px_28px_rgba(37,55,40,.08)] ${compact ? "min-w-[205px]" : ""}`}>
       <div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[#eef3e9] transition group-hover:scale-125" />
@@ -45,8 +46,8 @@ export function ProvinceCard({ province, compact = false }: { province: Province
         <div><p className="max-w-[165px] text-sm font-extrabold text-[#2b3c2e]">{province.name}</p><p className="mt-1 text-xs text-[#848c83]">{province.recipeCount} racikan</p></div>
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#f7f8f4] text-[#607260] transition group-hover:bg-[#31593a] group-hover:text-white"><ArrowUpRight size={15} /></span>
       </div>
-      {!compact && <div className="relative mt-4 flex items-center gap-1.5 text-[11px] text-[#838a80]"><MapPin size={12} /> Populer: <span className="truncate font-semibold text-[#536252]">{province.popularRecipe}</span></div>}
-      {compact && <p className="relative mt-3 truncate text-[11px] font-semibold text-[#667166]">Populer: {province.popularRecipe}</p>}
+      {!compact && <div className="relative mt-4 flex items-center gap-1.5 text-[11px] text-[#838a80]"><MapPin size={12} /> {popularRecipe ? <>Populer: <span className="truncate font-semibold text-[#536252]">{popularRecipe}</span></> : <span className="font-semibold text-[#667166]">Belum ada ulasan pengunjung</span>}</div>}
+      {compact && <p className="relative mt-3 truncate text-[11px] font-semibold text-[#667166]">{popularRecipe ? `Populer: ${popularRecipe}` : "Belum ada ulasan pengunjung"}</p>}
     </Link>
   );
 }
@@ -91,7 +92,7 @@ export function RecommendationCard({ recipe, score, isPrimary = false, rating }:
             <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#949c92]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#293a2c]">{recipe.price}</p></div>
             <Link href={`/resep/${recipe.slug}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29]">Lihat Resep <ArrowRight size={16} /></Link>
           </div>
-          {isPrimary && rating && rating.count > 0 && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#919a90]"><Users size={13} /> {formatCount(rating.count)} ulasan pengunjung</p>}
+          {isPrimary && rating && rating.count > 0 && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#919a90]" title={describeRating(rating)}><Users size={13} /> {formatCount(rating.count)} pemancing mencoba</p>}
         </div>
       </div>
     </article>

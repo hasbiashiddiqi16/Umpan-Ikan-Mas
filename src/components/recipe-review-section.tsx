@@ -8,6 +8,7 @@ import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Badge, Rating, RecipeRating, SectionHeader } from "@/components/shared";
+import { describeRating } from "@/lib/rating-utils";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { ReviewCard } from "@/components/recipe-details";
 import { useLocationAutofill } from "@/lib/use-location";
@@ -247,8 +248,8 @@ export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
   return (
     <span className="inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2">
       {aggregate.count ? <Rating value={aggregate.average} count={aggregate.count} /> : <RecipeRating />}
-      <span className="text-xs text-[#879087]">
-        {aggregate.count ? `${new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan pengunjung` : "Belum ada ulasan"}
+      <span className="text-xs text-[#879087]" title={describeRating({ count: aggregate.count, average: aggregate.average })}>
+        {aggregate.count ? `${new Intl.NumberFormat("id-ID").format(aggregate.count)} pemancing mencoba` : "Belum ada ulasan"}
       </span>
     </span>
   );
@@ -281,6 +282,7 @@ export function RecipeReviewSection({ recipe, sampleReviews = [] }: { recipe: Re
       </div>
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#8a9389]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan</span></div>
+      <p className="text-[11px] leading-5 text-[#8a9389]">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung.</p>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#7b857a]">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
       {examples.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">

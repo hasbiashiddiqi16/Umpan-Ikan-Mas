@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Search, Star } from "lucide-react";
 import { FOOTER_LOGO_ALT, FOOTER_LOGO_SRC, LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { describeRating } from "@/lib/rating-utils";
 
 export function Badge({ children, tone = "sage", className = "" }: { children: ReactNode; tone?: "sage" | "gold" | "dark" | "cream"; className?: string }) {
   const tones = {
@@ -29,9 +30,17 @@ export function Rating({ value, count, compact = false }: { value: number; count
  * tampil "Belum ada rating" — bukan angka karangan dari data katalog.
  */
 export function RecipeRating({ rating }: { rating?: { count: number; average: number } }) {
-  if (rating && rating.count > 0) return <Rating value={rating.average} count={rating.count} />;
+  // Semua angka di sini berasal dari satu sumber: ulasan pengunjung yang sudah
+  // disetujui. Satu ulasan = satu pemancing yang mencoba racikan tersebut.
+  if (rating && rating.count > 0) {
+    return (
+      <span title={describeRating(rating)}>
+        <Rating value={rating.average} count={rating.count} />
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8d968c]">
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8d968c]" title={describeRating(rating)}>
       <Star size={13} className="text-[#c3cbc0]" aria-hidden="true" />
       Belum ada rating
     </span>
