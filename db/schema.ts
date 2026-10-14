@@ -50,11 +50,24 @@ export const cmsReviews = pgTable("cms_reviews", {
   catchCount: integer("catch_count"),
   comment: text("comment").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
+  /**
+   * Id perangkat anonim (32 heksadesimal acak) dari token bertanda tangan yang
+   * dikirim peramban lewat header `x-review-device`. Bukan identitas orang —
+   * hanya penanda peramban agar aturan "satu ulasan per resep per perangkat per
+   * 24 jam" bisa ditegakkan (`cms_reviews_device_recipe_created_idx`).
+   */
+  device: varchar("device", { length: 64 }),
+  /** Sidik jari IP pengirim, hanya untuk pembatasan laju per IP. */
+  ipHash: varchar("ip_hash", { length: 64 }),
+  /** Sidik jari isi kiriman, untuk menolak kiriman ulang/kembar yang sama. */
+  payloadHash: varchar("payload_hash", { length: 64 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("cms_reviews_seed_key_unique").on(table.seedKey),
   index("cms_reviews_status_created_idx").on(table.status, table.createdAt),
   index("cms_reviews_recipe_idx").on(table.recipeSlug),
+  index("cms_reviews_device_recipe_created_idx").on(table.device, table.recipeSlug, table.createdAt),
+  index("cms_reviews_ip_created_idx").on(table.ipHash, table.createdAt),
 ]);
 
 export const analyticsEvents = pgTable("analytics_events", {

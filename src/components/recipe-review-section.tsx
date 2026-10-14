@@ -6,6 +6,9 @@ import type { Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
+import { postReviewToServer, reviewDeviceHeaders } from "@/lib/review-client";
+import { REVIEW_HONEYPOT_FIELD } from "@/lib/review-guard-constants";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Badge, Rating, RecipeRating, SectionHeader } from "@/components/shared";
 import { describeRating } from "@/lib/rating-utils";
@@ -42,18 +45,22 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
   const [catchCount, setCatchCount] = useState("");
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [serverSaved, setServerSaved] = useState<boolean | null>(null);
+  /** Kabar netral: antrean moderasi atau batas kiriman yang sedang berlaku. */
+  const [notice, setNotice] = useState("");
+  /** Kolom jebakan untuk bot; pengunjung tidak pernah melihat atau mengisinya. */
+  const [honeypot, setHoneypot] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const onTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const { markTouched: markLocationTouched } = useLocationAutofill((place) => {
     setProvince(place.province);
     if (place.city) setCity(place.city);
   });
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setSaved(false);
-    setServerSaved(null);
+    setNotice("");
     if (rating < 1) { setError("Pilih rating bintang sebelum mengirim ulasan."); return; }
     if (name.trim().length < 2) { setError("Masukkan nama minimal 2 karakter."); return; }
     if (!province) { setError("Pilih provinsi dulu, atau tekan “Gunakan lokasi saya” agar terisi otomatis."); return; }
@@ -71,22 +78,47 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(now),
       comment: comment.trim().slice(0, 500),
     } satisfies Omit<MemberReview, "id" | "createdAt">;
-    try {
-      const savedReview = saveCommunityReview(newReview);
-      onSubmitted(savedReview);
+    setSubmitting(true);
+    // Dikirim dulu ke server, baru disimpan sebagai salinan lokal. Jadi ulasan
+    // yang ditolak aturan (mis. sudah mengulas resep ini dalam 24 jam) tidak
+    // pernah muncul seolah-olah terkirim.
+    const result = await postReviewToServer({ ...newReview, [REVIEW_HONEYPOT_FIELD]: honeypot, turnstileToken });
+    setSubmitting(false);
+    // Balasan sukses tanpa ID berarti server tidak membuat barisnya (kiriman
+    // ditandai spam): jangan pernah ditampilkan seolah-olah sudah tersimpan.
+    if (result.ok && result.id === undefined) {
+      setError("Ulasan belum bisa dikirim ke server. Coba lagi sebentar lagi.");
+      return;
+    }
+    if (result.ok) {
+      try {
+        onSubmitted(saveCommunityReview({ ...newReview, synced: true, ...(result.id ? { serverId: result.id } : {}) }));
+      } catch {
+        // Salinan lokal tidak wajib ada; ulasan sudah tersimpan di server.
+      }
       setComment("");
       setRating(0);
-      setSaved(true);
-      void fetch("/api/public/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newReview) })
-        .then(async (response) => {
-          const data = response.ok ? await response.json() as { id?: number } : {};
-          markCommunityReviewSync(savedReview.id, response.ok, data.id);
-          setServerSaved(response.ok);
-        })
-        .catch(() => { markCommunityReviewSync(savedReview.id, false); setServerSaved(false); });
-    } catch {
-      setError("Ulasan belum tersimpan. Periksa ruang penyimpanan browser, lalu coba lagi.");
+      setHoneypot("");
+      setTurnstileToken("");
+      setNotice(result.duplicate ? "Ulasan ini sudah pernah terkirim, jadi tidak digandakan. Terima kasih!" : "Ulasan tersimpan di server dan menunggu persetujuan editor. Terima kasih sudah berbagi!");
+      return;
     }
+    if (result.offline) {
+      // Server tidak terjangkau: simpan di perangkat dan kirim ulang otomatis.
+      try {
+        const savedReview = saveCommunityReview({ ...newReview, synced: false });
+        onSubmitted(savedReview);
+        setComment("");
+        setRating(0);
+        setHoneypot("");
+      } catch {
+        // Penyimpanan diblokir; pesan di bawah tetap menjelaskan keadaannya.
+      }
+      setNotice("Server belum bisa dihubungi. Ulasan disimpan di perangkatmu dan akan dikirim ulang otomatis saat halaman resep dibuka lagi.");
+      return;
+    }
+    if (result.code === "review-cooldown" || result.code === "device-limit" || result.code === "ip-limit") setNotice(result.error ?? "Batas kiriman ulasan sedang berlaku.");
+    else setError(result.error ?? "Ulasan belum bisa dikirim ke server. Coba lagi sebentar lagi.");
   }
 
   return (
@@ -94,7 +126,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       <div className="flex min-w-0 items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eef3ea] text-[#587455]"><MessageSquareText size={19} /></span><div className="min-w-0"><h3 className="break-words text-base font-extrabold text-[#304133]">Pernah mencoba {recipe.name}?</h3><p className="mt-1 break-words text-xs leading-5 text-[#818b80]">Ulasan membantu pemancing lain dan menjadi sinyal untuk sistem pakar.</p></div></div>
       <div className="mt-5 rounded-xl bg-[#faf8f1] p-3.5"><p className="mb-1 text-xs font-bold text-[#716246]">Beri rating</p><StarRatingInput value={rating} onChange={setRating} /></div>
       <div className="mt-4 flex flex-col gap-2.5 rounded-xl border border-[#e9ede7] bg-[#f8faf6] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-5 text-[#77827a]">Kota dan provinsi bisa terisi otomatis dari lokasi perangkatmu. Lokasi tidak dikirim ke server.</p>
+        <p className="text-xs leading-5 text-[#77827a]">Kota dan provinsi membantu pemancing lain mengenali asal ceritamu, dan ikut tampil pada ulasan ini. Isi otomatis hanya muncul setelah kamu menekan tombol lokasi.</p>
         <UseMyLocationButton onPlace={(place) => { setProvince(place.province); if (place.city) setCity(place.city); }} label="Gunakan lokasi saya" className="shrink-0" />
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -107,9 +139,11 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Hasil tangkapan (opsional)<div className="relative"><input className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="0" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Ceritakan pengalaman<textarea className="min-h-28 min-w-0 w-full resize-y rounded-xl border border-[#e4e9e2] bg-white px-3.5 py-3 text-sm leading-6 text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10" value={comment} onChange={(event) => setComment(event.target.value)} minLength={12} maxLength={500} placeholder="Kondisi kolam, cara meracik, dan bagaimana hasilnya?" required /><span className="text-right text-[10px] font-medium text-[#9aa198]">{comment.length}/500</span></label>
       </div>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-[11px] leading-5 text-[#929a90]">Tanpa akun. Tersimpan lokal di perangkat ini dan dapat memengaruhi rekomendasi di browser yang sama.</p><button type="submit" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29]"><Send size={15} /> Kirim ulasan</button></div>
+      <div className="hidden" aria-hidden="true"><label>Website<input type="text" name={REVIEW_HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" value={honeypot} onChange={(event) => setHoneypot(event.target.value)} /></label></div>
+      <TurnstileWidget onToken={onTurnstileToken} />
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-[11px] leading-5 text-[#929a90]">Tanpa akun. Ulasan dikirim ke server, dibagikan ke semua pengunjung setelah disetujui editor, dan dibatasi satu ulasan per resep per perangkat dalam 24 jam.</p><button type="submit" disabled={submitting} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60"><Send size={15} /> {submitting ? "Mengirim…" : "Kirim ulasan"}</button></div>
       {error && <p role="alert" className="mt-3 rounded-lg bg-[#fbefeb] px-3 py-2 text-xs font-semibold text-[#9b513f]">{error}</p>}
-      {saved && <p role="status" className="mt-3 flex max-w-full items-start gap-2 rounded-lg bg-[#eef5eb] px-3 py-2 text-xs font-semibold leading-5 text-[#426641]"><CheckCircle2 size={15} className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">{serverSaved === true ? "Ulasan tersimpan dan menunggu persetujuan editor. Terima kasih sudah berbagi!" : serverSaved === false ? "Ulasan tersimpan di perangkat ini. Kami akan mencoba mengirimnya lagi saat Anda membuka halaman resep berikutnya." : "Ulasan tersimpan di perangkat ini; sedang mengirim untuk moderasi…"}</span></p>}
+      {notice && <p role="status" className="mt-3 flex max-w-full items-start gap-2 rounded-lg bg-[#eef5eb] px-3 py-2 text-xs font-semibold leading-5 text-[#426641]"><CheckCircle2 size={15} className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">{notice}</span></p>}
     </form>
   );
 }
@@ -124,20 +158,22 @@ function useReviewOutboxRetry() {
     if (!pending.length) return;
     const controller = new AbortController();
     void Promise.all(pending.map(async (review) => {
+      if (controller.signal.aborted) return;
       try {
-        const response = await fetch("/api/public/reviews", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            recipeSlug: review.recipeSlug, name: review.name, location: review.location, rating: review.rating,
-            weather: review.weather, water: review.water, fishingType: review.fishingType,
-            catchCount: review.catchCount, comment: review.comment,
-          }),
+        if (controller.signal.aborted) return;
+        const result = await postReviewToServer({
+          recipeSlug: review.recipeSlug, name: review.name, location: review.location, rating: review.rating,
+          weather: review.weather, water: review.water, fishingType: review.fishingType,
+          catchCount: review.catchCount, comment: review.comment,
         });
-        if (response.ok) {
-          const data = await response.json() as { id?: number };
-          markCommunityReviewSync(review.id, true, data.id);
+        if (result.ok) {
+          // Ulasan sudah di server; salinan lokalnya tidak perlu disimpan lagi.
+          // Kalau aturan 24 jam menolaknya, kiriman yang lebih lama di server
+          // memang yang berlaku, jadi salinan lokal ini juga dibuang.
+          if (result.id) markCommunityReviewSync(review.id, true, result.id);
+          else removeCommunityReviews([review.id]);
+        } else if (result.code === "review-cooldown" || result.code === "device-limit" || result.code === "ip-limit") {
+          removeCommunityReviews([review.id]);
         }
       } catch {
         // Server masih belum tersedia: biarkan menunggu kesempatan berikutnya.
@@ -166,7 +202,7 @@ async function fetchModerationStatus(reviews: MemberReview[], signal?: AbortSign
   try {
     const response = await fetch("/api/public/reviews/status", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await reviewDeviceHeaders()) },
       signal,
       body: JSON.stringify({ items: reviews.map((review) => ({ id: review.serverId, name: review.name, comment: review.comment })) }),
     });

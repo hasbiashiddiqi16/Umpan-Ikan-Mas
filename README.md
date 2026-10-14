@@ -153,6 +153,21 @@ Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/kata
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
+## Ulasan komunitas: tersimpan di server, tanpa akun
+
+Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan ke semua pengunjung — bukan lagi hanya di peramban pengirimnya. Peramban tetap punya salinan sementara supaya ulasan langsung tampil, tetapi sumber kebenarannya server:
+
+- **Kiriman lewat API, bukan penyimpanan peramban.** `POST /api/public/reviews` menyimpan baris dengan status `pending`, lalu editor menyetujuinya di dashboard (**Studio → Ulasan**). `GET /api/public/reviews[?slug=]` mengirim ulasan yang sudah disetujui (dan tidak bertanggal masa depan) ke semua orang. Menghapus data peramban hanya menghapus salinan lokal; ulasan yang sudah terkirim tetap ada di server dan tetap tampil.
+- **Tanpa akun: token perangkat anonim.** `POST /api/public/reviews/token` menerbitkan token bertanda tangan HMAC (`x-review-device`, berlaku 400 hari) yang berisi id acak. Peramban menyimpannya di `localStorage` (`umpan-mas-review-device-v1`). Token yang hilang diperbarui otomatis tanpa kehilangan id-nya; token yang dikarang klien selalu ditolak server.
+- **Satu ulasan per resep per perangkat per 24 jam.** Server menghitung baris milik perangkat itu untuk resep tersebut (`cms_reviews_device_recipe_created_idx`) dan menjawab `429` beserta pesan serta header `Retry-After`. Kiriman identik yang terulang (mis. percobaan ulang jaringan) **tidak digandakan** — dijawab dengan ID ulasan yang sudah ada. Ulasan yang **ditolak** moderator tidak dihitung, jadi penulisnya boleh memperbaiki kirimannya.
+- **Batas yang diketahui.** Menghapus data peramban (atau berpindah peramban) membuat perangkat mendapat id baru, seperti orang yang berganti perangkat — aturan 24 jam per resep mengikuti id itu. Jaring pengamannya adalah batas per IP di bawah, ditambah antrean moderasi yang menahan kiriman sebelum tampil.
+- **Batasan tambahan.** Batas bawaan 8 ulasan per perangkat per hari dan 24 per IP per hari; IP dikenali dari `x-real-ip`/`x-forwarded-for` (entri terakhir, yaitu proxy terdekat) dan hanya disimpan sebagai sidik jari HMAC. Tidak ada IP, token, atau nama mentah yang disimpan sebagai data pelacakan.
+- **Honeypot & Cloudflare Turnstile.** Formulir ulasan memuat kolom tersembunyi `website`; kiriman yang mengisinya dijawab "sukses" palsu tanpa disimpan. Turnstile aktif otomatis **hanya bila kedua kunci disetel** (`NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`); kalau hanya salah satu terisi, penyaring itu dimatikan supaya formulir tidak pernah macet. Kegagalan verifikasi dijawab `400` dengan kode `turnstile`.
+- **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
+- **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
+- Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
+- **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
+
 ## Kejujuran data ulasan dan laporan
 
 Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:

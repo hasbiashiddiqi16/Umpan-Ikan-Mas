@@ -1,7 +1,8 @@
-import { and, eq, inArray, isNull, or, type SQL } from "drizzle-orm";
+import { and, eq, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
 import { databaseErrorResponse } from "@/lib/database-status";
+import { readReviewDevice } from "@/lib/review-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +54,25 @@ export async function POST(request: Request) {
     const ids = items.map((item) => item.id).filter((id): id is number => typeof id === "number");
     const content = items.filter((item) => item.name !== undefined && item.comment !== undefined) as Required<Item>[];
 
+    // Perangkat peminta dipakai untuk membatasi pemeriksaan berbasis ID. ID baris
+    // berurutan, jadi tanpa pembatasan ini siapa pun bisa menebak ID dan membaca
+    // status ulasan orang lain. Baris lama yang belum punya penanda perangkat
+    // masih dicocokkan lewat isi kiriman, seperti sebelumnya.
+    const deviceId = readReviewDevice(request)?.id ?? null;
     const filters: SQL[] = [];
-    if (ids.length) filters.push(inArray(cmsReviews.id, ids));
+    const perId = items
+      .filter((item) => item.id !== undefined)
+      .map((item) => {
+        const cocokIsi = item.name !== undefined && item.comment !== undefined ? and(eq(cmsReviews.name, item.name), eq(cmsReviews.comment, item.comment)) : undefined;
+        const idnya = eq(cmsReviews.id, item.id as number);
+        if (deviceId) return and(idnya, or(eq(cmsReviews.device, deviceId), cocokIsi ? and(isNull(cmsReviews.device), cocokIsi) : undefined));
+        // Tanpa token perangkat, pencarian lewat ID saja ditolak: ID baris
+        // berurutan sehingga bisa ditebak. Hanya baris lama tanpa penanda
+        // perangkat yang boleh dicocokkan, dan itu pun harus sama isinya.
+        return cocokIsi ? and(idnya, isNull(cmsReviews.device), cocokIsi) : undefined;
+      })
+      .filter((predicate): predicate is SQL => predicate !== undefined);
+    if (perId.length) filters.push(or(...perId) as SQL);
     if (content.length) {
       const perIsi = content.map((item) => and(eq(cmsReviews.name, item.name), eq(cmsReviews.comment, item.comment)));
       const gabungan = or(...perIsi);
