@@ -8,7 +8,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api", "/dashboard"],
+      // Area admin tidak ditawarkan ke mesin pencari; `/dashboard` juga dipagari
+      // autentikasi di `src/proxy.ts` dan diberi `X-Robots-Tag: noindex`.
+      disallow: ["/api", "/dashboard", "/login"],
     },
     ...(sitemapUrl ? { sitemap: sitemapUrl } : {}),
   };

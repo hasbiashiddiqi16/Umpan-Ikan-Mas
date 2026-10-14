@@ -78,6 +78,12 @@ Perintah itu memeriksa variabel lingkungan, format kunci, ketersediaan endpoint 
 
 Buka `/login` untuk masuk ke dashboard. Halaman dashboard dan endpoint `/api/admin/*` dilindungi oleh sesi admin HttpOnly yang kedaluwarsa setelah 8 jam.
 
+**Area admin tidak dipromosikan dan tidak untuk diindeks:**
+
+- **Tidak ada tautan publik ke `/dashboard`.** Footer hanya memuat tautan jelajah publik; dashboard dibuka lewat alamat langsung `/login`.
+- **Pagar autentikasi di proxy.** `src/proxy.ts` (konvensi Next.js 16, sebelumnya `middleware.ts`) mengalihkan setiap permintaan ke `/dashboard*` tanpa cookie sesi yang sah ke `/login` — 307 + `Cache-Control: no-store`, sebelum halaman dirender. Pemeriksaannya sengaja ringan (`verifyAdminSessionSignature()`: bentuk, tanda tangan HMAC, dan masa berlaku; tanpa menyentuh basis data), sehingga aman dipanggil pada setiap permintaan. Pemeriksaan penuh — termasuk nomor versi password — tetap dilakukan `isAdminAuthenticated()` di `src/app/dashboard/layout.tsx` dan di setiap route handler admin, jadi sesi yang passwordnya sudah diganti tetap ditolak meski tanda tangannya masih sah.
+- **`noindex` berlapis.** Respons `/dashboard*` dan `/login` diberi `X-Robots-Tag: noindex, nofollow`; layout dashboard juga memuat metadata `robots` `index: false, follow: false`; `robots.txt` melarang `/api`, `/dashboard`, dan `/login`; sitemap hanya memuat rute publik.
+
 Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalankan aplikasi atau deploy. Untuk pengembangan lokal, salin `.env.example` menjadi `.env.local` lalu isi password yang diinginkan. Di Netlify, tambahkan `ADMIN_PASSWORD` pada environment variables dengan scope yang mencakup deploy production. Jangan gunakan awalan `NEXT_PUBLIC_` dan jangan commit file `.env.local`.
 
 `ADMIN_SESSION_SECRET` opsional; jika tidak diatur, password admin digunakan untuk menandatangani sesi. Gunakan password yang panjang dan unik untuk deployment publik.
@@ -197,7 +203,7 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 
 - **Aset merek**: logo berada di `public/images/logo-umpan-mas.png` (512px, latar transparan) dan dirujuk lewat `src/lib/brand.ts` agar hanya ada satu sumber. Favicon memakai konvensi Next.js: `src/app/icon.png` (256px) dan `src/app/apple-icon.png` (180px, diratakan ke putih karena iOS tidak mendukung transparansi). Logo juga dikirim sebagai `logo`/`image` pada structured data `Organization` agar Google dapat menampilkan identitas merek.
 - Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi kustom di Netlify bila domain tersebut berbeda dari `URL` bawaan Netlify; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
-- `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian.
+- `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian. Area admin ditutup tiga lapis: `Disallow` di `robots.txt`, header `X-Robots-Tag: noindex, nofollow` dari `src/proxy.ts`, dan metadata `robots` di layout dashboard.
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.
 - UMPAN MAS adalah platform komunitas daring, bukan toko dengan lokasi fisik yang telah diverifikasi. Karena itu, jangan menambahkan alamat, nomor telepon, jam buka, atau markup `LocalBusiness` fiktif. Jika ada lokasi usaha yang benar-benar melayani pengunjung, lengkapi NAP (nama, alamat, telepon) yang konsisten dan profil Google Business Profile sebelum mengaktifkan data bisnis lokal.
 - Gambar memakai `next/image` dengan preload selektif untuk gambar LCP, format AVIF/WebP, ukuran responsif, cache gambar statis, dan request analitik yang ditunda agar tidak mengganggu render awal. Setelah deploy, daftarkan domain produksi di Google Search Console dan kirim URL sitemap.

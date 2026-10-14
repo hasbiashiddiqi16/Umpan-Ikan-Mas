@@ -58,37 +58,61 @@ export async function createAdminSessionToken() {
   return `${payload}.${signature}`;
 }
 
-export async function verifyAdminSessionToken(token?: string) {
-  if (!token || token.length > 512) return false;
+type AdminSessionPayload = { expiresAt: number; generation: number };
+
+/**
+ * Membaca isi cookie sesi **tanpa menyentuh basis data**: hanya memeriksa bentuk,
+ * tanda tangan HMAC, dan masa berlaku. Dipakai gerbang cepat di `src/proxy.ts`,
+ * yang berjalan pada setiap permintaan ke area admin.
+ */
+function decodeAdminSessionToken(token?: string): AdminSessionPayload | null {
+  if (!token || token.length > 512) return null;
 
   const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra !== undefined) return false;
+  if (!payload || !signature || extra !== undefined) return null;
 
   const secret = getSessionSecret();
-  if (!secret) return false;
+  if (!secret) return null;
 
   const expectedSignature = createHmac("sha256", secret).update(payload).digest();
   const suppliedSignature = Buffer.from(signature, "base64url");
-  if (expectedSignature.length !== suppliedSignature.length || !timingSafeEqual(expectedSignature, suppliedSignature)) return false;
+  if (expectedSignature.length !== suppliedSignature.length || !timingSafeEqual(expectedSignature, suppliedSignature)) return null;
 
   let parsed: { expiresAt?: unknown; gen?: unknown };
   try {
     parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as typeof parsed;
   } catch {
-    return false;
+    return null;
   }
 
   if (typeof parsed.expiresAt !== "number"
     || !Number.isSafeInteger(parsed.expiresAt)
-    || parsed.expiresAt <= Math.floor(Date.now() / 1000)) return false;
+    || parsed.expiresAt <= Math.floor(Date.now() / 1000)) return null;
 
   // Cookie lama (dibuat sebelum fitur ganti password) tidak membawa nomor versi;
   // dianggap versi 0 supaya sesi yang masih berjalan tidak ikut diputus.
   const generation = typeof parsed.gen === "number" && Number.isSafeInteger(parsed.gen) && parsed.gen >= 0
     ? parsed.gen
     : 0;
+  return { expiresAt: parsed.expiresAt, generation };
+}
+
+/**
+ * Pemeriksaan ringan untuk proxy/middleware: tanda tangan sah dan sesi belum
+ * kedaluwarsa. Tidak membaca basis data, jadi aman dipanggil di setiap permintaan.
+ * Pemeriksaan penuh tetap dilakukan `verifyAdminSessionToken()` saat halaman dirender.
+ */
+export function verifyAdminSessionSignature(token?: string): boolean {
+  return decodeAdminSessionToken(token) !== null;
+}
+
+export async function verifyAdminSessionToken(token?: string) {
+  const session = decodeAdminSessionToken(token);
+  if (!session) return false;
+
+  // Password yang sudah diganti menaikkan nomor versi, sehingga sesi lama ditolak.
   const { generation: current } = await readAdminPasswordState();
-  return generation === current;
+  return session.generation === current;
 }
 
 /**
@@ -111,6 +135,11 @@ export function setAdminSessionCookie(response: NextResponse, request: Request, 
   });
 }
 
+/**
+ * Pemeriksaan penuh (termasuk versi password) untuk pemakaian di server:
+ * layout dashboard, route handler, dan halaman masuk. Ini pemeriksaan yang
+ * menentukan; gerbang di proxy hanya menyaring permintaan tanpa sesi sah.
+ */
 export async function isAdminAuthenticated() {
   const cookieStore = await cookies();
   return verifyAdminSessionToken(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);

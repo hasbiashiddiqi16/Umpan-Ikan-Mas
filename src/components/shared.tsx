@@ -133,7 +133,6 @@ export function Footer() {
         <div>
           <p className="text-sm font-bold">UMPAN MAS</p>
           <p className="mt-4 text-sm leading-6 text-white/65">Berbagi pengalaman, bukan janji hasil. Kondisi tiap kolam dan kebiasaan ikan bisa berbeda.</p>
-          <Link className="mt-4 inline-flex text-xs font-semibold text-white/55 transition hover:text-white" href="/dashboard">Content Studio →</Link>
         </div>
       </div>
       <div className="border-t border-white/10">
