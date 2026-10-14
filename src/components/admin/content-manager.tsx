@@ -8,7 +8,7 @@ import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Drople
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
-import { recipes as seedRecipes, type Ingredient } from "@/data/recipes";
+import { primaryFishingType, recipes as seedRecipes, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
 
 export type ManagedRecipe = {
@@ -19,10 +19,9 @@ export type ManagedRecipe = {
 type IngredientRow = { name: string; brand: string; amount: string; optional: boolean };
 
 type RecipeForm = {
-  title: string; slug: string; summary: string; category: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
+  title: string; slug: string; summary: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
 };
 
-const categoryOptions = ["Harian", "Lomba", "Galatama", "Premium", "Ekonomis"];
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
 const imageOptions = [
@@ -32,7 +31,7 @@ const imageOptions = [
 ];
 
 const blankForm: RecipeForm = {
-  title: "", slug: "", summary: "", category: "Harian", status: "draft", image: "/images/recipe-putih.jpg",
+  title: "", slug: "", summary: "", status: "draft", image: "/images/recipe-putih.jpg",
   price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh",
   fishingTypes: "Harian", provinces: "Jawa Barat", seasons: "Musim Hujan",
   ingredients: [
@@ -60,7 +59,7 @@ function filledIngredients(rows: IngredientRow[]): Ingredient[] {
 
 function formFromRecipe(recipe: ManagedRecipe): RecipeForm {
   return {
-    title: recipe.title, slug: recipe.slug, summary: recipe.summary, category: recipe.category, status: recipe.status, image: recipe.image,
+    title: recipe.title, slug: recipe.slug, summary: recipe.summary, status: recipe.status, image: recipe.image,
     price: recipe.price, priceValue: String(recipe.priceValue), difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
     water: recipe.water.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
     seasons: recipe.seasons.join(", "),
@@ -163,6 +162,8 @@ function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onCha
 function RecipePreview({ form }: { form: RecipeForm }) {
   const ingredients = filledIngredients(form.ingredients);
   const steps = listFrom(form.steps);
+  // Sama seperti halaman publik: kategori dihitung dari jenis pemancingan.
+  const kategori = primaryFishingType(form.title, listFrom(form.fishingTypes));
   const informasi = [
     { label: "Target", value: "Ikan mas", icon: Fish },
     { label: "Cuaca", value: listFrom(form.weather).slice(0, 2).join(" · ") || "—", icon: CloudRain },
@@ -180,7 +181,7 @@ function RecipePreview({ form }: { form: RecipeForm }) {
       <section className="overflow-hidden rounded-[22px] border border-[#e5e9e2] bg-white">
         <div className="relative h-44 w-full bg-[#e4e3d6]">
           {form.image && <Image src={form.image} alt="" fill unoptimized sizes="640px" className="object-cover" />}
-          <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{form.category} · Ikan mas</span>
+          <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{kategori} · Ikan mas</span>
         </div>
         <div className="p-4 sm:p-5">
           <h3 className="break-words text-xl font-black tracking-[-.03em] text-[#213426]">{form.title || "Judul resep"}</h3>
@@ -210,6 +211,8 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
   const [error, setError] = useState("");
   const update = (key: keyof RecipeForm, value: string) => setForm((current) => ({ ...current, [key]: value, ...(key === "title" && !recipe ? { slug: slugify(value) } : {}) }));
 
+  // Kategori = jenis pemancingan utama resep; tidak diisi manual lagi.
+  const kategori = primaryFishingType(form.title, listFrom(form.fishingTypes));
   const ingredients = filledIngredients(form.ingredients);
   const optionalCount = ingredients.filter((item) => item.optional).length;
 
@@ -266,7 +269,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Contoh: Umpan Putih Kroto" required /></Field>
                 <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="umpan-putih-kroto" required /></Field>
-                <Field label="Kategori"><select className={fieldClass} value={form.category} onChange={(event) => update("category", event.target.value)}>{categoryOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <Field label="Kategori" hint="Otomatis dari jenis pemancingan di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}>🎣 {kategori}</span></Field>
                 <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
                 <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
                 <Field label="Foto racikan" hint="Pilih aset lokal yang sudah tersedia agar tidak ada gambar rusak."><select className={fieldClass} value={form.image} onChange={(event) => update("image", event.target.value)}>{imageOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
@@ -466,7 +469,7 @@ export function ContentManager() {
                         <span className="relative h-10 w-12 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill unoptimized sizes="48px" className="object-cover" /></span>
                         <div className="min-w-0">
                           <p className="max-w-[270px] truncate text-xs font-extrabold text-[#37483a]">{item.title}</p>
-                          <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · ★ {(item.rating / 10).toFixed(1)} · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
+                          <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog ★ {(item.rating / 10).toFixed(1)} · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
                         </div>
                       </div>
                     </td>
@@ -478,7 +481,7 @@ export function ContentManager() {
                       </div>
                       <p className="mt-1.5 text-[9px] font-semibold text-[#969d94]">{item.ingredients.filter((entry) => !entry.optional).length} bahan · {item.ingredients.filter((entry) => entry.optional).length} opsional</p>
                     </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-[#677467]">{item.category}</td>
+                    <td className="px-4 py-3.5 text-xs font-semibold text-[#677467]">{primaryFishingType(item.title, item.fishingTypes)}</td>
                     <td className="px-4 py-3.5"><Badge tone={item.status === "published" ? "sage" : item.status === "draft" ? "gold" : "cream"}>{item.status === "published" ? "Published" : item.status === "draft" ? "Draft" : "Archived"}</Badge></td>
                     <td className="px-4 py-3.5 text-[10px] text-[#929a91]">{formattedDate(item.updatedAt)}</td>
                     <td className="px-5 py-3.5">

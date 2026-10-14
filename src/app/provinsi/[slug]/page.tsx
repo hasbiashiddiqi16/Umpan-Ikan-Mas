@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return createPageMetadata({
     title: `Umpan Ikan Mas di ${province.name}`,
-    description: `Temukan resep umpan ikan mas di ${province.name}, racikan yang dikaitkan dengan daerah, cuaca, dan kondisi kolam. Lihat bahan serta panduan komunitas.`,
+    description: `Temukan resep umpan ikan mas di ${province.name}, racikan yang dikaitkan dengan daerah, cuaca, dan kondisi kolam. Lihat bahan dan langkah meraciknya.`,
     path: `/provinsi/${province.slug}`,
   });
 }
@@ -32,9 +32,15 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
   const province = provinces.find((item) => item.slug === slug);
   if (!province) notFound();
   const regionalRecipes = recipes.filter((recipe) => recipe.provinces.includes(province.name));
-  const displayedRecipes = regionalRecipes.length ? regionalRecipes : recipes.slice(0, 8);
   // Angka ulasan hanya dari ulasan asli yang sudah disetujui (bukan ulasan contoh).
   const recipeRatings = await getRecipeRatings();
+  // Kalau provinsi ini belum punya racikan khusus, tampilkan racikan yang paling
+  // banyak diulas pengunjung — urutannya juga dari tabel ulasan, bukan angka katalog.
+  const displayedRecipes = regionalRecipes.length
+    ? regionalRecipes
+    : [...recipes]
+        .sort((a, b) => (recipeRatings[b.slug]?.count ?? 0) - (recipeRatings[a.slug]?.count ?? 0) || (recipeRatings[b.slug]?.average ?? 0) - (recipeRatings[a.slug]?.average ?? 0))
+        .slice(0, 8);
   const visitorReviewCount = regionalRecipes.reduce((total, recipe) => total + (recipeRatings[recipe.slug]?.count ?? 0), 0);
   const popularCount = Math.min(province.recipeCount, 24);
   const provinceUrl = absoluteUrl(`/provinsi/${province.slug}`);
@@ -95,13 +101,13 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
           <div className="absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-[40px] border-white/[.045]" />
           <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#d5c38f]"><MapPin size={14} /> Racikan & pengalaman lokal</span>
           <h1 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">Umpan Ikan Mas di {province.name}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan yang dibagikan komunitas di {province.name}. Provinsi adalah salah satu indikator; karakter air setiap kolam tetap bisa berbeda.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan katalog untuk {province.name}. Provinsi adalah salah satu indikator; karakter air setiap kolam tetap bisa berbeda.</p>
           <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
             {[{ value: province.recipeCount, label: "racikan tercatat", icon: BookOpen }, { value: visitorReviewCount, label: "ulasan pengunjung", icon: MessageCircle }, { value: popularCount, label: "racikan populer", icon: Sparkles }].map(({ value, label, icon: Icon }) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-3.5 sm:p-4"><Icon size={16} className="text-[#dbc783]" /><p className="mt-3 text-xl font-black sm:text-2xl">{new Intl.NumberFormat("id-ID").format(value)}</p><p className="mt-1 text-[10px] leading-4 text-white/65 sm:text-xs">{label}</p></div>)}
           </div>
         </section>
         <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#7b725d]">Angka ulasan dihitung hanya dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
-        {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan komunitas populer" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} /></section>}
+        {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} /></section>}
       </main>
       <Footer />
     </PageShell>

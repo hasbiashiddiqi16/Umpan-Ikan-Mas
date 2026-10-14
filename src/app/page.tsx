@@ -53,11 +53,11 @@ export default async function HomePage() {
           <QuickFinder />
           <section>
             <SectionHeader eyebrow="Pilihan sistem" title="🏆 Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} featured={index === 0} />)}</div>
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
           </section>
           <section>
             <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "🔥 Racikan Populer" : "🔥 Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
-            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} featured={index === 0} /></div>)}</div>
+            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} /></div>)}</div>
           </section>
           <section>
             <SectionHeader eyebrow="Baca situasinya" title="🌦️ Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />

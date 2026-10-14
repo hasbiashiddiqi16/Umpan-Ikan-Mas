@@ -154,10 +154,20 @@ Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
 - **Ulasan contoh hanya 3 per resep dan selalu berlabel.** `src/data/reviews.ts` menyimpan contoh penulisan ulasan (`sample: true`, kunci `catalog:<slug>:01..03`) dengan tanggal yang dipatok di masa lampau dan kota yang berbeda-beda. Di halaman resep contoh ditaruh di blok "Contoh penulisan ulasan" berlabel **Data contoh**, dan dijelaskan bahwa contoh itu bukan kiriman pengunjung serta tidak dihitung.
 - **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved`, `seed_key` kosong (bukan contoh), dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
 - **Kalau belum ada ulasan, tulis apa adanya.** Kartu resep, halaman resep, dan bagian ulasan menampilkan **"Belum ada rating"** / **"Belum ada ulasan"** — bukan angka katalog.
-- **Angka katalog tidak lagi tampil.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` hanya dipakai internal (kurasi, urutan sistem, dan tampilan admin di Content Studio), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi" dan "Ulasan Terbanyak" di katalog memakai rating nyata.
+- **Angka katalog tidak lagi tampil sebagai statistik.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` hanya dipakai internal (kurasi dan tampilan admin di Content Studio, selalu diberi label "angka katalog"), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi"/"Ulasan Terbanyak" di katalog dan pilihan racikan di halaman cuaca memakai rating ulasan nyata, dan "N racikan" pada kartu cuaca dihitung dari katalog — bukan angka tetap.
 - **Tanggal masa depan ditolak.** `src/lib/review-dates.ts` menyediakan `isFutureReviewDate` (toleransi jam 60 detik) dan `clampReviewCreatedAt`. API publik menolak `POST` bertanggal masa depan (400), API baca (`/api/public/reviews`, `/api/admin/reviews`, ringkasan) menyaring `created_at <= now()`, dan sinkronisasi katalog memangkas tanggal contoh yang melewati waktu server.
 - **Laporan mancing di halaman komunitas diberi label "Data contoh"** (`src/data/fishingReports.ts` memakai tanggal relatif seperti "2 hari lalu", jadi tidak pernah bertanggal masa depan).
 - Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
+
+## Badge resep diturunkan dari satu field
+
+Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
+
+- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya (mis. "Sarden Pelet Lomba", "Jagung Nangka Harian"), jenis itulah yang dipakai. Semua resep katalog (inti maupun turunan) mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
+- **Satu tempat menulis teks badge.** `src/lib/recipe-badge.ts` (`recipeBadge()`) menentukan label dan warna badge dari `recipe.category`; semua kartu, kepala halaman resep, dan kartu rekomendasi AI Umpan memakainya. Karena sumbernya sama dengan tag kondisi, badge tidak mungkin lagi bertentangan dengan tag — mis. badge "Lomba" dengan tag "Harian".
+- **Tidak ada badge berdasarkan posisi.** Prop `featured` pada `RecipeCard` dihapus, termasuk label "🏆 Rekomendasi" yang dulu otomatis diberikan ke kartu pertama. Setiap kartu menampilkan jenis resep yang sebenarnya.
+- **Tag kondisi menampilkan seluruh jenis.** Kartu menulis "🎣 Harian / Lomba" (bukan hanya jenis pertama), dan jenis pertama selalu sama dengan badge.
+- **Kategori "Premium"/"Ekonomis" dihapus.** Itu tingkat harga, bukan jenis kolam; informasinya sudah ada pada filter Budget dan "Estimasi biaya" di kartu. Dashboard kini menampilkan kategori sebagai nilai otomatis (dihitung dari jenis pemancingan) dan `validateCmsRecipeInput` ikut menghitungnya, jadi data baru tidak bisa lagi memasukkan kategori yang bertentangan.
 
 ## Satu sumber angka, skor kecocokan, dan label "Populer"
 

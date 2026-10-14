@@ -2,6 +2,7 @@ import {
   normalizeFishingText,
   normalizeFishingType,
   normalizeFishingTypes,
+  primaryFishingType,
   type Recipe,
 } from "@/data/recipes";
 import type { CmsIngredient } from "@/db/schema";
@@ -42,7 +43,6 @@ export type CmsRecipeInput = Omit<CmsRecipeRecord, "id" | "rating" | "reviewCoun
 
 // "Galat" tetap diterima sebagai sebutan lama (data yang sudah tersimpan),
 // tetapi disimpan kembali sebagai "Galatama".
-const validCategories = ["Harian", "Lomba", "Galatama", "Galat", "Premium", "Ekonomis"];
 const validStatuses = ["draft", "published", "archived"];
 const validDifficulties = ["Mudah", "Menengah", "Tingkat lanjut"];
 const validWeather = ["Hujan", "Mendung", "Cerah", "Berawan", "Panas"];
@@ -80,14 +80,14 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const summary = typeof item.summary === "string" ? item.summary.trim() : "";
   if (title.length < 3 || title.length > 180) return { error: "Judul harus berisi 3–180 karakter." };
   if (summary.length < 15 || summary.length > 1500) return { error: "Ringkasan harus berisi 15–1.500 karakter." };
-  const category = typeof item.category === "string" && validCategories.includes(item.category)
-    ? normalizeFishingType(item.category)
-    : "Harian";
   const status = typeof item.status === "string" && validStatuses.includes(item.status) ? item.status : "draft";
   const difficulty = typeof item.difficulty === "string" && validDifficulties.includes(item.difficulty) ? item.difficulty : "Mudah";
   const weather = stringArray(item.weather, validWeather);
   const water = stringArray(item.water, validWater);
   const fishingTypes = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType);
+  // Kategori tidak lagi dipilih manual di dashboard: diturunkan dari jenis
+  // pemancingan resep supaya badge dan tag kondisi selalu sama isinya.
+  const category = primaryFishingType(title, fishingTypes ?? []);
   const provinces = stringArray(item.provinces);
   const seasons = stringArray(item.seasons, validSeasons);
   const steps = stringArray(item.steps);
@@ -125,7 +125,9 @@ export function mergeRecipesBySlug(seedRecipes: Recipe[], managedRecipes: Recipe
 export function normalizeCmsRecipeRecord<T extends CmsRecipeRecord>(record: T): T {
   return {
     ...record,
-    category: normalizeFishingType(record.category),
+    // Baris lama bisa menyimpan kategori manual (mis. "Premium") yang tidak lagi
+    // dikenal: dibaca ulang dari jenis pemancingannya.
+    category: primaryFishingType(record.title, record.fishingTypes),
     fishingTypes: normalizeFishingTypes(record.fishingTypes),
     summary: normalizeFishingText(record.summary),
     suitable: record.suitable.map(normalizeFishingText),
@@ -137,7 +139,7 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
   return {
     slug: record.slug,
     name: record.title,
-    category: normalizeFishingType(record.category) as Recipe["category"],
+    category: primaryFishingType(record.title, record.fishingTypes),
     rating: record.rating / 10,
     reviewCount: record.reviewCount,
     users: record.users,

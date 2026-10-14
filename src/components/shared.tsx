@@ -5,14 +5,14 @@ import { Search, Star } from "lucide-react";
 import { FOOTER_LOGO_ALT, FOOTER_LOGO_SRC, LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { describeRating } from "@/lib/rating-utils";
 
-export function Badge({ children, tone = "sage", className = "" }: { children: ReactNode; tone?: "sage" | "gold" | "dark" | "cream"; className?: string }) {
+export function Badge({ children, tone = "sage", className = "", title }: { children: ReactNode; tone?: "sage" | "gold" | "dark" | "cream"; className?: string; title?: string }) {
   const tones = {
     sage: "bg-[#e7f0e7] text-[#34583b]",
     gold: "bg-[#fbf0d5] text-[#8a5d10]",
     dark: "bg-[#193a2c] text-white",
     cream: "bg-[#f4f0e7] text-[#5d625b]",
   };
-  return <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]} ${className}`}>{children}</span>;
+  return <span title={title} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]} ${className}`}>{children}</span>;
 }
 
 export function Rating({ value, count, compact = false }: { value: number; count?: number; compact?: boolean }) {
