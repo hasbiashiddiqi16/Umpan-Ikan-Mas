@@ -263,7 +263,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
           <div className={tab === "pratinjau" ? "hidden" : "space-y-5 p-4 sm:p-6"}>
             <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
               <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Informasi utama</h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Contoh: Umpan Putih Kroto" required /></Field>
                 <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="umpan-putih-kroto" required /></Field>
                 <Field label="Kategori"><select className={fieldClass} value={form.category} onChange={(event) => update("category", event.target.value)}>{categoryOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
