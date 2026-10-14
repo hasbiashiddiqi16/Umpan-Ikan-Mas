@@ -3,15 +3,16 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Search, Star } from "lucide-react";
 import { FOOTER_LOGO_ALT, FOOTER_LOGO_SRC, LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { describeRating } from "@/lib/rating-utils";
 
-export function Badge({ children, tone = "sage", className = "" }: { children: ReactNode; tone?: "sage" | "gold" | "dark" | "cream"; className?: string }) {
+export function Badge({ children, tone = "sage", className = "", title }: { children: ReactNode; tone?: "sage" | "gold" | "dark" | "cream"; className?: string; title?: string }) {
   const tones = {
     sage: "bg-[#e7f0e7] text-[#34583b]",
     gold: "bg-[#fbf0d5] text-[#8a5d10]",
     dark: "bg-[#193a2c] text-white",
     cream: "bg-[#f4f0e7] text-[#5d625b]",
   };
-  return <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]} ${className}`}>{children}</span>;
+  return <span title={title} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]} ${className}`}>{children}</span>;
 }
 
 export function Rating({ value, count, compact = false }: { value: number; count?: number; compact?: boolean }) {
@@ -20,6 +21,28 @@ export function Rating({ value, count, compact = false }: { value: number; count
       <Star size={14} fill="currentColor" className="text-[#d6a344]" aria-hidden="true" />
       <span className="font-bold text-[#27332a]">{value.toFixed(1)}</span>
       {count !== undefined && !compact && <span className="text-[#7b817a]">({count})</span>}
+    </span>
+  );
+}
+
+/**
+ * Rating yang jujur: hanya dari ulasan asli pengunjung. Kalau belum ada ulasan,
+ * tampil "Belum ada rating" — bukan angka karangan dari data katalog.
+ */
+export function RecipeRating({ rating }: { rating?: { count: number; average: number } }) {
+  // Semua angka di sini berasal dari satu sumber: ulasan pengunjung yang sudah
+  // disetujui. Satu ulasan = satu pemancing yang mencoba racikan tersebut.
+  if (rating && rating.count > 0) {
+    return (
+      <span title={describeRating(rating)}>
+        <Rating value={rating.average} count={rating.count} />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8d968c]" title={describeRating(rating)}>
+      <Star size={13} className="text-[#c3cbc0]" aria-hidden="true" />
+      Belum ada rating
     </span>
   );
 }
@@ -110,7 +133,6 @@ export function Footer() {
         <div>
           <p className="text-sm font-bold">UMPAN MAS</p>
           <p className="mt-4 text-sm leading-6 text-white/65">Berbagi pengalaman, bukan janji hasil. Kondisi tiap kolam dan kebiasaan ikan bisa berbeda.</p>
-          <Link className="mt-4 inline-flex text-xs font-semibold text-white/55 transition hover:text-white" href="/dashboard">Content Studio →</Link>
         </div>
       </div>
       <div className="border-t border-white/10">

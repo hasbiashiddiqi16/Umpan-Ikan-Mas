@@ -78,6 +78,12 @@ Perintah itu memeriksa variabel lingkungan, format kunci, ketersediaan endpoint 
 
 Buka `/login` untuk masuk ke dashboard. Halaman dashboard dan endpoint `/api/admin/*` dilindungi oleh sesi admin HttpOnly yang kedaluwarsa setelah 8 jam.
 
+**Area admin tidak dipromosikan dan tidak untuk diindeks:**
+
+- **Tidak ada tautan publik ke `/dashboard`.** Footer hanya memuat tautan jelajah publik; dashboard dibuka lewat alamat langsung `/login`.
+- **Pagar autentikasi di proxy.** `src/proxy.ts` (konvensi Next.js 16, sebelumnya `middleware.ts`) mengalihkan setiap permintaan ke `/dashboard*` tanpa cookie sesi yang sah ke `/login` — 307 + `Cache-Control: no-store`, sebelum halaman dirender. Pemeriksaannya sengaja ringan (`verifyAdminSessionSignature()`: bentuk, tanda tangan HMAC, dan masa berlaku; tanpa menyentuh basis data), sehingga aman dipanggil pada setiap permintaan. Pemeriksaan penuh — termasuk nomor versi password — tetap dilakukan `isAdminAuthenticated()` di `src/app/dashboard/layout.tsx` dan di setiap route handler admin, jadi sesi yang passwordnya sudah diganti tetap ditolak meski tanda tangannya masih sah.
+- **`noindex` berlapis.** Respons `/dashboard*` dan `/login` diberi `X-Robots-Tag: noindex, nofollow`; layout dashboard juga memuat metadata `robots` `index: false, follow: false`; `robots.txt` melarang `/api`, `/dashboard`, dan `/login`; sitemap hanya memuat rute publik.
+
 Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalankan aplikasi atau deploy. Untuk pengembangan lokal, salin `.env.example` menjadi `.env.local` lalu isi password yang diinginkan. Di Netlify, tambahkan `ADMIN_PASSWORD` pada environment variables dengan scope yang mencakup deploy production. Jangan gunakan awalan `NEXT_PUBLIC_` dan jangan commit file `.env.local`.
 
 `ADMIN_SESSION_SECRET` opsional; jika tidak diatur, password admin digunakan untuk menandatangani sesi. Gunakan password yang panjang dan unik untuk deployment publik.
@@ -147,6 +153,41 @@ Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/kata
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
+## Kejujuran data ulasan dan laporan
+
+Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
+
+- **Ulasan contoh hanya 3 per resep dan selalu berlabel.** `src/data/reviews.ts` menyimpan contoh penulisan ulasan (`sample: true`, kunci `catalog:<slug>:01..03`) dengan tanggal yang dipatok di masa lampau dan kota yang berbeda-beda. Di halaman resep contoh ditaruh di blok "Contoh penulisan ulasan" berlabel **Data contoh**, dan dijelaskan bahwa contoh itu bukan kiriman pengunjung serta tidak dihitung.
+- **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved`, `seed_key` kosong (bukan contoh), dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
+- **Kalau belum ada ulasan, tulis apa adanya.** Kartu resep, halaman resep, dan bagian ulasan menampilkan **"Belum ada rating"** / **"Belum ada ulasan"** — bukan angka katalog.
+- **Angka katalog tidak lagi tampil sebagai statistik.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` hanya dipakai internal (kurasi dan tampilan admin di Content Studio, selalu diberi label "angka katalog"), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi"/"Ulasan Terbanyak" di katalog dan pilihan racikan di halaman cuaca memakai rating ulasan nyata, dan "N racikan" pada kartu cuaca dihitung dari katalog — bukan angka tetap.
+- **Tanggal masa depan ditolak.** `src/lib/review-dates.ts` menyediakan `isFutureReviewDate` (toleransi jam 60 detik) dan `clampReviewCreatedAt`. API publik menolak `POST` bertanggal masa depan (400), API baca (`/api/public/reviews`, `/api/admin/reviews`, ringkasan) menyaring `created_at <= now()`, dan sinkronisasi katalog memangkas tanggal contoh yang melewati waktu server.
+- **Laporan mancing di halaman komunitas diberi label "Data contoh"** (`src/data/fishingReports.ts` memakai tanggal relatif seperti "2 hari lalu", jadi tidak pernah bertanggal masa depan).
+- Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
+
+## Badge resep diturunkan dari satu field
+
+Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
+
+- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya (mis. "Sarden Pelet Lomba", "Jagung Nangka Harian"), jenis itulah yang dipakai. Semua resep katalog (inti maupun turunan) mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
+- **Satu tempat menulis teks badge.** `src/lib/recipe-badge.ts` (`recipeBadge()`) menentukan label dan warna badge dari `recipe.category`; semua kartu, kepala halaman resep, dan kartu rekomendasi AI Umpan memakainya. Karena sumbernya sama dengan tag kondisi, badge tidak mungkin lagi bertentangan dengan tag — mis. badge "Lomba" dengan tag "Harian".
+- **Tidak ada badge berdasarkan posisi.** Prop `featured` pada `RecipeCard` dihapus, termasuk label "🏆 Rekomendasi" yang dulu otomatis diberikan ke kartu pertama. Setiap kartu menampilkan jenis resep yang sebenarnya.
+- **Tag kondisi menampilkan seluruh jenis.** Kartu menulis "🎣 Harian / Lomba" (bukan hanya jenis pertama), dan jenis pertama selalu sama dengan badge.
+- **Kategori "Premium"/"Ekonomis" dihapus.** Itu tingkat harga, bukan jenis kolam; informasinya sudah ada pada filter Budget dan "Estimasi biaya" di kartu. Dashboard kini menampilkan kategori sebagai nilai otomatis (dihitung dari jenis pemancingan) dan `validateCmsRecipeInput` ikut menghitungnya, jadi data baru tidak bisa lagi memasukkan kategori yang bertentangan.
+- **Resep dari dashboard ikut aturan yang sama.** `normalizeCmsRecipeRecord()` dan `cmsRecipeToRecipe()` menghitung ulang kategori **dan** mengurutkan jenis pemancingan dari judul + daftar jenisnya, sehingga baris lama yang masih menyimpan kategori manual (mis. "Premium") tetap tampil dengan badge yang sama dengan tag kondisinya. `validateCmsRecipeInput` menyimpan jenis dalam urutan itu juga, jadi basis data tidak menyimpan nilai yang bertentangan.
+
+## Satu sumber angka, skor kecocokan, dan label "Populer"
+
+**Satu sumber angka.** Semua angka komunitas di halaman publik berasal dari satu tempat: tabel `cms_reviews`. `getRecipeRatings()` (`src/lib/review-summary.ts`) menghitung jumlah dan rata-rata rating hanya dari ulasan pengunjung yang sudah disetujui (`seed_key` kosong) dan tidak bertanggal masa depan. Angka katalog `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` tidak pernah ditampilkan sebagai statistik komunitas — hanya dipakai internal (kurasi dan urutan sistem) serta tampilan Content Studio.
+
+**Definisi "mencoba".** Tulisan "N pemancing mencoba" berarti **jumlah ulasan pengunjung** pada resep itu: satu ulasan = satu pemancing yang mencoba. Angkanya tidak pernah melebihi jumlah ulasan, dan selalu disertai penjelasan di halaman resep ("Satu ulasan berarti satu pemancing yang mencoba racikan ini…"). Kalimat penjelas yang sama dipakai pada atribut `title` kartu resep lewat `describeRating()` (`src/lib/rating-utils.ts`). Tombol "Saya coba" belum ada; kalau nanti ditambahkan, angkanya harus tetap berasal dari tabel yang sama.
+
+**Skor kecocokan ("Match").** `calculateMatchScore()` (`src/lib/recommendation.ts`) hanya memakai kondisi yang **diisi pengunjung**: air 30, cuaca 22, jenis pemancingan 22, provinsi 16, musim 10 (jumlahnya 100). Tanpa isian nilainya 0 dan **tidak ditampilkan sama sekali** — jadi tidak ada lagi "100% match" di beranda sebelum pengunjung mengisi apa pun. Isian disimpan di `localStorage` (`umpan-mas-preferences-v1`) oleh Cari Cepat, langkah AI Umpan, Sistem Pakar, filter katalog, dan provinsi hasil izin lokasi; komponen membacanya lewat `useVisitorPreferences()` (`src/lib/visitor-preferences.ts`). Kotak skor di halaman resep juga merinci kondisi yang dipakai menghitungnya.
+
+**Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
+
+**Sistem pakar & AI Umpan.** Analisis sistem pakar baru muncul setelah pengunjung memilih minimal 2 bahan, dan hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
@@ -162,7 +203,7 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 
 - **Aset merek**: logo berada di `public/images/logo-umpan-mas.png` (512px, latar transparan) dan dirujuk lewat `src/lib/brand.ts` agar hanya ada satu sumber. Favicon memakai konvensi Next.js: `src/app/icon.png` (256px) dan `src/app/apple-icon.png` (180px, diratakan ke putih karena iOS tidak mendukung transparansi). Logo juga dikirim sebagai `logo`/`image` pada structured data `Organization` agar Google dapat menampilkan identitas merek.
 - Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi kustom di Netlify bila domain tersebut berbeda dari `URL` bawaan Netlify; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
-- `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian.
+- `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, resep katalog, 38 halaman provinsi, dan resep CMS berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian. Area admin ditutup tiga lapis: `Disallow` di `robots.txt`, header `X-Robots-Tag: noindex, nofollow` dari `src/proxy.ts`, dan metadata `robots` di layout dashboard.
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.
 - UMPAN MAS adalah platform komunitas daring, bukan toko dengan lokasi fisik yang telah diverifikasi. Karena itu, jangan menambahkan alamat, nomor telepon, jam buka, atau markup `LocalBusiness` fiktif. Jika ada lokasi usaha yang benar-benar melayani pengunjung, lengkapi NAP (nama, alamat, telepon) yang konsisten dan profil Google Business Profile sebelum mengaktifkan data bisnis lokal.
 - Gambar memakai `next/image` dengan preload selektif untuk gambar LCP, format AVIF/WebP, ukuran responsif, cache gambar statis, dan request analitik yang ditunda agar tidak mengganggu render awal. Setelah deploy, daftarkan domain produksi di Google Search Console dan kirim URL sitemap.

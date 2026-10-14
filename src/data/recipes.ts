@@ -30,6 +30,39 @@ export function isFishingType(value: string): boolean {
 }
 
 /**
+ * Jenis pemancingan yang tertulis di nama resep, mis. "Sarden Pelet Lomba" →
+ * "Lomba". Dipakai supaya nama, badge, dan tag kondisi tidak saling bertentangan.
+ */
+export function fishingTypeFromName(name: string): FishingType | null {
+  return FISHING_TYPES.find((type) => new RegExp(`\\b${type}\\b`, "i").test(name)) ?? null;
+}
+
+/**
+ * Jenis pemancingan utama sebuah resep: **satu-satunya sumber** badge dan tag
+ * kondisi. Kalau nama resep menyebut jenisnya, itu yang dipakai; kalau tidak,
+ * jenis pertama dari data kondisi resep (warisan template katalog).
+ */
+export function primaryFishingType(name: string, fishingTypes: readonly string[]): FishingType {
+  const dariNama = fishingTypeFromName(name);
+  if (dariNama) return dariNama;
+  const [pertama] = normalizeFishingTypes(fishingTypes);
+  return (FISHING_TYPES as string[]).includes(pertama) ? (pertama as FishingType) : "Harian";
+}
+
+/**
+ * Daftar jenis dengan jenis utama di depan. Tag pertama di kartu selalu sama
+ * dengan badge, dan jenis lain tetap ditampilkan agar tidak ada kondisi yang
+ * disembunyikan.
+ */
+export function orderFishingTypes(name: string, fishingTypes: readonly string[]): FishingType[] {
+  const utama = primaryFishingType(name, fishingTypes);
+  const lain = normalizeFishingTypes(fishingTypes).filter(
+    (type) => type !== utama && (FISHING_TYPES as string[]).includes(type),
+  ) as FishingType[];
+  return [utama, ...lain];
+}
+
+/**
  * Menyeragamkan sebutan di dalam kalimat, mis. "Kolam galatama" -> "Kolam
  * galatama" dan "Kolam Galat" -> "Kolam Galatama". Hanya dipakai pada teks
  * data resep/ulasan, bukan pada pesan galat (arti "error") di antarmuka.
@@ -37,7 +70,12 @@ export function isFishingType(value: string): boolean {
 export function normalizeFishingText(value: string): string {
   return value.replace(/\bgalat\b/gi, (match) => (match === "Galat" ? "Galatama" : "galatama"));
 }
-export type RecipeCategory = FishingType | "Premium" | "Ekonomis";
+/**
+ * Kategori resep = jenis pemancingan resep itu. Nilainya **diturunkan** dari
+ * `fishingTypes` (lihat `primaryFishingType`), bukan ditulis manual per resep,
+ * supaya badge di kartu dan tag kondisi tidak pernah bertentangan.
+ */
+export type RecipeCategory = FishingType;
 
 export type Ingredient = {
   name: string;
@@ -74,11 +112,12 @@ export type Recipe = {
   notSuitable: string[];
 };
 
-const coreRecipes: Recipe[] = [
+type CoreRecipe = Omit<Recipe, "category">;
+
+const coreRecipes: CoreRecipe[] = [
   {
     slug: "umpan-putih-kroto",
     name: "Umpan Putih Kroto",
-    category: "Harian",
     rating: 4.8,
     reviewCount: 327,
     users: 2341,
@@ -109,7 +148,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "pelet-pandan-wangi",
     name: "Pelet Pandan Wangi",
-    category: "Ekonomis",
     rating: 4.7,
     reviewCount: 214,
     users: 1892,
@@ -132,7 +170,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "jagung-kroto-kuning",
     name: "Jagung Kroto Kuning",
-    category: "Harian",
     rating: 4.8,
     reviewCount: 186,
     users: 1548,
@@ -155,7 +192,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "keju-susu-kukus",
     name: "Keju Susu Kukus",
-    category: "Premium",
     rating: 4.9,
     reviewCount: 142,
     users: 1120,
@@ -178,7 +214,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "vanila-telur-bebek",
     name: "Vanila Telur Bebek",
-    category: "Lomba",
     rating: 4.6,
     reviewCount: 118,
     users: 987,
@@ -201,7 +236,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "kacang-santan-gurih",
     name: "Kacang Santan Gurih",
-    category: "Harian",
     rating: 4.5,
     reviewCount: 96,
     users: 804,
@@ -224,7 +258,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "amis-udang-bawang",
     name: "Amis Udang Bawang",
-    category: "Galatama",
     rating: 4.6,
     reviewCount: 77,
     users: 721,
@@ -247,7 +280,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "roti-keju-ekonomis",
     name: "Roti Keju Ekonomis",
-    category: "Ekonomis",
     rating: 4.4,
     reviewCount: 64,
     users: 632,
@@ -270,7 +302,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "pelet-tuna-kroto",
     name: "Pelet Tuna Kroto",
-    category: "Premium",
     rating: 4.9,
     reviewCount: 93,
     users: 790,
@@ -293,7 +324,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "ubi-madu-kukus",
     name: "Ubi Madu Kukus",
-    category: "Harian",
     rating: 4.5,
     reviewCount: 59,
     users: 540,
@@ -316,7 +346,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "sagu-telur-madu",
     name: "Sagu Telur Madu",
-    category: "Lomba",
     rating: 4.6,
     reviewCount: 51,
     users: 480,
@@ -339,7 +368,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "kelapa-pandan-hijau",
     name: "Kelapa Pandan Hijau",
-    category: "Harian",
     rating: 4.3,
     reviewCount: 42,
     users: 390,
@@ -362,7 +390,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "susu-kedelai-kroto",
     name: "Susu Kedelai Kroto",
-    category: "Harian",
     rating: 4.7,
     reviewCount: 37,
     users: 354,
@@ -385,7 +412,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "kuning-santan-pisang",
     name: "Kuning Santan Pisang",
-    category: "Ekonomis",
     rating: 4.2,
     reviewCount: 33,
     users: 310,
@@ -408,7 +434,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "essen-mangga-pelet",
     name: "Essen Mangga Pelet",
-    category: "Galatama",
     rating: 4.4,
     reviewCount: 28,
     users: 275,
@@ -431,7 +456,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "roti-tawar-kroto-lomba",
     name: "Roti Tawar Kroto Lomba",
-    category: "Lomba",
     rating: 4.8,
     reviewCount: 45,
     users: 420,
@@ -454,7 +478,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "pelet-ikan-bawang-putih",
     name: "Pelet Bawang Putih",
-    category: "Ekonomis",
     rating: 4.3,
     reviewCount: 21,
     users: 231,
@@ -477,7 +500,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "sarden-susu-premium",
     name: "Sarden Susu Premium",
-    category: "Premium",
     rating: 4.7,
     reviewCount: 18,
     users: 199,
@@ -500,7 +522,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "jagung-keju-kolam",
     name: "Jagung Keju Kolam",
-    category: "Harian",
     rating: 4.5,
     reviewCount: 17,
     users: 170,
@@ -523,7 +544,6 @@ const coreRecipes: Recipe[] = [
   {
     slug: "amis-kuning-telur",
     name: "Amis Kuning Telur",
-    category: "Galatama",
     rating: 4.4,
     reviewCount: 14,
     users: 148,
@@ -569,7 +589,6 @@ const expansionProfiles = ["Pandan Wangi", "Susu Gurih", "Keju Lembut", "Kroto S
 const expansionRecipeNames = expansionBases.flatMap((base) => expansionProfiles.map((profile) => `Racikan ${base} ${profile}`)).slice(0, 101);
 const additionalRecipeNames = [...curatedAdditionalRecipeNames, ...expansionRecipeNames];
 
-const catalogCategories: Recipe["category"][] = ["Harian", "Ekonomis", "Lomba", "Premium", "Galatama"];
 const catalogDifficulties: Recipe["difficulty"][] = ["Mudah", "Mudah", "Menengah", "Menengah", "Tingkat lanjut"];
 const catalogSummaries = [
   "Racikan seimbang dengan aroma lembut untuk sesi mancing santai dan kondisi kolam yang berubah.",
@@ -605,20 +624,19 @@ const recipeProvinceAssignments = [
   ...provinceDirectory.flatMap((province) => Array.from({ length: (priorityProvinceRecipeTargets[province.name] ?? 2) - (coreProvinceCounts[province.name] ?? 0) }, () => province.name)),
 ];
 
-const normalizedCoreRecipes: Recipe[] = coreRecipes.map((recipe, index) => ({
+const normalizedCoreRecipes: CoreRecipe[] = coreRecipes.map((recipe, index) => ({
   ...recipe,
   provinces: [recipeProvinceAssignments[index]],
   reviewCount: Math.max(25, recipe.reviewCount),
 }));
 
-const generatedRecipes: Recipe[] = additionalRecipeNames.map((name, index) => {
+const generatedRecipes: CoreRecipe[] = additionalRecipeNames.map((name, index) => {
   const template = coreRecipes[index % coreRecipes.length];
   const catalogIndex = index + coreRecipes.length;
   return {
     ...template,
     slug: slugForGeneratedRecipe(name, index),
     name,
-    category: catalogCategories[index % catalogCategories.length],
     rating: Number((4.2 + ((index * 3) % 8) / 10).toFixed(1)),
     reviewCount: 25 + ((index * 7) % 76),
     users: 180 + ((index * 137) % 2_800),
@@ -686,9 +704,18 @@ function withOptionalAdditions(recipe: Recipe, fromCatalog: boolean): Recipe {
   return { ...recipe, ingredients: [...ingredients, ...additions] };
 }
 
-export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes].map((recipe, index) =>
-  withOptionalAdditions(recipe, index < normalizedCoreRecipes.length),
-);
+/**
+ * Semua resep katalog (inti + turunan) merakit `category` dari satu field yang
+ * sama dengan tag kondisi, yaitu jenis pemancingan. Tidak ada lagi kategori yang
+ * ditulis manual per resep maupun dipilih berdasarkan urutan kartu.
+ */
+export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes].map((recipe, index) => {
+  const fishingTypes = orderFishingTypes(recipe.name, recipe.fishingTypes);
+  return withOptionalAdditions(
+    { ...recipe, fishingTypes, category: fishingTypes[0] },
+    index < normalizedCoreRecipes.length,
+  );
+});
 
 /** Cakupan Jabodetabek dihitung dari resep berlabel DKI Jakarta, Jawa Barat, dan Banten. */
 export const jabodetabekProvinces = ["DKI Jakarta", "Jawa Barat", "Banten"] as const;

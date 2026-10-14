@@ -1,4 +1,4 @@
-import { count, desc, isNull, isNotNull } from "drizzle-orm";
+import { and, count, desc, isNull, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
 import { normalizeFishingType } from "@/data/recipes";
@@ -13,9 +13,10 @@ export async function GET() {
 
   try {
     const [reviews, catalogSummary] = await Promise.all([
-      // Moderasi hanya memuat kiriman komunitas. Ulasan katalog telah disetujui
-      // saat sinkronisasi dan tidak perlu ditinjau satu per satu.
-      db.select().from(cmsReviews).where(isNull(cmsReviews.seedKey)).orderBy(desc(cmsReviews.createdAt)).limit(250),
+      // Moderasi hanya memuat kiriman komunitas. Ulasan contoh telah disetujui
+      // saat sinkronisasi dan tidak perlu ditinjau satu per satu. Ulasan bertanggal
+      // masa depan disembunyikan dari daftar sampai tanggalnya masuk akal.
+      db.select().from(cmsReviews).where(and(isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(250),
       db.select({ total: count() }).from(cmsReviews).where(isNotNull(cmsReviews.seedKey)),
     ]);
     return Response.json({

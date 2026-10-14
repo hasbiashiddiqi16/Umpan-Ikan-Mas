@@ -9,7 +9,7 @@ import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient
 import { recipes, defaultPreferences, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
-import { reviews, type RecipeReview } from "@/data/reviews";
+import type { RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
@@ -18,10 +18,10 @@ import type { UserPreferences } from "@/lib/recommendation";
 import { Badge, SectionHeader } from "@/components/shared";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { useLocationAutofill } from "@/lib/use-location";
+import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 
 const selectClass = `${SELECT_FIELD_CLASS} min-h-12 w-full min-w-0 rounded-xl border border-[#e3e8e1] bg-white pl-3.5 text-sm font-semibold text-[#3d4d3f] outline-none transition focus:border-[#718b70] focus:ring-4 focus:ring-[#365b3a]/10 sm:min-h-11`;
 const ratioColors = ["bg-[#315b3c]", "bg-[#638363]", "bg-[#a7b78d]", "bg-[#d3b45f]", "bg-[#9a7449]", "bg-[#839d9a]"];
-const initialIngredients = ["pelet-ikan", "tepung-tapioka", "kroto", "susu-bubuk"];
 
 function Field({ label, icon: Icon, children }: { label: string; icon: LucideIcon; children: ReactNode }) {
   return <label className="grid gap-1.5 text-xs font-bold text-[#738071]"><span className="inline-flex items-center gap-1.5"><Icon size={13} /> {label}</span>{children}</label>;
@@ -50,7 +50,9 @@ function ExpertRecipeEvidence({ result, index }: { result: NonNullable<ReturnTyp
 export function ExpertSystem() {
   // Provinsi dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
   const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences, province: "" });
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialIngredients);
+  // Mulai tanpa bahan terpilih: skor dan analisis hanya muncul setelah pengunjung
+  // benar-benar memilih (aturan yang sama dengan skor kecocokan).
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { markTouched: markLocationTouched } = useLocationAutofill((place) => {
     setPreferences((current) => ({ ...current, province: place.province }));
   });
@@ -90,13 +92,16 @@ export function ExpertSystem() {
     return mergeRecipesBySlug(recipes.filter((recipe) => !hidden.has(recipe.slug)), publishedRecipes);
   }, [publishedRecipes, shadowedSlugs]);
   const serverOnlyReviews = useMemo(() => approvedReviews.filter((remote) => !localReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, localReviews]);
-  const allReviews = useMemo(() => [...reviews, ...localReviews, ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
+  // Hanya ulasan pengunjung (lokal + hasil moderasi) yang dipakai sebagai bukti;
+  // ulasan contoh tidak ikut analisis, hanya tampil sebagai contoh berlabel.
+  const allReviews = useMemo(() => [...localReviews, ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
   const result = useMemo(() => buildExpertBlend(selectedIds, preferences, allReviews, allRecipes), [selectedIds, preferences, allReviews, allRecipes]);
   const stats = getExpertKnowledgeStats(localReviews.length, allRecipes.length, serverOnlyReviews.length);
 
   function updatePreference(key: keyof UserPreferences, value: string) {
     if (key === "province") markLocationTouched();
     setPreferences((current) => ({ ...current, [key]: value }));
+    saveVisitorPreferences({ [key]: value });
   }
 
   function toggleIngredient(id: string) {
@@ -148,15 +153,15 @@ export function ExpertSystem() {
             </div> : <div className="p-6 text-sm text-[#788378]">Tentukan bahan pilihanmu untuk melihat simulasi campuran.</div>}
           </div>
 
-          {result && <div className="rounded-[24px] border border-[#e6eae3] bg-white p-5 sm:p-6"><div className="mb-4"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Cara membaca hasil</p><h3 className="mt-1 text-base font-extrabold text-[#334437]">Alasan rekomendasi</h3></div><ul className="space-y-3">{result.reasoning.map((reason, index) => <li key={reason} className="flex gap-2.5 text-xs leading-5 text-[#657265]"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#edf3e9] text-[9px] font-extrabold text-[#587458]">{index + 1}</span>{reason}</li>)}</ul><div className="mt-4 rounded-xl bg-[#f7f8f4] px-3.5 py-3 text-[11px] leading-5 text-[#879084]">{result.evidenceCount ? `${result.evidenceCount} ulasan pada resep terkait ikut diperiksa.` : "Belum ada ulasan pada resep alternatif teratas; sistem menggunakan rating katalog sampai ada masukan baru."}</div></div>}
+          {result && <div className="rounded-[24px] border border-[#e6eae3] bg-white p-5 sm:p-6"><div className="mb-4"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#839080]">Cara membaca hasil</p><h3 className="mt-1 text-base font-extrabold text-[#334437]">Alasan rekomendasi</h3></div><ul className="space-y-3">{result.reasoning.map((reason, index) => <li key={reason} className="flex gap-2.5 text-xs leading-5 text-[#657265]"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#edf3e9] text-[9px] font-extrabold text-[#587458]">{index + 1}</span>{reason}</li>)}</ul><div className="mt-4 rounded-xl bg-[#f7f8f4] px-3.5 py-3 text-[11px] leading-5 text-[#879084]">{result.evidenceCount ? `${result.evidenceCount} ulasan pengunjung pada resep terkait ikut diperiksa.` : "Belum ada ulasan pengunjung pada resep alternatif teratas; sistem memakai kecocokan bahan dan kondisi kolam."}</div></div>}
         </section>
       </div>
 
       {result && <section className="mt-10"><SectionHeader eyebrow="Diperiksa terhadap koleksi resep" title="Resep paling mendekati pilihanmu" subtitle="Ranking menggabungkan kecocokan kondisi, kemiripan bahan, rating, dan ulasan pada kondisi serupa." /><div className="grid gap-3 md:grid-cols-3">{result.recipeMatches.map((item, index) => <ExpertRecipeEvidence key={item.recipe.slug} result={item} index={index} />)}</div></section>}
 
       <section className="mt-10 grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
-        <div className="rounded-[24px] border border-[#e4e9e1] bg-white p-5 sm:p-6"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf2e9] text-[#527052]"><BookOpenCheck size={19} /></span><div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#899286]">Basis pengetahuan</p><h2 className="mt-0.5 text-base font-extrabold text-[#354739]">Sumber rekomendasi yang transparan</h2></div></div><p className="mt-3 text-xs leading-6 text-[#778276]">{getKnowledgeEvidenceDescription(localReviews.length, allRecipes.length, serverOnlyReviews.length)} Skor konteks: air 25, cuaca 20, jenis pemancingan 20, provinsi 15, musim 10, rating 5, dan popularitas 5. Kecocokan bahan serta ulasan membantu menyusun urutan resep.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[{ label: "Resep", count: stats.recipes, icon: BookOpenCheck }, { label: "Bahan", count: stats.ingredients, icon: Beaker }, { label: "Ulasan", count: stats.reviews, icon: MessageSquareText }, { label: "Laporan", count: stats.reports, icon: Fish }].map(({ label, count, icon: Icon }) => <div key={label} className="rounded-xl bg-[#f6f8f4] p-3"><Icon size={15} className="text-[#6f866c]" /><p className="mt-2 text-lg font-black text-[#354739]">{count}</p><p className="text-[10px] font-semibold text-[#8a9389]">{label}</p></div>)}</div></div>
-        <div className="rounded-[24px] bg-[#203e2c] p-5 text-white sm:p-6"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-[#e0d09f]"><BrainCircuit size={20} /></span><h2 className="mt-4 text-base font-extrabold">Pengetahuan bertambah dari masukan</h2><p className="mt-2 text-xs leading-6 text-white/70">Resep katalog, fungsi bahan, laporan mancing, dan ulasan menjadi basis aturan. Ulasan baru langsung memperbarui sinyal rekomendasi di browser ini.</p><p className="mt-3 rounded-xl bg-white/[.08] px-3 py-2.5 text-[10px] leading-5 text-white/60">MVP tanpa backend: ulasan disimpan lokal di perangkat/browser ini, belum dibagikan ke seluruh pengguna. Tidak ada pelatihan model otomatis atau klaim hasil tangkapan.</p><Link href="/komunitas" className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#e6d6a9] hover:underline">Jelajahi cerita pemancing <ArrowRight size={13} /></Link></div>
+        <div className="rounded-[24px] border border-[#e4e9e1] bg-white p-5 sm:p-6"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf2e9] text-[#527052]"><BookOpenCheck size={19} /></span><div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#899286]">Basis pengetahuan</p><h2 className="mt-0.5 text-base font-extrabold text-[#354739]">Sumber rekomendasi yang transparan</h2></div></div><p className="mt-3 text-xs leading-6 text-[#778276]">{getKnowledgeEvidenceDescription(localReviews.length, allRecipes.length, serverOnlyReviews.length)} Skor konteks hanya memakai isian pengunjung: air 30, cuaca 22, jenis pemancingan 22, provinsi 16, dan musim 10. Kecocokan bahan serta ulasan membantu menyusun urutan resep.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[{ label: "Resep", count: stats.recipes, icon: BookOpenCheck }, { label: "Bahan", count: stats.ingredients, icon: Beaker }, { label: "Ulasan asli", count: stats.reviews, icon: MessageSquareText }, { label: "Laporan", count: stats.reports, icon: Fish }].map(({ label, count, icon: Icon }) => <div key={label} className="rounded-xl bg-[#f6f8f4] p-3"><Icon size={15} className="text-[#6f866c]" /><p className="mt-2 text-lg font-black text-[#354739]">{count}</p><p className="text-[10px] font-semibold text-[#8a9389]">{label}</p></div>)}</div></div>
+        <div className="rounded-[24px] bg-[#203e2c] p-5 text-white sm:p-6"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-[#e0d09f]"><BrainCircuit size={20} /></span><h2 className="mt-4 text-base font-extrabold">Pengetahuan bertambah dari masukan</h2><p className="mt-2 text-xs leading-6 text-white/70">Resep katalog, fungsi bahan, laporan mancing, dan ulasan pengunjung menjadi basis aturan. Ulasan yang sudah disetujui editor ikut memperbarui urutan rekomendasi.</p><p className="mt-3 rounded-xl bg-white/[.08] px-3 py-2.5 text-[10px] leading-5 text-white/60">Ulasan kiriman pengunjung tersimpan di server dan tampil setelah disetujui; ulasan contoh berlabel tidak ikut dihitung. Tidak ada pelatihan model otomatis atau klaim hasil tangkapan.</p><Link href="/komunitas" className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#e6d6a9] hover:underline">Jelajahi cerita pemancing <ArrowRight size={13} /></Link></div>
       </section>
       <div className="mt-6 rounded-xl border border-[#e7eae3] bg-[#f7f8f5] px-4 py-3 text-[11px] leading-5 text-[#7f897e]">Saran bahan adalah ilustrasi edukatif untuk umpan ikan mas, bukan formula baku. Sesuaikan takaran, patuhi aturan kolam, dan uji dalam porsi kecil karena respons ikan berbeda.</div>
     </div>

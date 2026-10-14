@@ -10,7 +10,8 @@ import { Footer, SectionHeader } from "@/components/shared";
 import { recipes, defaultPreferences } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { fishingReports } from "@/data/fishingReports";
-import { calculateMatchScore, getRecommendedRecipes } from "@/lib/recommendation";
+import { getRecommendedRecipes } from "@/lib/recommendation";
+import { getRecipeRatings } from "@/lib/review-summary";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -25,11 +26,24 @@ export const metadata: Metadata = {
   },
 };
 
+/** Resep paling banyak diulas di sebuah provinsi — dihitung dari tabel ulasan. */
+function popularRecipeFor(provinceName: string, ratings: Record<string, { count: number; average: number }>) {
+  const kandidat = recipes
+    .filter((recipe) => recipe.provinces.includes(provinceName) && (ratings[recipe.slug]?.count ?? 0) > 0)
+    .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
+  return kandidat[0]?.name;
+}
+
 const popularProvinceNames = ["Jawa Barat", "Jawa Tengah", "Jawa Timur", "Banten", "DKI Jakarta", "Sumatera Utara", "Riau", "Sumatera Selatan", "Lampung", "Bali"];
 
-export default function HomePage() {
-  const bestRecommendations = getRecommendedRecipes(recipes, defaultPreferences).slice(0, 3);
-  const popularRecipes = [...recipes].sort((a, b) => b.users - a.users).slice(0, 5);
+export default async function HomePage() {
+  // Semua angka komunitas di halaman ini berasal dari satu sumber: tabel ulasan.
+  const ratings = await getRecipeRatings();
+  const bestRecommendations = getRecommendedRecipes(recipes, defaultPreferences, ratings).slice(0, 3);
+  const popularRecipes = [...recipes]
+    .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0))
+    .slice(0, 5);
+  const adaUlasan = Object.values(ratings).some((rating) => rating.count > 0);
   const popularProvinces = provinces.filter((province) => popularProvinceNames.includes(province.name));
   return (
     <PageShell>
@@ -38,12 +52,12 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl space-y-16 px-5 pt-8 sm:space-y-20 sm:px-8 sm:pt-12 lg:pt-14">
           <QuickFinder />
           <section>
-            <SectionHeader eyebrow="Pilihan komunitas" title="🏆 Rekomendasi Terbaik" subtitle="Racikan yang banyak dipilih dan mendapat rating tinggi dari pemancing." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} />)}</div>
+            <SectionHeader eyebrow="Pilihan sistem" title="🏆 Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
           </section>
           <section>
-            <SectionHeader eyebrow="Sering dicoba" title="🔥 Racikan Populer" subtitle="Favorit pemancing, dari umpan harian sampai racikan untuk lomba." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
-            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} matchScore={calculateMatchScore(recipe, defaultPreferences)} featured={index === 0} /></div>)}</div>
+            <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "🔥 Racikan Populer" : "🔥 Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
+            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} /></div>)}</div>
           </section>
           <section>
             <SectionHeader eyebrow="Baca situasinya" title="🌦️ Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
@@ -51,7 +65,7 @@ export default function HomePage() {
           </section>
           <section>
             <SectionHeader eyebrow="Dari berbagai daerah" title="🗺️ Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} />)}</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name, ratings)} />)}</div>
             <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#788176]">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
           </section>
           <section>

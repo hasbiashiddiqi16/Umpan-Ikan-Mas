@@ -34,7 +34,7 @@ export function ProvinceExplorer({ province, recipes }: { province: string; reci
         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[.09em] text-[#899286]">Budget<SelectBox><select className={selectClass} value={budget} onChange={(event) => setBudget(event.target.value)}>{["Semua budget", "< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       </div>
       <p className="mb-4 text-sm font-bold text-[#526253]">{results.length} racikan ditemukan</p>
-      {results.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{results.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} featured={index === 0} />)}</div> : <EmptyState title="Belum ada racikan yang sesuai." description="Coba longgarkan pilihan cuaca, kondisi air, atau budget." />}
+      {results.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{results.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div> : <EmptyState title="Belum ada racikan yang sesuai." description="Coba longgarkan pilihan cuaca, kondisi air, atau budget." />}
     </section>
   );
 }

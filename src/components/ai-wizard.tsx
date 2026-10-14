@@ -13,6 +13,8 @@ import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
 import { rankExpertRecipes } from "@/lib/expert-system";
 import { RecommendationCard } from "@/components/cards";
+import { useRecipeRatings } from "@/lib/use-ratings";
+import { saveVisitorPreferences } from "@/lib/visitor-preferences";
 import { FavoriteButton } from "@/components/favorite-button";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { Badge, SectionHeader } from "@/components/shared";
@@ -117,15 +119,19 @@ export function AIWizard() {
     return mergeRecipesBySlug(recipes.filter((recipe) => !hidden.has(recipe.slug)), publishedRecipes);
   }, [publishedRecipes, shadowedSlugs]);
   const expertResults = useMemo(
-    () => rankExpertRecipes(preferences, [], [...reviews, ...memberReviews, ...extraReviews], recommendationRecipes),
+    // Ulasan contoh tidak dipakai sebagai bukti; hanya ulasan pengunjung asli.
+    () => rankExpertRecipes(preferences, [], [...memberReviews, ...extraReviews], recommendationRecipes),
     [preferences, memberReviews, extraReviews, recommendationRecipes],
   );
+  // Rating nyata untuk kartu rekomendasi (bukan angka katalog).
+  const ratings = useRecipeRatings();
   const primary = expertResults[0]?.recipe;
   const alternatives = expertResults.slice(1, 3);
 
   function update(key: keyof UserPreferences, value: string) {
     if (key === "province") markLocationTouched();
     setPreferences((current) => ({ ...current, [key]: value, ...(key === "weather" ? { season: seasonFor(value) } : {}) }));
+    saveVisitorPreferences({ [key]: value, ...(key === "weather" ? { season: seasonFor(value) } : {}) });
   }
 
   function continueFlow() {
@@ -171,8 +177,8 @@ export function AIWizard() {
       </section>
 
       {showResult && primary && <section id="ai-results" className="scroll-mt-24 pt-12"><div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-[#778676]">Hasil racikan untukmu</p><h2 className="text-3xl font-black tracking-tight text-[#203326]">🎯 Rekomendasi untuk Anda</h2><p className="mt-2 text-sm text-[#788278]">Disesuaikan untuk {preferences.province || "semua daerah"}, cuaca {(preferences.weather ?? defaultPreferences.weather).toLowerCase()}, air {(preferences.water ?? defaultPreferences.water).toLowerCase()}.</p></div><button type="button" onClick={restart} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#59705a] hover:bg-[#eef3eb]"><RotateCcw size={15} /> Ubah kondisi</button></div>
-        <div className="space-y-5"><RecommendationCard recipe={primary} score={expertResults[0].score} isPrimary /><div className="rounded-2xl border border-[#e5eae2] bg-white p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold text-[#334436]">Bahan utama racikan</p><p className="mt-1 text-xs text-[#8a9388]">Lihat takaran lengkap dan langkah persiapan di halaman resep.</p></div><FavoriteButton recipeSlug={primary.slug} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#e1e7df] px-3 text-xs font-bold text-[#526452] hover:bg-[#f5f8f2]" /></div><div className="flex flex-wrap gap-2">{primary.ingredients.filter((ingredient) => !ingredient.optional).slice(0, 5).map((ingredient) => <Badge key={ingredient.name} tone="cream">{ingredient.name} · {ingredient.amount}</Badge>)}</div></div></div>
-        <div className="mt-10"><SectionHeader eyebrow="Pilihan lain yang cocok" title="Alternatif racikan" subtitle="Coba opsi lain jika bahan utama belum tersedia." /><div className="grid gap-5 lg:grid-cols-2">{alternatives.map((item) => <RecommendationCard key={item.recipe.slug} recipe={item.recipe} score={item.score} />)}</div></div>
+        <div className="space-y-5"><RecommendationCard recipe={primary} score={expertResults[0].score} isPrimary rating={ratings[primary.slug]} /><div className="rounded-2xl border border-[#e5eae2] bg-white p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold text-[#334436]">Bahan utama racikan</p><p className="mt-1 text-xs text-[#8a9388]">Lihat takaran lengkap dan langkah persiapan di halaman resep.</p></div><FavoriteButton recipeSlug={primary.slug} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#e1e7df] px-3 text-xs font-bold text-[#526452] hover:bg-[#f5f8f2]" /></div><div className="flex flex-wrap gap-2">{primary.ingredients.filter((ingredient) => !ingredient.optional).slice(0, 5).map((ingredient) => <Badge key={ingredient.name} tone="cream">{ingredient.name} · {ingredient.amount}</Badge>)}</div></div></div>
+        <div className="mt-10"><SectionHeader eyebrow="Pilihan lain yang cocok" title="Alternatif racikan" subtitle="Coba opsi lain jika bahan utama belum tersedia." /><div className="grid gap-5 lg:grid-cols-2">{alternatives.map((item) => <RecommendationCard key={item.recipe.slug} recipe={item.recipe} score={item.score} rating={ratings[item.recipe.slug]} />)}</div></div>
         <div className="mt-6 flex items-start gap-2 rounded-xl bg-[#f2f5ef] p-4 text-xs leading-5 text-[#748073]"><Check size={15} className="mt-0.5 shrink-0 text-[#648064]" />Skor dihitung dari kecocokan kondisi dan data komunitas, bukan hasil yang dijamin. Respons ikan dapat berbeda di tiap kolam dan waktu.</div>
       </section>}
     </div>

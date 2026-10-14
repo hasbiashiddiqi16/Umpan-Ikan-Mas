@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Heart, Users } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
-import { Badge, Rating } from "@/components/shared";
-import { formatCount } from "@/lib/utils";
+import { Badge, RecipeRating } from "@/components/shared";
+import { MatchOrPopularBadge } from "@/components/match-or-popular";
+import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
+import { useRecipeRatings } from "@/lib/use-ratings";
 
 const FAVORITES_KEY = "umpan-mas-favorites";
 const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
@@ -21,8 +23,12 @@ function getStoredFavorites(): string[] {
   }
 }
 
-export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: Recipe; matchScore?: number; featured?: boolean }) {
+export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?: number }) {
   const [favorite, setFavorite] = useState(false);
+  // Rating katalog (angka editorial) tidak pernah ditampilkan; hanya ulasan asli.
+  const ratings = useRecipeRatings();
+  const badge = recipeBadge(recipe);
+  const tagJenis = fishingTypeTag(recipe);
 
   useEffect(() => {
     const syncFavorite = () => setFavorite(getStoredFavorites().includes(recipe.slug));
@@ -51,27 +57,27 @@ export function RecipeCard({ recipe, matchScore, featured = false }: { recipe: R
           <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/60 via-transparent to-[#16241b]/5" />
         </Link>
         <div className="pointer-events-none absolute left-3.5 top-3.5 flex flex-wrap gap-2">
-          {featured && <Badge tone="gold">🏆 Rekomendasi</Badge>}
-          {!featured && <Badge tone="cream">{recipe.category}</Badge>}
+          {/* Badge & tag kondisi dibaca dari field yang sama (jenis pemancingan resep). */}
+          <Badge tone={badge.tone} title={badge.title}>{badge.label}</Badge>
         </div>
         <button type="button" onClick={toggleFavorite} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#b65b42]" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
           <Heart size={18} fill={favorite ? "currentColor" : "none"} />
         </button>
-        {matchScore !== undefined && <div className="absolute bottom-3.5 right-3.5 rounded-xl border border-white/25 bg-[#17372a]/85 px-3 py-2 text-white shadow-sm backdrop-blur-md"><p className="text-[9px] font-bold uppercase tracking-[.13em] text-white/70">Match</p><p className="text-lg font-black leading-none">{matchScore}%</p></div>}
-        <div className="pointer-events-none absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan pemancing</p><p className="text-xs font-bold">Ikan mas</p></div>
+        <MatchOrPopularBadge recipe={recipe} matchScore={matchScore} />
+        <div className="pointer-events-none absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan katalog</p><p className="text-xs font-bold">Ikan mas</p></div>
       </div>
       <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={`/resep/${recipe.slug}`} className="line-clamp-1 text-[17px] font-extrabold tracking-tight text-[#223528] transition hover:text-[#55734d]">{recipe.name}</Link>
-            <div className="mt-1.5 flex items-center gap-2"><Rating value={recipe.rating} /><span className="text-xs text-[#929990]">· {formatCount(recipe.users)} pemancing</span></div>
+            <div className="mt-1.5 flex items-center gap-2"><RecipeRating rating={ratings[recipe.slug]} /></div>
           </div>
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
           <Badge className={cardMetaBadgeClass}><span className="truncate" title={recipe.weather[0]}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</span></Badge>
           <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={recipe.water[0]}>💧 {recipe.water[0]}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={recipe.fishingTypes[0]}>🎣 {recipe.fishingTypes[0]}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={`Jenis pemancingan: ${tagJenis}`}>🎣 {tagJenis}</span></Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#26382b]">{recipe.price}</p></div>

@@ -130,11 +130,12 @@ export function ConditionTags({ suitable, notSuitable }: { suitable: string[]; n
 }
 
 export function ReviewCard({ review }: { review: RecipeReview }) {
+  // Ulasan contoh wajib berlabel supaya tidak tertukar dengan kiriman pengunjung.
   return (
     <article className="flex h-full min-w-0 flex-col rounded-2xl border border-[#e7eae4] bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="break-words text-sm font-bold text-[#304033]">{review.name}</h3>
+          <div className="flex flex-wrap items-center gap-1.5"><h3 className="break-words text-sm font-bold text-[#304033]">{review.name}</h3>{review.sample && <Badge tone="cream" className="!text-[10px]">Data contoh</Badge>}</div>
           <p className="mt-1 break-words text-xs text-[#8c948b]">{review.location} · {review.date}</p>
         </div>
         <Rating value={review.rating} compact />

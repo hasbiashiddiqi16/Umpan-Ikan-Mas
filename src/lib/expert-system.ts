@@ -1,7 +1,7 @@
 import { fishingReports } from "@/data/fishingReports";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
 import { normalizeFishingType, recipes, type Recipe } from "@/data/recipes";
-import { reviews, type RecipeReview } from "@/data/reviews";
+import type { RecipeReview } from "@/data/reviews";
 import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
 
 export type ExpertRecipeResult = { recipe: Recipe; score: number; ingredientFit: number; communityFit: number; contextScore: number };
@@ -33,7 +33,9 @@ function getIngredientFit(recipe: Recipe, selectedIds: string[]): number {
 
 function getCommunityFit(recipe: Recipe, preferences: UserPreferences, communityReviews: RecipeReview[]): number {
   const evidence = communityReviews.filter((review) => review.recipeSlug === recipe.slug);
-  if (!evidence.length) return Math.round(recipe.rating * 20);
+  // Tanpa ulasan pengunjung, tidak ada bukti komunitas: nilainya netral (50),
+  // bukan diisi dari rating katalog yang tidak ada sumbernya.
+  if (!evidence.length) return 50;
   const averageRating = evidence.reduce((sum, review) => sum + review.rating, 0) / evidence.length;
   const contextPoints = evidence.map((review) => {
     let checks = 0;
@@ -54,7 +56,9 @@ function getCommunityFit(recipe: Recipe, preferences: UserPreferences, community
 export function rankExpertRecipes(
   preferences: UserPreferences,
   selectedIds: string[] = [],
-  communityReviews: RecipeReview[] = reviews,
+  // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
+  // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
+  communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = recipes,
 ): ExpertRecipeResult[] {
   const inBudget = filterRecipesByBudget(sourceRecipes, preferences.budget);
@@ -66,13 +70,16 @@ export function rankExpertRecipes(
     // Context rules retain the product's weighted score; recipe/ingredient evidence refines the ranking.
     const score = Math.max(0, Math.min(100, Math.round(contextScore * 0.8 + ingredientFit * 0.12 + communityFit * 0.08)));
     return { recipe, score, ingredientFit, communityFit, contextScore };
-  }).sort((a, b) => b.score - a.score || b.recipe.rating - a.recipe.rating || b.recipe.users - a.recipe.users);
+    // Seri diputus oleh kecocokan bahan, bukan angka rating/popularitas katalog.
+  }).sort((a, b) => b.score - a.score || b.ingredientFit - a.ingredientFit);
 }
 
 export function buildExpertBlend(
   selectedIds: string[],
   preferences: UserPreferences,
-  communityReviews: RecipeReview[] = reviews,
+  // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
+  // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
+  communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = recipes,
 ): ExpertBlendResult | null {
   const uniqueIds = [...new Set(selectedIds)];
@@ -113,17 +120,22 @@ export function buildExpertBlend(
   return { title, ingredients: blend, warnings, reasoning, recipeMatches, evidenceCount };
 }
 
+/**
+ * Statistik basis pengetahuan. Angka ulasan **hanya** dari ulasan asli
+ * pengunjung (lokal + hasil moderasi); ulasan contoh tidak dihitung supaya
+ * tidak ada angka komunitas yang mengarang.
+ */
 export function getExpertKnowledgeStats(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0) {
   return {
     recipes: activeRecipeCount,
     ingredients: ingredientKnowledge.length,
-    reviews: reviews.length + localReviewCount + approvedReviewCount,
+    reviews: localReviewCount + approvedReviewCount,
     reports: fishingReports.length,
     sources: 3,
   };
 }
 
 export function getKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0): string {
-  const total = reviews.length + localReviewCount + approvedReviewCount;
-  return `${activeRecipeCount} resep terkurasi, ${total} ulasan, ${fishingReports.length} laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
+  const total = localReviewCount + approvedReviewCount;
+  return `${activeRecipeCount} resep terkurasi, ${total} ulasan pengunjung, ${fishingReports.length} contoh laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
 }
