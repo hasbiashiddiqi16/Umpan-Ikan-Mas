@@ -86,15 +86,27 @@ export const MATCH_WEIGHTS_NOTE =
 
 /**
  * Aturan evaluasi yang disepakati: sebuah ulasan dianggap **berhasil** kalau
- * rating ≥ 4 **dan** hasil tangkapannya tinggi; yang dihitung adalah berapa kali
- * resep tersebut muncul di 3 teratas untuk kondisi yang dilaporkan.
+ * rating ≥ 4 (sinyal utama) **dan** hasil tangkapannya tinggi; yang dihitung
+ * adalah berapa kali resep tersebut muncul di 3 teratas untuk kondisi yang
+ * dilaporkan.
+ *
+ * "Tangkapan tinggi" diukur sebagai **laju per jam**, bukan angka mentah:
+ * 8 ekor dalam 8 jam dengan satu joran tidak sama artinya dengan 8 ekor dalam
+ * 2 jam. Karena itu ulasan yang menyebut angka tangkapan **tanpa durasi** tidak
+ * dihitung sebagai "berhasil" (dilaporkan terpisah sebagai `strictAbsoluteOnly`),
+ * dan laju hanya dihitung kalau sesinya minimal `minSessionMinutesForRate` —
+ * supaya hasil sesi setengah jam tidak diekstrapolasi jadi angka per jam.
  */
 export const TUNING_TARGET = {
   /** Hit-rate dihitung sampai 3 teratas (hit-rate@3). */
   topK: 3,
-  /** Rating minimum sebuah ulasan agar dianggap berhasil. */
+  /** Rating minimum sebuah ulasan agar dianggap berhasil — sinyal utama. */
   minRating: 4,
-  /** "Tangkapan tinggi" = minimal sekian ekor dalam satu sesi (lihat catatan di bawah). */
+  /** "Tangkapan tinggi" = minimal sekian ekor per jam (butuh durasi sesi). */
+  highCatchPerHourMin: 1.5,
+  /** Laju baru dihitung kalau sesinya minimal sekian menit (tidak diekstrapolasi dari sesi pendek). */
+  minSessionMinutesForRate: 60,
+  /** Angka absolut lama; hanya dipakai untuk laporan pembanding, bukan untuk "berhasil". */
   highCatchMin: 5,
   /** Di bawah jumlah ini, hasil tuning tidak layak dipercaya — laporan hanya menampilkan keadaan. */
   minStrictReviewsForTuning: 30,
@@ -103,14 +115,14 @@ export const TUNING_TARGET = {
 } as const;
 
 /**
- * Catatan soal "tangkapan tinggi": kolom hasil tangkapan bersifat opsional di
- * formulir ulasan, jadi hanya sebagian ulasan memilikinya. Laporan evaluasi
- * selalu menampilkan dua angka — hit-rate@3 versi ketat (rating ≥ 4 **dan**
- * tangkapan ≥ 5 ekor) dan versi longgar (rating ≥ 4 saja) — supaya tidak ada
- * angka yang dilebih-lebihkan.
+ * Catatan soal "tangkapan tinggi": hasil tangkapan, durasi sesi, dan jumlah
+ * joran semuanya opsional di formulir. Laporan evaluasi karena itu menampilkan
+ * dua angka — hit-rate@3 versi ketat (rating ≥ 4 **dan** laju tangkapan tinggi)
+ * dan versi longgar (rating ≥ 4 saja) — plus jumlah ulasan yang belum bisa
+ * dinilai karena durasinya tidak disebut.
  */
 export const HIGH_CATCH_NOTE =
-  "Hasil tangkapan bersifat opsional di formulir, jadi ulasan tanpa angka tangkapan tidak bisa dinilai \"tangkapan tinggi\".";
+  "Hasil tangkapan, durasi sesi, dan jumlah joran bersifat opsional. Tanpa durasi, angka tangkapan tidak bisa dibandingkan, jadi ulasan seperti itu tidak dihitung sebagai \"tangkapan tinggi\" — hanya ikut di hit-rate versi longgar (rating saja).";
 
 /**
  * Kandidat bobot untuk diuji. Tuning memilih kandidat dengan hit-rate@3

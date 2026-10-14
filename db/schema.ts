@@ -56,6 +56,10 @@ export const cmsReviews = pgTable("cms_reviews", {
   waterBody: varchar("water_body", { length: 30 }),
   fishingType: varchar("fishing_type", { length: 30 }).notNull(),
   catchCount: integer("catch_count"),
+  /** Durasi sesi mancing dalam menit (0,5–24 jam) — opsional, lihat `@/lib/catch-details`. */
+  sessionMinutes: integer("session_minutes"),
+  /** Jumlah joran yang dipakai selama sesi (1–10) — opsional. */
+  rodCount: integer("rod_count"),
   comment: text("comment").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   /**

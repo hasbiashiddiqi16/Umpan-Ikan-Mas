@@ -36,13 +36,19 @@ export type EvalReview = {
   /** Lokasi bebas, mis. "Bogor, Jawa Barat". */
   location?: string | null;
   catchCount?: number | null;
+  /** Durasi sesi dalam menit — dipakai menghitung laju tangkapan per jam. */
+  sessionMinutes?: number | null;
+  /** Jumlah joran (dilaporkan ke editor; belum dipakai untuk ambang). */
+  rodCount?: number | null;
 };
 
 export type ReviewOutcome = {
-  /** Rating ≥ 4 dan tangkapan tinggi — definisi "berhasil" yang disepakati. */
+  /** Rating ≥ 4 dan laju tangkapan tinggi (durasi sesi wajib diketahui). */
   strict: boolean;
   /** Rating ≥ 4 saja, dipakai sebagai pembanding yang lebih longgar. */
   ratingOnly: boolean;
+  /** Laju tangkapan per jam; null kalau durasinya tidak disebut. */
+  catchPerHour: number | null;
 };
 
 export type HitRateAtK = {
@@ -65,11 +71,22 @@ export type RecommendationEvalReport = {
     approvedRealReviews: number;
     /** Ulasan yang menyertakan angka hasil tangkapan. */
     withCatchCount: number;
+    /** Ulasan yang juga menyebut durasi sesi (syarat laju per jam). */
+    withSessionMinutes: number;
+    /** Ulasan yang menyebut jumlah joran. */
+    withRodCount: number;
     strictSuccess: number;
     ratingSuccess: number;
+    /**
+     * Rating ≥ 4 dan tangkapan ≥ angka absolut, tetapi **tanpa durasi** —
+     * sengaja tidak dihitung sebagai "berhasil" karena angkanya tidak bisa
+     * dibandingkan. Dilaporkan supaya tidak ada yang disembunyikan.
+     */
+    strictAbsoluteOnly: number;
     /** Ulasan yang resepnya tidak ada di katalog, jadi tidak bisa dinilai. */
     skippedUnknownRecipe: number;
   };
+  criteria: { minRating: number; highCatchPerHourMin: number; minSessionMinutesForRate: number; highCatchMin: number };
   current: { strict: HitRateAtK; ratingOnly: HitRateAtK };
   candidates: { nama: string; weights: MatchWeights; strict: HitRateAtK; ratingOnly: HitRateAtK }[];
   recommendation: {
@@ -118,9 +135,18 @@ export function reviewOutcome(review: EvalReview): ReviewOutcome {
   // tidak boleh dihitung sebagai bukti "berhasil".
   const ratingValid = Number.isFinite(review.rating) && review.rating >= 1 && review.rating <= 5;
   const ratingOnly = ratingValid && review.rating >= TUNING_TARGET.minRating;
+  const laju = evalCatchPerHour(review);
+  const sesiCukup = typeof review.sessionMinutes === "number" && review.sessionMinutes >= TUNING_TARGET.minSessionMinutesForRate;
+  const strict = ratingOnly && laju !== null && sesiCukup && laju >= TUNING_TARGET.highCatchPerHourMin;
+  return { strict, ratingOnly, catchPerHour: laju };
+}
+
+/** Laju tangkapan per jam dari sebuah ulasan; null kalau durasinya tidak diisi. */
+export function evalCatchPerHour(review: EvalReview): number | null {
   const tangkapan = typeof review.catchCount === "number" && Number.isFinite(review.catchCount) ? review.catchCount : null;
-  const strict = ratingOnly && tangkapan !== null && tangkapan >= TUNING_TARGET.highCatchMin;
-  return { strict, ratingOnly };
+  const menit = typeof review.sessionMinutes === "number" && Number.isFinite(review.sessionMinutes) && review.sessionMinutes > 0 ? review.sessionMinutes : null;
+  if (tangkapan === null || menit === null) return null;
+  return tangkapan / (menit / 60);
 }
 
 type EvidenceMap = Record<string, { count: number; average: number }>;
@@ -202,8 +228,15 @@ export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalRe
   const sample = {
     approvedRealReviews: reviews.length,
     withCatchCount: reviews.filter((review) => typeof review.catchCount === "number").length,
+    withSessionMinutes: reviews.filter((review) => typeof review.sessionMinutes === "number").length,
+    withRodCount: reviews.filter((review) => typeof review.rodCount === "number").length,
     strictSuccess: reviews.filter((review) => reviewOutcome(review).strict).length,
     ratingSuccess: reviews.filter((review) => reviewOutcome(review).ratingOnly).length,
+    strictAbsoluteOnly: reviews.filter((review) => {
+      const hasil = reviewOutcome(review);
+      const tangkapan = typeof review.catchCount === "number" ? review.catchCount : null;
+      return hasil.ratingOnly && hasil.catchPerHour === null && tangkapan !== null && tangkapan >= TUNING_TARGET.highCatchMin;
+    }).length,
     skippedUnknownRecipe: reviews.filter((review) => !slugs.has(review.recipeSlug)).length,
   };
 
@@ -220,8 +253,9 @@ export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalRe
   const terbaik = [...denganHitRate].sort((a, b) => (b.strict.hitRate ?? 0) - (a.strict.hitRate ?? 0))[0];
   const selisih = terbaik && sekarang.strict.hitRate !== null ? (terbaik.strict.hitRate ?? 0) - sekarang.strict.hitRate : null;
 
+  const syarat = `rating ≥ ${TUNING_TARGET.minRating} dan laju tangkapan ≥ ${TUNING_TARGET.highCatchPerHourMin.toLocaleString("id-ID")} ekor/jam (sesi ≥ ${TUNING_TARGET.minSessionMinutesForRate} menit)`;
   const alasanBelumDituning = sample.strictSuccess === 0
-    ? `Belum ada ulasan yang memenuhi syarat "berhasil" (rating ≥ ${TUNING_TARGET.minRating} dan tangkapan ≥ ${TUNING_TARGET.highCatchMin} ekor). Hasil tangkapan bersifat opsional di formulir, jadi angkanya akan tumbuh seiring ulasan baru.`
+    ? `Belum ada ulasan yang memenuhi syarat "berhasil" (${syarat}). Durasi sesi, jumlah joran, dan hasil tangkapan semuanya opsional, jadi angkanya tumbuh seiring ulasan baru.${sample.strictAbsoluteOnly ? ` ${sample.strictAbsoluteOnly} ulasan menyebut tangkapan ≥ ${TUNING_TARGET.highCatchMin} ekor tanpa durasi, jadi belum bisa dibandingkan.` : ""}`
     : `Baru ${sample.strictSuccess} ulasan memenuhi syarat "berhasil" — minimal ${TUNING_TARGET.minStrictReviewsForTuning} agar hasil tuning layak dipercaya.`;
 
   return {
@@ -232,6 +266,12 @@ export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalRe
     minRating: TUNING_TARGET.minRating,
     highCatchMin: TUNING_TARGET.highCatchMin,
     minStrictReviewsForTuning: TUNING_TARGET.minStrictReviewsForTuning,
+    criteria: {
+      minRating: TUNING_TARGET.minRating,
+      highCatchPerHourMin: TUNING_TARGET.highCatchPerHourMin,
+      minSessionMinutesForRate: TUNING_TARGET.minSessionMinutesForRate,
+      highCatchMin: TUNING_TARGET.highCatchMin,
+    },
     sample,
     current: { strict: sekarang.strict, ratingOnly: sekarang.ratingOnly },
     candidates,

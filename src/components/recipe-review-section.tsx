@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, MessageSquareText, Send, Star } from "lucide-react";
 import { WATER_BODIES, type Recipe } from "@/data/recipes";
+import { CATCH_DETAILS_HINT, ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
@@ -45,6 +46,9 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
   const [waterBody, setWaterBody] = useState("");
   const [fishingType, setFishingType] = useState("Harian");
   const [catchCount, setCatchCount] = useState("");
+  // Durasi diisi dalam jam (boleh setengah jam) lalu disimpan sebagai menit.
+  const [sessionHours, setSessionHours] = useState("");
+  const [rodCount, setRodCount] = useState("");
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   /** Kabar netral: antrean moderasi atau batas kiriman yang sedang berlaku. */
@@ -78,6 +82,8 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       waterBody: waterBody || undefined,
       fishingType,
       catchCount: catchCount ? Math.min(999, Math.max(0, Number(catchCount))) : undefined,
+      sessionMinutes: sessionHours ? Math.min(SESSION_MAX_MINUTES, Math.max(SESSION_MIN_MINUTES, Math.round(Number(sessionHours) * 60))) : undefined,
+      rodCount: rodCount ? Math.min(ROD_MAX, Math.max(ROD_MIN, Number(rodCount))) : undefined,
       date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(now),
       comment: comment.trim().slice(0, 500),
     } satisfies Omit<MemberReview, "id" | "createdAt">;
@@ -140,7 +146,11 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Tipe air (opsional)<SelectBox><select className={selectClass} value={waterBody} onChange={(event) => setWaterBody(event.target.value)}><option value="">Belum dipilih</option>{WATER_BODIES.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Kondisi air<SelectBox><select className={selectClass} value={water} onChange={(event) => setWater(event.target.value)}>{["Keruh", "Hijau", "Jernih", "Kekuningan"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164]">Jenis pemancingan<SelectBox><select className={selectClass} value={fishingType} onChange={(event) => setFishingType(event.target.value)}>{["Harian", "Lomba", "Galatama"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
-        <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Hasil tangkapan (opsional)<div className="relative"><input className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="0" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div></label>
+        <div className="grid gap-1.5 sm:col-span-2"><span className="text-xs font-bold text-[#657164]">Hasil tangkapan (opsional)</span><div className="grid gap-3 sm:grid-cols-3">
+          <div className="relative"><input aria-label="Jumlah ikan" className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="Jumlah ikan" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div>
+          <div className="relative"><input aria-label="Durasi sesi dalam jam" className={`${inputClass} pr-14`} type="number" inputMode="decimal" min="0.5" max="24" step="0.5" value={sessionHours} onChange={(event) => setSessionHours(event.target.value)} placeholder="Durasi sesi" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">jam</span></div>
+          <div className="relative"><input aria-label="Jumlah joran" className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="1" max="10" value={rodCount} onChange={(event) => setRodCount(event.target.value)} placeholder="Jumlah joran" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">joran</span></div>
+        </div><span className="text-[10px] font-medium leading-5 text-[#9aa198]">{CATCH_DETAILS_HINT}</span></div>
         <label className="grid gap-1.5 text-xs font-bold text-[#657164] sm:col-span-2">Ceritakan pengalaman<textarea className="min-h-28 min-w-0 w-full resize-y rounded-xl border border-[#e4e9e2] bg-white px-3.5 py-3 text-sm leading-6 text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10" value={comment} onChange={(event) => setComment(event.target.value)} minLength={12} maxLength={500} placeholder="Kondisi kolam, cara meracik, dan bagaimana hasilnya?" required /><span className="text-right text-[10px] font-medium text-[#9aa198]">{comment.length}/500</span></label>
       </div>
       <div className="hidden" aria-hidden="true"><label>Website<input type="text" name={REVIEW_HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" value={honeypot} onChange={(event) => setHoneypot(event.target.value)} /></label></div>
@@ -168,7 +178,7 @@ function useReviewOutboxRetry() {
         const result = await postReviewToServer({
           recipeSlug: review.recipeSlug, name: review.name, location: review.location, rating: review.rating,
           weather: review.weather, water: review.water, waterBody: review.waterBody, fishingType: review.fishingType,
-          catchCount: review.catchCount, comment: review.comment,
+          catchCount: review.catchCount, sessionMinutes: review.sessionMinutes, rodCount: review.rodCount, comment: review.comment,
         });
         if (result.ok) {
           // Ulasan sudah di server; salinan lokalnya tidak perlu disimpan lagi.

@@ -34,6 +34,8 @@ export async function GET() {
           fishingType: cmsReviews.fishingType,
           location: cmsReviews.location,
           catchCount: cmsReviews.catchCount,
+          sessionMinutes: cmsReviews.sessionMinutes,
+          rodCount: cmsReviews.rodCount,
         })
         .from(cmsReviews)
         .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))),

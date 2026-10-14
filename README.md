@@ -166,6 +166,7 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
 - **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
 - Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
+- **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Data contoh di `/komunitas` juga memakai format yang sama supaya jelas cara membacanya.
 - **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
 
 ## Kejujuran data ulasan dan laporan
@@ -245,7 +246,10 @@ Total selalu 100 (dijaga `MATCH_WEIGHTS_TOTAL`/`MATCH_WEIGHTS_BALANCED`), dan ha
 
 **Evaluasi hit-rate@3.** Pertanyaannya: kalau pengunjung melaporkan kondisi mancingnya dan resepnya **berhasil**, apakah resep itu muncul di 3 teratas? `TUNING_TARGET` (`src/lib/recommendation-config.ts`) menetapkan:
 
-- **berhasil** = rating ≥ 4 **dan** tangkapan ≥ 5 ekor (kolom hasil tangkapan bersifat opsional, jadi laporan selalu menampilkan dua angka: **ketat** dan **longgar** untuk rating ≥ 4 saja);
+- **rating tetap sinyal utama**: syarat pertama dan wajib adalah rating ≥ 4;
+- **"tangkapan tinggi" diukur sebagai laju** (`TUNING_TARGET.highCatchPerHourMin = 1,5 ekor/jam`), bukan angka mentah — karena 8 ekor dalam 8 jam tidak sama dengan 8 ekor dalam 2 jam. Laju hanya dihitung kalau durasi sesi diisi dan sesinya ≥ 60 menit (`minSessionMinutesForRate`), supaya sesi setengah jam tidak diekstrapolasi;
+- ulasan yang menyebut tangkapan **tanpa durasi** tidak dihitung sebagai "berhasil"; jumlahnya dilaporkan terpisah (`strictAbsoluteOnly`) supaya tidak ada yang disembunyikan;
+- laporan tetap menampilkan dua angka: **ketat** (rating ≥ 4 **dan** laju tinggi) dan **longgar** (rating ≥ 4 saja);
 - hit-rate@3 dihitung di `src/lib/recommendation-eval.ts` dengan **fungsi urutan yang sama** seperti situs (`getRecommendedRecipes` dengan bobot sebagai parameter — tidak ada rumus tandingan);
 - ulasan yang sedang diuji **dikeluarkan dari bukti pemutus seri** (leave-one-out), supaya resep tidak dibantu ulasan yang justru sedang dinilai;
 - hanya ulasan nyata yang sudah disetujui yang dihitung (ulasan contoh dan yang belum disetujui tidak pernah ikut);

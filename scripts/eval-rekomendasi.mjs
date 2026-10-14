@@ -52,8 +52,11 @@ async function main() {
   console.log("Sampel ulasan nyata (disetujui, tanpa ulasan contoh):");
   console.log(`  total                     ${laporan.sample.approvedRealReviews}`);
   console.log(`  punya angka tangkapan     ${laporan.sample.withCatchCount}`);
-  console.log(`  berhasil (rating ≥ ${laporan.minRating} dan tangkapan ≥ ${laporan.highCatchMin} ekor)  ${laporan.sample.strictSuccess}`);
-  console.log(`  rating ≥ ${laporan.minRating} saja             ${laporan.sample.ratingSuccess}`);
+  console.log(`  menyebut durasi sesi      ${laporan.sample.withSessionMinutes}`);
+  console.log(`  menyebut jumlah joran     ${laporan.sample.withRodCount}`);
+  console.log(`  berhasil (rating ≥ ${laporan.criteria.minRating} dan laju ≥ ${laporan.criteria.highCatchPerHourMin} ekor/jam)  ${laporan.sample.strictSuccess}`);
+  console.log(`  rating ≥ ${laporan.criteria.minRating} saja             ${laporan.sample.ratingSuccess}`);
+  if (laporan.sample.strictAbsoluteOnly) console.log(`  tangkapan ≥ ${laporan.criteria.highCatchMin} ekor tanpa durasi (belum bisa dibandingkan)  ${laporan.sample.strictAbsoluteOnly}`);
   if (laporan.sample.skippedUnknownRecipe) console.log(`  dilewati (resep tidak ada di katalog)  ${laporan.sample.skippedUnknownRecipe}`);
   console.log("");
   console.log("Hit-rate@3 bobot sekarang:");

@@ -14,11 +14,15 @@ export type RecommendationEvalPayload = {
   minRating: number;
   highCatchMin: number;
   minStrictReviewsForTuning: number;
+  criteria: { minRating: number; highCatchPerHourMin: number; minSessionMinutesForRate: number; highCatchMin: number };
   sample: {
     approvedRealReviews: number;
     withCatchCount: number;
+    withSessionMinutes: number;
+    withRodCount: number;
     strictSuccess: number;
     ratingSuccess: number;
+    strictAbsoluteOnly: number;
     skippedUnknownRecipe: number;
   };
   current: { strict: HitRate; ratingOnly: HitRate };
@@ -69,7 +73,7 @@ export function RecommendationEvalPanel() {
   return (
     <section className="mt-4 rounded-[20px] border border-[#e7ebe5] bg-white p-4 sm:p-5 lg:p-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <ChartHeading icon={ListOrdered} label={`Uji urutan rekomendasi · hit-rate@${data?.topK ?? 3}`} note={`Apakah resep yang berhasil (rating ≥ ${data?.minRating ?? 4} dan tangkapan ≥ ${data?.highCatchMin ?? 5} ekor) muncul di ${data?.topK ?? 3} teratas?`} />
+        <ChartHeading icon={ListOrdered} label={`Uji urutan rekomendasi · hit-rate@${data?.topK ?? 3}`} note={`Apakah resep yang berhasil (rating ≥ ${data?.criteria?.minRating ?? 4} dan laju tangkapan ≥ ${data?.criteria?.highCatchPerHourMin ?? 1.5} ekor/jam, sesi ≥ ${data?.criteria?.minSessionMinutesForRate ?? 60} menit) muncul di ${data?.topK ?? 3} teratas?`} />
         <button type="button" onClick={() => setRefreshToken((value) => value + 1)} className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-[#e3e8e1] bg-white px-3 text-[10px] font-bold text-[#59685a] hover:bg-[#f6f8f4]"><RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Hitung ulang</button>
       </div>
 
@@ -80,7 +84,7 @@ export function RecommendationEvalPanel() {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Hit-rate@3 (ketat)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.strict)}</p><p className="mt-1 text-[10px] text-[#8b9489]">{data.current.strict.evaluable ? `${data.current.strict.hits} dari ${data.current.strict.evaluable} ulasan berhasil` : "Belum ada ulasan yang bisa dinilai"}</p></div>
             <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Hit-rate@3 (rating saja)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.ratingOnly)}</p><p className="mt-1 text-[10px] text-[#8b9489]">{data.current.ratingOnly.evaluable ? `${data.current.ratingOnly.hits} dari ${data.current.ratingOnly.evaluable} ulasan` : "Belum ada ulasan rating ≥ 4"}</p></div>
-            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Sampel ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.sample.approvedRealReviews}</p><p className="mt-1 text-[10px] text-[#8b9489]">{data.sample.withCatchCount} menyertakan angka tangkapan · {data.sample.strictSuccess} dinilai berhasil</p></div>
+            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Sampel ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.sample.approvedRealReviews}</p><p className="mt-1 text-[10px] leading-4 text-[#8b9489]">{data.sample.withCatchCount} menyertakan angka tangkapan · {data.sample.withSessionMinutes} menyebut durasi · {data.sample.withRodCount} menyebut jumlah joran · {data.sample.strictSuccess} dinilai berhasil</p></div>
           </div>
 
           <div className={`mt-4 flex items-start gap-2 rounded-xl border px-4 py-3 text-[11px] leading-5 ${data.recommendation.dapatDituning ? "border-[#cfe0cb] bg-[#f1f7ef] text-[#43603f]" : "border-[#eadfc2] bg-[#fbf7ec] text-[#776a45]"}`}>
@@ -103,7 +107,7 @@ export function RecommendationEvalPanel() {
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {data.candidates.map((kandidat) => <li key={kandidat.nama} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="min-w-0 truncate font-semibold text-[#4b5b4d]">{kandidat.nama}</span><span className="shrink-0 font-black tabular-nums text-[#31593a]">{formatHitRate(kandidat.strict)}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#8b9489]">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Hasil tangkapan opsional, jadi ulasan tanpa angka tangkapan hanya ikut di hit-rate versi longgar.</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#8b9489]">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}; semuanya masih ikut di hit-rate versi longgar (rating saja).</p>
             </div>
           </div>
         </>
