@@ -185,9 +185,10 @@ export function AppearanceManager() {
 
   const logo = state?.logo;
   const footerLogo = state?.footerLogo;
+  const hero = state?.hero;
   const media = state?.popup.media;
   const previewAppearance: AppearanceState | undefined = state && media
-    ? { logo: state.logo, footerLogo: state.footerLogo, popup: { ...form, media } }
+    ? { logo: state.logo, footerLogo: state.footerLogo, hero: state.hero, popup: { ...form, media } }
     : undefined;
 
   return (
@@ -288,6 +289,61 @@ export function AppearanceManager() {
                 {busy === "logo-footer" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo footer
               </button>
               <button type="button" disabled={busy === "logo-footer" || !footerLogo?.custom} onClick={() => void resetMedia("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                <RotateCcw size={14} /> Kembalikan bawaan
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Gambar hero beranda */}
+      <section className="mb-6 overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#344638]">Gambar hero (beranda)</h2>
+            <p className="mt-1 text-[10px] text-[#929a91]">Gambar besar di bagian paling atas beranda. Sisi kiri beranda tertutup gradasi hijau dan teks, jadi objek utama sebaiknya berada di sisi kanan.</p>
+          </div>
+          {hero && <Badge tone={hero.custom ? "sage" : "cream"}>{hero.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+        </header>
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#8b9489]">Pratinjau di beranda</p>
+            {/* Memakai gradasi dan pemotongan yang sama seperti bagian hero asli. */}
+            <div className="mt-2 overflow-hidden rounded-xl border border-[#e8ece5] bg-[#173326]">
+              <div className="relative aspect-[16/9] w-full">
+                <Image
+                  src={`${hero?.url ?? "/api/media/hero"}?v=${hero?.updatedAt ?? "bawaan"}`}
+                  alt="Pratinjau gambar hero"
+                  fill
+                  unoptimized
+                  sizes="640px"
+                  className="object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,37,27,.94)_0%,rgba(19,44,31,.84)_38%,rgba(18,43,31,.48)_67%,rgba(18,43,31,.14)_100%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(12,31,22,.35),transparent_50%)]" />
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-4 sm:px-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[.16em] text-[#e7c277] sm:text-[10px]">Contoh tata letak</p>
+                  <p className="mt-1 max-w-[72%] text-sm font-black leading-tight tracking-[-.03em] text-white sm:text-lg">Temukan Umpan Ikan Mas yang <span className="text-[#e9ca87]">Tepat.</span></p>
+                </div>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] font-medium leading-4 text-[#959c93]">
+              Pratinjau memakai rasio dan pemotongan yang sama seperti beranda. Gambar akan memenuhi lebar banner (potong tengah), jadi bagian penting jangan diletakkan di tepi atas/bawah.
+            </p>
+          </div>
+          <div className="grid content-start gap-3">
+            <p className={hintClass}>
+              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.hero)}. Disarankan gambar lanskap minimal 1280 px.
+              Bawaan: <code>public/images/pond-hero.jpg</code> ({formatBytes(163_788)}) — bisa ditimpa langsung di GitHub, atau diunggah di sini agar berlaku tanpa deploy ulang.
+            </p>
+            <p className={hintClass}>Diperbarui: {formatDate(hero?.updatedAt ?? null)}. Gambar baru tampil di beranda dalam ±2 menit (cache gambar), atau langsung setelah muat ulang paksa.</p>
+            <div className="flex flex-wrap gap-2">
+              <input ref={(node) => { fileInputs.current.hero = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("hero", file); }} />
+              <button type="button" disabled={busy === "hero"} onClick={() => fileInputs.current.hero?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "hero" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah gambar hero
+              </button>
+              <button type="button" disabled={busy === "hero" || !hero?.custom} onClick={() => void resetMedia("hero")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
@@ -482,6 +538,7 @@ export function AppearanceManager() {
 function applyMedia(state: AppearanceState, media: AppearanceState["logo"]): AppearanceState {
   if (media.key === "logo") return { ...state, logo: media };
   if (media.key === "logo-footer") return { ...state, footerLogo: media };
+  if (media.key === "hero") return { ...state, hero: media };
   return {
     ...state,
     popup: {
