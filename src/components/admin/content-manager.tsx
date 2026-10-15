@@ -479,7 +479,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                           </button>
                         )}
                       </div>
-                      <p className="text-[10px] font-medium leading-4 text-[#959c93]">{fotoUnggahan ? "Sedang memakai foto unggahanmu." : form.image ? "Sedang memakai foto bawaan katalog." : "Belum ada foto."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB); foto tersimpan begitu dipilih. Boleh dikosongkan — halaman publik akan memakai foto bawaan katalog.</p>
+                      <p className="text-[10px] font-medium leading-4 text-[#959c93]">{fotoUnggahan ? "Sedang memakai foto unggahanmu." : form.image ? "Sedang memakai foto bawaan katalog." : "Belum ada foto."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB); foto tersimpan begitu dipilih dan langsung tampil di halaman publik setelah resep disimpan. Boleh dikosongkan — halaman publik akan memakai foto bawaan katalog.</p>
                       {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
                     </div>
                   </div>

@@ -2,6 +2,7 @@ import { inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { revalidateRecipePages } from "@/lib/revalidate-recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { parseRecipeSpreadsheet, readSpreadsheetRows } from "@/lib/recipe-spreadsheet";
 
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
         updatedAt: now,
       },
     });
+    revalidateRecipePages(slugs, parsed.recipes.flatMap((recipe) => recipe.provinces));
     return Response.json({
       created: slugs.length - existingSlugs.size,
       updated: existingSlugs.size,

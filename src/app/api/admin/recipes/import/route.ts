@@ -5,6 +5,7 @@ import { normalizeFishingText, normalizeFishingType, normalizeFishingTypes } fro
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { revalidateRecipePages } from "@/lib/revalidate-recipes";
 import { clampReviewCreatedAt } from "@/lib/review-dates";
 
 export const dynamic = "force-dynamic";
@@ -124,6 +125,9 @@ export async function POST() {
       const inserted = await db.insert(cmsReviews).values(batch).onConflictDoNothing({ target: cmsReviews.seedKey }).returning({ id: cmsReviews.id });
       importedReviews += inserted.length;
     }
+
+    // Katalog sumber baru saja menimpa basis data: segarkan halaman publik.
+    revalidateRecipePages(recipes.map((recipe) => recipe.slug), recipes.flatMap((recipe) => [...recipe.provinces]));
 
     return Response.json({
       recipes: {
