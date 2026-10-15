@@ -359,6 +359,36 @@ emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
   /resep/…, /komunitas) mengandung 0 emoji dengan ikon SVG + `aria-label`
   di seluruh halamannya.
 
+## Ukuran gambar: `sizes` per konteks, satu `priority`, format AVIF/WebP
+
+Semua URL `/_next/image` dulu bisa meminta lebar 3840, termasuk thumbnail
+kartu. Penyebabnya bukan satu hal: atribut `sizes` belum mengikuti konteks
+tampil, beberapa logo ikut memakai `priority`, dan daftar `deviceSizes`
+bawaan Next masih menyediakan 3840 sehingga lebar itu selalu ditawarkan.
+
+- **`sizes` per konteks** (browser memilih lebar terkecil yang cukup dari
+  `srcset`, termasuk faktor DPR):
+  - kartu resep (grid katalog 1/2/3 kolom): `(max-width: 640px) 90vw,
+    (max-width: 1280px) 45vw, 33vw` — ponsel ±384px, desktop ±640px;
+  - kartu komunitas: `(max-width: 768px) 90vw, (max-width: 1280px) 45vw, 33vw`;
+  - kartu rekomendasi: `(max-width: 768px) 100vw, (max-width: 1280px) 44vw, 560px`;
+  - hero beranda: `(max-width: 1279px) 100vw, 1280px`; hero halaman resep:
+    `(max-width: 1023px) 100vw, 48vw`.
+- **`priority`/`preload` hanya untuk hero beranda** (`src/components/hero.tsx`).
+  Logo navigasi, logo halaman login, dan hero halaman resep tidak lagi
+  dipreload — halaman resep tetap mendapat gambar utamanya lebih dulu lewat
+  urutan dokumen tanpa preload paksa.
+- **`deviceSizes` dibatasi** `[640, 750, 828, 1080, 1200, 1920, 2048]` di
+  `next.config.ts`: 3840 dibuang, jadi tidak ada lagi penawaran/permintaan
+  `w=3840`; 2048 tetap cukup untuk hero 1280px pada DPR 2.
+- **Format AVIF/WebP aktif** (`images.formats: ["image/avif", "image/webp"]`):
+  terverifikasi server membalas `image/avif` untuk browser yang menerima
+  AVIF, `image/webp` sebagai cadangan, dan JPEG untuk sisanya. Contoh
+  thumbnail kartu `w=384` kini ±18 KB dari berkas asli 190 KB.
+- Gambar berukuran tetap (logo, pratinjau dashboard, poster popup) memakai
+  `width`/`height` dan sebagian `unoptimized` karena dilayani dari
+  `/api/media/`; mereka tidak melewati pengoptimal sama sekali.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
