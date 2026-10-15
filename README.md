@@ -90,7 +90,7 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 Kata sandi dashboard juga bisa diganti tanpa deploy dari **Studio → Keamanan** di dalam dashboard. Kata sandi baru disimpan sebagai hash scrypt di tabel `cms_settings` (kunci `admin_password`) dan menimpa `ADMIN_PASSWORD` selama ada. Setiap penggantian menaikkan nomor versi yang ikut ditanamkan ke cookie sesi, sehingga sesi di perangkat lain otomatis berakhir sementara perangkat yang mengganti tetap masuk. Tombol "Pakai password server lagi" menghapus penimpa tersebut sehingga `ADMIN_PASSWORD` berlaku kembali. Bila Anda lupa kata sandi yang dipasang di dashboard: ubah `ADMIN_PASSWORD` di host lalu deploy ulang, masuk dengan nilai baru itu, dan pasang kata sandi pilihan Anda lagi. Jangan menghapus `ADMIN_PASSWORD` dari environment — ia adalah kunci cadangan sekaligus penanda tangan sesi bila `ADMIN_SESSION_SECRET` kosong.
 
-Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 200 resep sumber dan 5.000 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru.
+Di `/dashboard/konten`, gunakan **Sinkronkan katalog** setelah deploy untuk memasukkan atau memperbarui 3 resep sumber DKI Jakarta dan 9 ulasan contoh ke CMS. Sinkronisasi aman diulangi: setiap ulasan katalog memiliki kunci unik sehingga tidak diduplikasi. Karena sinkronisasi mengikuti data sumber, perubahan manual pada resep sumber dengan slug yang sama akan diperbarui kembali ke versi katalog terbaru. Migrasi `20261015123000_prune_catalog_to_dki_jakarta` menghapus resep dan ulasan lama dari basis data, jadi katalog lama tidak hidup lagi hanya karena sinkronisasi dijalankan.
 
 ## Istilah jenis kolam: "Galatama"
 
@@ -106,7 +106,7 @@ Sebutan lama tetap **dibaca** agar data yang sudah tersimpan (resep CMS dan ulas
 
 Setiap resep katalog punya dua tambahan yang sama, keduanya bertanda `optional` pada data bahan:
 
-- **Kroto `1 ons`** (bukan gram) mengikuti kebiasaan pemancing. Resep yang memang berbasis kroto — nama resep menyebut kroto, atau resep inti yang bahannya memuat kroto seperti Sarden Susu Premium — memakai kroto sebagai bahan inti. Resep lain, termasuk resep turunan yang mewarisi bahan template, memakai kroto sebagai **tambahan opsional**.
+- **Kroto `1 ons`** (bukan gram) mengikuti kebiasaan pemancing. Resep yang memang berbasis kroto (Umpan Putih Kroto dan Roti Tawar Kroto Lomba) memakai kroto sebagai bahan inti; resep lain (Vanila Telur Bebek) menerimanya sebagai **tambahan opsional**.
 - **Ikan tuna kaleng amis `2 sdm`** bermerek **Deho / Sunbell Katsuo**, plus **minyak ikan amis `1 sdm`**. Baris tuna dilewati bila resep sudah memakai ikan kalengan (mis. Sarden).
 
 Bahan bertanda `optional` dipisahkan ke bagian **Tambahan opsional** di halaman resep dan tidak dihitung sebagai pembeda pada pencarian maupun skor kecocokan bahan di Sistem Pakar, karena tersedia di semua resep. Catatan `1 ons ≈ 100 g` tampil di bawah bagian tersebut dan pada `recipeIngredient` di structured data. Di Content Studio, kolom keempat pada baris bahan menandai opsional (`Kroto | Segar | 1 ons | opsional`) agar penanda ini bertahan saat resep disunting lewat dashboard.
@@ -176,16 +176,17 @@ Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
 - **Ulasan contoh hanya 3 per resep dan selalu berlabel.** `src/data/reviews.ts` menyimpan contoh penulisan ulasan (`sample: true`, kunci `catalog:<slug>:01..03`) dengan tanggal yang dipatok di masa lampau dan kota yang berbeda-beda. Di halaman resep contoh ditaruh di blok "Contoh penulisan ulasan" berlabel **Data contoh**, dan dijelaskan bahwa contoh itu bukan kiriman pengunjung serta tidak dihitung.
 - **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved`, `seed_key` kosong (bukan contoh), dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
 - **Kalau belum ada ulasan, tulis apa adanya.** Kartu resep, halaman resep, dan bagian ulasan menampilkan **"Belum ada rating"** / **"Belum ada ulasan"** — bukan angka katalog.
-- **Angka katalog tidak lagi tampil sebagai statistik.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` hanya dipakai internal (kurasi dan tampilan admin di Content Studio, selalu diberi label "angka katalog"), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi"/"Ulasan Terbanyak" di katalog dan pilihan racikan di halaman cuaca memakai rating ulasan nyata, dan "N racikan" pada kartu cuaca dihitung dari katalog — bukan angka tetap.
+- **Angka katalog tidak lagi tampil sebagai statistik.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` kini dikosongkan (0) pada tiga resep yang dipertahankan dan hanya dipakai internal (tampilan admin di Content Studio, selalu diberi label "angka katalog"), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi"/"Ulasan Terbanyak" di katalog dan pilihan racikan di halaman cuaca memakai rating ulasan nyata, dan "N racikan" pada kartu cuaca dihitung dari katalog — bukan angka tetap.
 - **Tanggal masa depan ditolak.** `src/lib/review-dates.ts` menyediakan `isFutureReviewDate` (toleransi jam 60 detik) dan `clampReviewCreatedAt`. API publik menolak `POST` bertanggal masa depan (400), API baca (`/api/public/reviews`, `/api/admin/reviews`, ringkasan) menyaring `created_at <= now()`, dan sinkronisasi katalog memangkas tanggal contoh yang melewati waktu server.
 - **Laporan mancing di halaman komunitas diberi label "Data contoh"** (`src/data/fishingReports.ts` memakai tanggal relatif seperti "2 hari lalu", jadi tidak pernah bertanggal masa depan).
 - Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
+- **Katalog dipangkas ke data jujur DKI Jakarta.** `src/data/recipes.ts` kini hanya memuat Umpan Putih Kroto, Vanila Telur Bebek, dan Roti Tawar Kroto Lomba — tiga resep yang data asalnya memang mencantumkan DKI Jakarta — dan ketiganya berlabel provinsi `["DKI Jakarta"]`. Migrasi `20261015123000_prune_catalog_to_dki_jakarta` menghapus 197 resep lain dari `cms_recipes` dan semua ulasan selain 9 contoh berlabel untuk ketiga resep itu dari `cms_reviews` (termasuk ulasan non-contoh), serta mengosongkan angka katalog pada resep yang dipertahankan. Berkas foto resep yang tidak terpakai ikut dihapus dari `public/images` (menyusut dari ±18 MB menjadi di bawah 1 MB).
 
 ## Badge resep diturunkan dari satu field
 
 Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
-- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya (mis. "Sarden Pelet Lomba", "Jagung Nangka Harian"), jenis itulah yang dipakai. Semua resep katalog (inti maupun turunan) mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
+- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya (mis. "Roti Tawar Kroto Lomba"), jenis itulah yang dipakai. Semua resep katalog mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
 - **Satu tempat menulis teks badge.** `src/lib/recipe-badge.ts` (`recipeBadge()`) menentukan label dan warna badge dari `recipe.category`; semua kartu, kepala halaman resep, dan kartu rekomendasi AI Umpan memakainya. Karena sumbernya sama dengan tag kondisi, badge tidak mungkin lagi bertentangan dengan tag — mis. badge "Lomba" dengan tag "Harian".
 - **Tidak ada badge berdasarkan posisi.** Prop `featured` pada `RecipeCard` dihapus, termasuk label "🏆 Rekomendasi" yang dulu otomatis diberikan ke kartu pertama. Setiap kartu menampilkan jenis resep yang sebenarnya.
 - **Tag kondisi menampilkan seluruh jenis.** Kartu menulis "🎣 Harian / Lomba" (bukan hanya jenis pertama), dan jenis pertama selalu sama dengan badge.
@@ -194,7 +195,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 - **Foto racikan di formulir dashboard diunggah, bukan dipilih.** Editor resep mengunggah berkas PNG/JPEG/WebP (maks 3 MB, diperiksa dari isi berkas) ke `POST /api/admin/recipes/photo`; foto tersimpan di tabel media berkunci `recipe-<slug>` dan dilayani `/api/media/recipe-<slug>`, lalu alamat itulah yang disimpan di kolom `image` resep. Tombol "Pakai foto bawaan" mengembalikan resep ke foto katalog bawaan.
 - **Kolom kondisi di formulir dashboard adalah dropdown, bukan teks bebas.** Cuaca, Kondisi air, Tipe air, Musim, dan Provinsi terkait dipilih dari daftar resmi (`WEATHER_CONDITIONS`, `WATER_CONDITIONS`, `WATER_BODIES`, `SEASON_CONDITIONS` di `src/data/recipes.ts` + 38 provinsi) dan boleh lebih dari satu pilihan; daftar yang sama dipakai `validateCmsRecipeInput`, jadi nilai formulir tidak mungkin ditolak server atau luput dari saringan publik. Foto racikan pada resep baru mulai **kosong** (tidak lagi foto bawaan katalog); bila disimpan tanpa foto, halaman publik tetap memakai foto bawaan agar tidak ada gambar rusak.
 - **Panel dropdown formulir melayang, dan Tingkat kesulitan kini dropdown yang sama.** Panel pilihan pada dropdown kondisi membuka sebagai lapisan melayang (klik di luar atau Escape menutupnya) agar grid "Kondisi & harga" tidak berantakan saat dibuka, dan Tingkat kesulitan memakai dropdown kustom bercangkang sama seperti kolom pilihan lain (bukan lagi `<select>` bawaan peramban).
-- **Field "Harga acuan (angka, Rp)" dihapus dari formulir resep.** Angkanya penting (dipakai saringan budget dan urutan "Harga Terendah"), tetapi tidak perlu diketik: `hargaAcuanDariLabel()` (`src/lib/utils.ts`) menurunkannya dari Label harga sebagai titik tengah rentang — persis pola seluruh resep katalog (teruji 20/20 pasangan label↔acuan). Admin cukup menulis label seperti "Rp20.000–25.000".
+- **Field "Harga acuan (angka, Rp)" dihapus dari formulir resep.** Angkanya penting (dipakai saringan budget dan urutan "Harga Terendah"), tetapi tidak perlu diketik: `hargaAcuanDariLabel()` (`src/lib/utils.ts`) menurunkannya dari Label harga sebagai titik tengah rentang — persis pola resep katalog (teruji pada ketiga resep yang dipertahankan). Admin cukup menulis label seperti "Rp20.000–25.000".
 - **Resep dari dashboard ikut aturan yang sama.** `normalizeCmsRecipeRecord()` dan `cmsRecipeToRecipe()` menghitung ulang kategori **dan** mengurutkan jenis pemancingan dari judul + daftar jenisnya, sehingga baris lama yang masih menyimpan kategori manual (mis. "Premium") tetap tampil dengan badge yang sama dengan tag kondisinya. `validateCmsRecipeInput` menyimpan jenis dalam urutan itu juga, jadi basis data tidak menyimpan nilai yang bertentangan.
 
 ## Satu sumber angka, skor kecocokan, dan label "Populer"
@@ -301,37 +302,36 @@ Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** a
 
 ## Foto adonan per resep dan alt text unik
 
-Dulu 200 resep katalog memutar tiga berkas yang sama (`recipe-putih.jpg`,
-`recipe-pelet.jpg`, `recipe-jagung.jpg`). Sekarang setiap resep punya foto
-dan alt text-nya sendiri, diatur dari satu tempat: `src/data/recipe-photos.ts`.
+Setiap resep kini punya foto dan alt text-nya sendiri, diatur dari satu
+tempat: `src/data/recipe-photos.ts`. Setelah katalog dipangkas, yang
+tersisa hanya tiga berkas foto resep:
 
-- **20 resep inti** punya foto adonan tersendiri yang dipetakan dari slug di
-  `CORE_RECIPE_PHOTOS` (berkas di `public/images/recipes/<slug>.jpg`; tiga
-  resep pertama tetap memakai berkas klasik yang memang cocok dengan isinya).
-- **Resep turunan katalog** memakai berkas tersendiri per slug
-  (`/images/recipes/<slug>.jpg`), dibuat oleh `scripts/buat-foto-racikan.py`
-  dari foto adonan keluarga bahannya (dipilih lewat kata kunci nama, sama
-  seperti daftar `PHOTO_FAMILIES`) lalu dipotong/dibalik/di-grading berbeda
-  per slug berdasarkan hash slug — tidak ada dua resep berbagi berkas yang
-  sama (terverifikasi 200/200 unik, termasuk hash berkasnya).
+- **Umpan Putih Kroto** memakai berkas klasik `/images/recipe-putih.jpg`
+  yang memang cocok dengan adonannya.
+- **Vanila Telur Bebek** memakai `/images/recipes/vanila-telur-bebek.jpg`.
+- **Roti Tawar Kroto Lomba** memakai
+  `/images/recipes/roti-tawar-kroto-lomba.jpg`.
+
+Pemetaannya dikunci dari slug di `CORE_RECIPE_PHOTOS`. Berkas foto 197
+resep lama yang sudah dihapus ikut dibuang dari `public/images/recipes/`
+(plus dua berkas klasik yang tidak terpakai), jadi folder gambar menyusut
+dari ±18 MB menjadi di bawah 1 MB; skrip pembuat foto turunan
+(`scripts/buat-foto-racikan.py`) ikut dihapus karena katalog turunan sudah
+tidak ada. Foto resep baru cukup diunggah dari dashboard (tersimpan di
+tabel media), bukan dibuat dari skrip.
+
 - **Alt text unik per resep** disimpan di field `imageAlt`, diturunkan oleh
   `buildRecipeImageAlt` dari nama resep, warna adonan pada fotonya, bahan
   inti, jenis pemancingan, dan kondisi air. Field yang sama dipakai kartu
   katalog, kartu rekomendasi, halaman detail (termasuk metadata berbagi/Open
   Graph), dan resep CMS dari dashboard — tidak ada lagi alt generik yang
   diulang antarresep.
-- **Dashboard**: pemilih "Foto racikan" menawarkan seluruh foto adonan
-  katalog (`RECIPE_PHOTO_OPTIONS`), bukan tiga berkas lama.
 - **Foto pengirim ulasan tidak dikarang.** Ulasan pengunjung saat ini tidak
   memiliki unggahan foto, jadi kartu komunitas menampilkan foto racikan
   katalog dari resep yang dicoba dengan label "Ilustrasi racikan" dan alt
   yang menyatakannya sebagai ilustrasi katalog — bukan seolah-olah foto
   kiriman pemancingnya. Bila unggahan foto ulasan ditambahkan nanti, foto
   itulah yang harus menggantikan ilustrasi ini.
-- Menambah/mengganti foto resep cukup menimpa berkas bernama slug resep di
-  `public/images/recipes/`; menjalankan ulang
-  `python3 scripts/buat-foto-racikan.py` akan membuat ulang berkas turunan
-  yang belum ada (tambahkan `--force` untuk membuat semuanya dari awal).
 
 ## Ikon SVG (bukan emoji) dan kontras WCAG AA
 
