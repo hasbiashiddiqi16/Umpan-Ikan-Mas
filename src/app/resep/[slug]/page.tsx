@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,7 +14,7 @@ import { recipeBadge } from "@/lib/recipe-badge";
 import { RecipeCard } from "@/components/recipe-card";
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
-import { db, databaseEnvName } from "@/db";
+import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
@@ -32,20 +33,28 @@ export const dynamicParams = true;
  */
 export const revalidate = 3600;
 
-async function findRecipe(slug: string) {
+// Di-cache per request: metadata dan badan halaman berbagi satu query,
+// mengurangi tekanan koneksi ke pooler basis data dalam satu render.
+async function bacaResep(slug: string): Promise<CmsRecipeRecord | undefined> {
+  const [row] = await db.select().from(cmsRecipes).where(eq(cmsRecipes.slug, slug)).limit(1);
+  return row as unknown as CmsRecipeRecord | undefined;
+}
+
+const findRecipe = cache(async (slug: string) => {
   let record: CmsRecipeRecord | undefined;
   let databaseFailed = false;
   try {
-    const [row] = await db.select().from(cmsRecipes).where(eq(cmsRecipes.slug, slug)).limit(1);
-    record = row as unknown as CmsRecipeRecord | undefined;
-  } catch (error) {
-    // Gangguan sesaat basis data (mis. pooler koneksi penuh) TIDAK boleh
-    // berubah menjadi "resep tidak ditemukan": halaman ini memakai ISR,
-    // jadi 404 hasil render yang gagal akan disimpan sampai satu jam dan
-    // menimpa halaman sehat — persis kejadian resep terbit yang tiba-tiba
-    // 404 padahal datanya utuh di basis data.
-    databaseFailed = true;
-    console.error(`Gagal membaca resep "${slug}" dari basis data:`, error);
+    record = await bacaResep(slug);
+  } catch {
+    // Kegagalan koneksi sesaat (pooler basis data penuh/koneksi putus)
+    // biasanya lolos pada percobaan kedua dengan koneksi baru.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      record = await bacaResep(slug);
+    } catch (error) {
+      databaseFailed = true;
+      console.error(`Gagal membaca resep "${slug}" dari basis data:`, error);
+    }
   }
   if (record) {
     if (record.status !== "published") return undefined;
@@ -56,14 +65,17 @@ async function findRecipe(slug: string) {
   // Resep katalog bawaan tetap tersedia saat basis data tak terjangkau.
   const seed = recipes.find((item) => item.slug === slug);
   if (seed) return seed;
-  if (databaseFailed && databaseEnvName()) {
-    // Basis data terkonfigurasi tetapi sedang tak terjangkau, dan resepnya
-    // bukan katalog bawaan: gagalkan render agar ISR mempertahankan
-    // salinan sehat terakhir (bila ada) alih-alih menyimpan 404 ini.
+  if (databaseFailed) {
+    // Gagal dua kali dan resepnya bukan katalog bawaan: lempar agar
+    // render ini TIDAK disimpan ke cache ISR. Bila dikembalikan sebagai
+    // 404, ISR menyimpannya sampai satu jam dan menimpa halaman sehat —
+    // persis kejadian resep terbit yang tiba-tiba 404 padahal datanya
+    // utuh. Halaman galat sesaat lebih jujur dan pulih sendiri pada
+    // kunjungan berikutnya begitu basis data menjawab.
     throw new Error("Basis data resep sedang tidak terjangkau. Coba lagi sesaat lagi.");
   }
   return undefined;
-}
+});
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
