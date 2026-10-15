@@ -19,7 +19,7 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = {
   ...createPageMetadata({
     title: "Umpan Ikan Mas Indonesia | UMPAN MAS",
-    description: "Temukan resep umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, jenis kolam, dan pengalaman pemancing dari 38 provinsi.",
+    description: "Temukan resep umpan ikan mas untuk kolam di DKI Jakarta berdasarkan cuaca, kondisi air, dan jenis kolam.",
     path: "/",
     includeBrandInSocialTitle: false,
   }),
@@ -64,7 +64,7 @@ async function RatedRecipeSections() {
   return (
     <>
       <section>
-        <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+        <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kolam di DKI Jakarta; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
       </section>
       <section>
