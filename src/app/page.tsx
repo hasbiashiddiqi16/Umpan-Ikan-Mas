@@ -9,11 +9,12 @@ import { RecipeCard } from "@/components/recipe-card";
 import { WeatherCard, ProvinceCard, CommunityCard } from "@/components/cards";
 import { Footer, SectionHeader } from "@/components/shared";
 import { RecipeCardSkeleton } from "@/components/skeletons";
-import { recipes, defaultPreferences } from "@/data/recipes";
+import { defaultPreferences, type Recipe } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { fishingReports } from "@/data/fishingReports";
 import { getRecommendedRecipes } from "@/lib/recommendation";
 import { getRecipeRatings } from "@/lib/review-summary";
+import { countRecipesForProvince, getPublicRecipes } from "@/lib/public-recipes";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -29,8 +30,8 @@ export const metadata: Metadata = {
 };
 
 /** Resep paling banyak diulas di sebuah provinsi — dihitung dari tabel ulasan. */
-function popularRecipeFor(provinceName: string, ratings: Record<string, { count: number; average: number }>) {
-  const kandidat = recipes
+function popularRecipeFor(provinceName: string, ratings: Record<string, { count: number; average: number }>, publicRecipes: Recipe[]) {
+  const kandidat = publicRecipes
     .filter((recipe) => recipe.provinces.includes(provinceName) && (ratings[recipe.slug]?.count ?? 0) > 0)
     .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0));
   return kandidat[0]?.name;
@@ -56,8 +57,9 @@ export const revalidate = 3600;
  */
 async function RatedRecipeSections() {
   const ratings = await getRecipeRatings();
-  const bestRecommendations = getRecommendedRecipes(recipes, defaultPreferences, ratings).slice(0, 3);
-  const popularRecipes = [...recipes]
+  const publicRecipes = await getPublicRecipes();
+  const bestRecommendations = getRecommendedRecipes(publicRecipes, defaultPreferences, ratings).slice(0, 3);
+  const popularRecipes = [...publicRecipes]
     .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0))
     .slice(0, 5);
   const adaUlasan = Object.values(ratings).some((rating) => rating.count > 0);
@@ -78,8 +80,9 @@ async function RatedRecipeSections() {
 /** Grid provinsi populer; label resep terpopuler per provinsi berasal dari rating. */
 async function PopularProvinceGrid() {
   const ratings = await getRecipeRatings();
+  const publicRecipes = await getPublicRecipes();
   const popularProvinces = provinces.filter((province) => popularProvinceNames.includes(province.name));
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name, ratings)} />)}</div>;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={{ ...province, recipeCount: countRecipesForProvince(publicRecipes, province.name) }} popularRecipe={popularRecipeFor(province.name, ratings, publicRecipes)} />)}</div>;
 }
 
 /** Penampung selama pulau rating dimuat: meniru tata letak aslinya. */

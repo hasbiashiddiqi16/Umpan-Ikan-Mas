@@ -31,7 +31,7 @@ function readFavorites(): string[] {
   } catch { return []; }
 }
 
-export function CatalogView() {
+export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRecipes?: ReturnType<typeof cmsRecipeToRecipe>[]; initialManagedSlugs?: string[] }) {
   // Rating dari ulasan asli; dipakai untuk urutan dan label kartu.
   const { ratings, globalAverage, minReviews } = useRatingSummary();
   // Urutan "Rating Tertinggi" memakai rata-rata Bayesian (m = minReviews):
@@ -59,8 +59,11 @@ export function CatalogView() {
   const { consent: locationConsent, place: locationPlace, markTouched } = useLocationAutofill(applyLocationToFilters);
   const locationFilterActive = Boolean(locationConsent === "granted" && locationPlace && filters.province === locationPlace.province);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>([]);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
+  // Data awal dari server (sudah gabungan katalog + dashboard terbit) agar
+  // hitungan katalog benar sejak tampil pertama; pengambilan di bawah ini
+  // tetap menyegarkannya selama halaman dibuka.
+  const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>(() => initialRecipes ?? []);
+  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>(() => initialManagedSlugs ?? []);
 
   useEffect(() => {
     const controller = new AbortController();

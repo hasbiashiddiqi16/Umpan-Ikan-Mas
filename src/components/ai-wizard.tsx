@@ -52,14 +52,14 @@ function ChoiceButton({ selected, onClick, children, className = "" }: { selecte
   return <button type="button" onClick={onClick} aria-pressed={selected} className={`min-h-[70px] rounded-2xl border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31593a] ${selected ? "border-[#507651] bg-[#f0f6ed] text-[#31563a] shadow-[0_0_0_2px_rgba(67,109,68,.08)]" : "border-[#e4e9e2] bg-white text-[#4f5d50] hover:border-[#bacbb8] hover:bg-[#fbfcf9]"} ${className}`}>{children}</button>;
 }
 
-export function AIWizard() {
+export function AIWizard({ initialRecipes, initialManagedSlugs }: { initialRecipes?: Recipe[]; initialManagedSlugs?: string[] }) {
   // Provinsi sengaja dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
   const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences, province: "" });
   const [step, setStep] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [memberReviews, setMemberReviews] = useState<RecipeReview[]>([]);
-  const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>([]);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
+  const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>(() => initialRecipes ?? []);
+  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>(() => initialManagedSlugs ?? []);
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
   const { place: detectedPlace, markTouched: markLocationTouched } = useLocationAutofill((place) => {
     setPreferences((current) => ({ ...current, province: place.province }));
