@@ -10,7 +10,7 @@ import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
-import { slugify } from "@/lib/utils";
+import { hargaAcuanDariLabel, slugify } from "@/lib/utils";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
@@ -27,14 +27,14 @@ export type ManagedRecipe = {
 type IngredientRow = { name: string; brand: string; amount: string; optional: boolean };
 
 type RecipeForm = {
-  title: string; slug: string; summary: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
+  title: string; slug: string; summary: string; status: string; image: string; price: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
 };
 
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
 const blankForm: RecipeForm = {
   title: "", slug: "", summary: "", status: "draft", image: "",
-  price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
+  price: "Rp15.000–30.000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
   fishingTypes: "Harian", provinces: "Jawa Barat", seasons: "Musim Hujan",
   ingredients: [
     { name: "Pelet ikan", brand: "Pelet Jitu", amount: "50 g", optional: false },
@@ -62,7 +62,7 @@ function filledIngredients(rows: IngredientRow[]): Ingredient[] {
 function formFromRecipe(recipe: ManagedRecipe): RecipeForm {
   return {
     title: recipe.title, slug: recipe.slug, summary: recipe.summary, status: recipe.status, image: recipe.image,
-    price: recipe.price, priceValue: String(recipe.priceValue), difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
+    price: recipe.price, difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
     water: recipe.water.join(", "), waterBodies: recipe.waterBodies.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
     seasons: recipe.seasons.join(", "),
     ingredients: recipe.ingredients.map((item) => ({ name: item.name, brand: item.brand, amount: item.amount, optional: Boolean(item.optional) })),
@@ -77,7 +77,8 @@ function toPayload(form: RecipeForm, status = form.status) {
     slug: form.slug.trim() || slugify(form.title),
     summary: form.summary.trim(),
     status,
-    priceValue: Number(form.priceValue),
+    // Harga acuan tidak lagi diketik manual: diturunkan dari label harga.
+    priceValue: hargaAcuanDariLabel(form.price),
     weather: listFrom(form.weather),
     water: listFrom(form.water),
     waterBodies: listFrom(form.waterBodies),
@@ -430,8 +431,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                 <PilihanField label="Musim"><MultiSelectDropdown value={form.seasons} options={SEASON_CONDITIONS} onChange={(value) => update("seasons", value)} placeholder="Pilih musim" /></PilihanField>
                 <PilihanField label="Provinsi terkait"><MultiSelectDropdown value={form.provinces} options={provinces.map((province) => province.name)} onChange={(value) => update("provinces", value)} placeholder="Pilih provinsi" searchable /></PilihanField>
                 <Field label="Tingkat kesulitan"><select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Mudah", "Menengah", "Tingkat lanjut"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-                <Field label="Label harga"><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
-                <Field label="Harga acuan (angka, Rp)"><input className={fieldClass} type="number" min="0" max="100000000" value={form.priceValue} onChange={(event) => update("priceValue", event.target.value)} /></Field>
+                <Field label="Label harga" hint="Harga acuan untuk saringan budget dihitung otomatis dari rentang ini (titik tengahnya), jadi tidak perlu diisi angka terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
               </div>
             </section>
 
