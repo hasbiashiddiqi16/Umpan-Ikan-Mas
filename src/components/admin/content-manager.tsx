@@ -673,13 +673,30 @@ export function ContentManager() {
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog + contoh ulasan"}</button>
-          {/* Unduhan berkas dari API (bukan navigasi halaman), jadi <a> memang yang tepat. */}
-          <a href="/api/admin/recipes/import-spreadsheet/template" download className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0]"><FileDown size={15} /> Template Excel</a>
-          <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><FileSpreadsheet size={15} />{importingExcel ? "Mengimpor…" : "Impor Excel"}</button>
-          <input ref={excelInputRef} type="file" accept=".xlsx,.csv" className="hidden" aria-label="Pilih berkas Excel atau CSV berisi resep" onChange={(event) => { const berkas = event.target.files?.[0]; event.target.value = ""; if (berkas) void importExcel(berkas); }} />
           <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]"><Plus size={16} /> Tulis resep</button>
         </div>
       </div>
+
+      <section aria-label="Impor resep dari Excel" className="mb-5 rounded-[20px] border border-[#d8e4d2] bg-[#f3f7f0] p-4 shadow-[0_5px_20px_rgba(36,53,39,.03)] sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3.5">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#294b34] text-white shadow-sm"><FileSpreadsheet size={21} aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold tracking-tight text-[#2c4231]">Impor resep dari Excel</h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-[#5c6a5c]">Tambah banyak resep sekaligus tanpa mengisi formulir satu per satu: unduh template-nya, isi satu baris untuk satu resep, lalu unggah kembali berkasnya di sini. Baris yang tidak valid tidak akan disimpan dan dilaporkan per baris.</p>
+              <p className="mt-2.5 flex flex-wrap gap-1.5">
+                {["Format .xlsx / .csv", "Maks 2 MB", "Maks 200 baris", "Slug sama = diperbarui"].map((catatan) => <span key={catatan} className="rounded-full border border-[#dbe5d5] bg-white px-2.5 py-1 text-[10px] font-bold text-[#506550]">{catatan}</span>)}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:shrink-0">
+            {/* Unduhan berkas dari API (bukan navigasi halaman), jadi <a download> memang yang tepat. */}
+            <a href="/api/admin/recipes/import-spreadsheet/template" download className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#203d29]"><FileDown size={16} aria-hidden="true" /> Download Template Excel</a>
+            <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d8c5] bg-white px-5 text-xs font-extrabold text-[#3c5a41] transition hover:bg-[#eef4ea] disabled:opacity-60"><FileSpreadsheet size={16} aria-hidden="true" />{importingExcel ? "Mengimpor…" : "Upload Excel"}</button>
+          </div>
+        </div>
+        <input ref={excelInputRef} type="file" accept=".xlsx,.csv" className="hidden" aria-label="Pilih berkas Excel atau CSV berisi resep" onChange={(event) => { const berkas = event.target.files?.[0]; event.target.value = ""; if (berkas) void importExcel(berkas); }} />
+      </section>
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Semua konten</p><p className="mt-2 text-2xl font-black text-[#344638]">{counts.all}</p></div>
