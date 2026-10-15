@@ -97,6 +97,9 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
     ? []
     : stringArray(item.waterBodies, WATER_BODIES);
   const fishingTypesInput = stringArray(item.fishingTypes, validTypes)?.map(normalizeFishingType) ?? null;
+  // Jenis kolam wajib terisi minimal satu: resep tanpa jenis tidak akan
+  // pernah cocok dengan saringan jenis kolam mana pun di halaman publik.
+  if (fishingTypesInput && fishingTypesInput.length === 0) return { error: "Pilih minimal satu jenis kolam (Harian, Lomba, atau Galatama)." };
   // Kategori tidak lagi dipilih manual di dashboard: diturunkan dari jenis
   // pemancingan resep, dan jenis yang tertulis di judul diletakkan paling depan
   // supaya badge dan tag kondisi selalu sama isinya — juga saat disimpan.

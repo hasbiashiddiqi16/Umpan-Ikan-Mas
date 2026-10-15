@@ -8,7 +8,7 @@ import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Drople
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
-import { primaryFishingType, recipes as seedRecipes, type Ingredient } from "@/data/recipes";
+import { FISHING_TYPES, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
 import { RECIPE_PHOTO_OPTIONS } from "@/data/recipe-photos";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
@@ -164,6 +164,37 @@ function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onCha
   );
 }
 
+
+/**
+ * Pemilih jenis kolam berbentuk centang, bukan teks bebas: satu resep boleh
+ * cocok untuk beberapa jenis sekaligus — centang ketiganya bila resep bisa
+ * dipakai di semua jenis kolam (harian, lomba, dan galatama). Nilai tetap
+ * ditulis sebagai teks terpisah koma agar bentuk data formulir tidak berubah;
+ * urutannya selalu urutan baku supaya kategori turunan stabil.
+ */
+function FishingTypePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const terpilih = new Set(listFrom(value).map(normalizeFishingType));
+  const toggle = (type: FishingType) => {
+    const berikutnya = new Set(terpilih);
+    if (berikutnya.has(type)) berikutnya.delete(type); else berikutnya.add(type);
+    onChange(FISHING_TYPES.filter((item) => berikutnya.has(item)).join(", "));
+  };
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Pilih jenis kolam">
+      {FISHING_TYPES.map((type) => {
+        const aktif = terpilih.has(type);
+        return (
+          <label key={type} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-bold transition ${aktif ? "border-[#8fae87] bg-[#eef5ea] text-[#33523a]" : "border-[#e2e8e1] bg-white text-[#626e61] (4.59:1 terburuk) hover:bg-[#f6f8f5]"}`}>
+            <input type="checkbox" className="sr-only" checked={aktif} onChange={() => toggle(type)} />
+            {aktif && <Check size={13} aria-hidden="true" />}
+            {type}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Pratinjau memakai komponen yang sama dengan halaman publik, jadi tidak mungkin berbeda. */
 function RecipePreview({ form }: { form: RecipeForm }) {
   const ingredients = filledIngredients(form.ingredients);
@@ -224,6 +255,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError("");
+    if (listFrom(form.fishingTypes).length === 0) { setError("Pilih minimal satu jenis kolam untuk resep ini."); return; }
     if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
     if (listFrom(form.steps).length === 0) { setError("Tambahkan setidaknya satu langkah persiapan."); return; }
     setBusy(true);
@@ -235,6 +267,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
   async function publish(status: string) {
     setError("");
     if (form.title.trim().length < 3 || form.summary.trim().length < 15) { setError("Lengkapi judul dan ringkasan sebelum mengganti status."); return; }
+    if (listFrom(form.fishingTypes).length === 0) { setError("Pilih minimal satu jenis kolam untuk resep ini."); return; }
     if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
     setBusy(true);
     try { await onSave(toPayload(form, status), recipe?.id); }
@@ -275,7 +308,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Contoh: Umpan Putih Kroto" required /></Field>
                 <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="umpan-putih-kroto" required /></Field>
-                <Field label="Kategori" hint="Otomatis dari jenis pemancingan di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}><Fish size={14} aria-hidden="true" /> {kategori}</span></Field>
+                <Field label="Kategori" hint="Otomatis dari jenis kolam yang dipilih di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}><Fish size={14} aria-hidden="true" /> {kategori}</span></Field>
                 <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
                 <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
                 <Field label="Foto racikan" hint="Pilih aset lokal yang sudah tersedia agar tidak ada gambar rusak."><select className={fieldClass} value={form.image} onChange={(event) => update("image", event.target.value)}>{imageOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
@@ -289,7 +322,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                 <Field label="Cuaca" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.weather} onChange={(event) => update("weather", event.target.value)} placeholder="Hujan, Mendung" /></Field>
                 <Field label="Kondisi air" hint="Warna air: pisahkan dengan koma"><input className={fieldClass} value={form.water} onChange={(event) => update("water", event.target.value)} placeholder="Keruh, Hijau" /></Field>
                 <Field label="Tipe air" hint="Kolam, Sungai, atau Danau"><input className={fieldClass} value={form.waterBodies} onChange={(event) => update("waterBodies", event.target.value)} placeholder="Kolam" /></Field>
-                <Field label="Jenis pemancingan"><input className={fieldClass} value={form.fishingTypes} onChange={(event) => update("fishingTypes", event.target.value)} placeholder="Harian, Lomba, Galatama" /></Field>
+                <Field label="Jenis kolam" hint="Bisa dipilih lebih dari satu. Centang ketiganya bila resep ini cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
                 <Field label="Musim"><input className={fieldClass} value={form.seasons} onChange={(event) => update("seasons", event.target.value)} placeholder="Musim Hujan, Peralihan" /></Field>
                 <Field label="Provinsi terkait"><input className={fieldClass} value={form.provinces} onChange={(event) => update("provinces", event.target.value)} placeholder="Jawa Barat, Banten" /></Field>
                 <Field label="Tingkat kesulitan"><select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Mudah", "Menengah", "Tingkat lanjut"].map((item) => <option key={item}>{item}</option>)}</select></Field>
