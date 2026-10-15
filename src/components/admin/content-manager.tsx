@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FilePenLine, Fish, Gauge, Globe2, ListChecks, Plus, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FilePenLine, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { FISHING_TYPES, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
-import { RECIPE_PHOTO_OPTIONS } from "@/data/recipe-photos";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
@@ -32,9 +31,6 @@ type RecipeForm = {
 
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
-/** Pilihan foto editor: seluruh foto adonan katalog, bukan tiga berkas lama. */
-const imageOptions = RECIPE_PHOTO_OPTIONS;
-
 const blankForm: RecipeForm = {
   title: "", slug: "", summary: "", status: "draft", image: "/images/recipe-putih.jpg",
   price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
@@ -248,8 +244,35 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
   const [error, setError] = useState("");
   const update = (key: keyof RecipeForm, value: string) => setForm((current) => ({ ...current, [key]: value, ...(key === "title" && !recipe ? { slug: slugify(value) } : {}) }));
 
-  // Kategori = jenis pemancingan utama resep; tidak diisi manual lagi.
-  const kategori = primaryFishingType(form.title, listFrom(form.fishingTypes));
+  // Foto racikan diunggah sebagai berkas (bukan dipilih dari daftar aset):
+  // berkas langsung tersimpan per slug resep, lalu alamatnya yang disimpan
+  // di formulir. `photoVersion` hanya penanda agar pratinjau kecil di sini
+  // langsung menampilkan foto terbaru setelah diganti.
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const fotoUnggahan = form.image.startsWith("/api/media/recipe-");
+  const fotoPratinjau = fotoUnggahan ? `${form.image}?v=${photoVersion}` : form.image;
+
+  async function uploadPhoto(file: File) {
+    const slug = form.slug.trim() || slugify(form.title);
+    if (!slug) { setPhotoError("Isi judul resep dulu, lalu unggah fotonya."); return; }
+    setPhotoBusy(true); setPhotoError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("slug", slug);
+      const response = await fetch("/api/admin/recipes/photo", { method: "POST", body });
+      const result = await response.json().catch(() => ({})) as { error?: string; url?: string };
+      if (!response.ok || !result.url) throw new Error(result.error ?? "Foto gagal diunggah.");
+      update("image", result.url);
+      setPhotoVersion(Date.now());
+    } catch (caught) {
+      setPhotoError(caught instanceof Error ? caught.message : "Foto gagal diunggah.");
+    } finally { setPhotoBusy(false); }
+  }
+
   const ingredients = filledIngredients(form.ingredients);
   const optionalCount = ingredients.filter((item) => item.optional).length;
 
@@ -308,10 +331,32 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Contoh: Umpan Putih Kroto" required /></Field>
                 <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="umpan-putih-kroto" required /></Field>
-                <Field label="Kategori" hint="Otomatis dari jenis kolam yang dipilih di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}><Fish size={14} aria-hidden="true" /> {kategori}</span></Field>
                 <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
                 <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
-                <Field label="Foto racikan" hint="Pilih aset lokal yang sudah tersedia agar tidak ada gambar rusak."><select className={fieldClass} value={form.image} onChange={(event) => update("image", event.target.value)}>{imageOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
+                <div className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) sm:col-span-2">
+                  <span>Foto racikan</span>
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea]">
+                      <Image src={fotoPratinjau} alt="" fill sizes="128px" unoptimized={fotoUnggahan} className="object-cover" />
+                    </span>
+                    <div className="grid min-w-0 gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="Pilih berkas foto racikan"
+                          onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadPhoto(file); }} />
+                        <button type="button" disabled={photoBusy} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                          {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {fotoUnggahan ? "Ganti foto" : "Unggah foto"}
+                        </button>
+                        {fotoUnggahan && (
+                          <button type="button" disabled={photoBusy} onClick={() => { update("image", "/images/recipe-putih.jpg"); setPhotoError(""); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                            <RotateCcw size={14} /> Pakai foto bawaan
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium leading-4 text-[#959c93]">{fotoUnggahan ? "Sedang memakai foto unggahanmu." : "Sedang memakai foto bawaan katalog."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB); foto tersimpan begitu dipilih, tanpa perlu memilih dari daftar.</p>
+                      {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
+                    </div>
+                  </div>
+                </div>
                 <Field label="Penulis"><input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} /></Field>
               </div>
             </section>
@@ -420,7 +465,7 @@ export function ContentManager() {
   // rata-rata mentah, supaya editor melihat urutan yang benar-benar tampil.
   const rankerRating = useMemo(() => ratingScoreRanker(ulasan.ratings, ulasan.globalAverage || null, ulasan.minReviews), [ulasan]);
   const filtered = useMemo(() => {
-    const hasil = items.filter((item) => (filter === "Semua" || item.status === filter) && `${item.title} ${item.slug} ${item.category} ${item.author}`.toLocaleLowerCase("id-ID").includes(query.trim().toLocaleLowerCase("id-ID")));
+    const hasil = items.filter((item) => (filter === "Semua" || item.status === filter) && `${item.title} ${item.slug} ${item.author}`.toLocaleLowerCase("id-ID").includes(query.trim().toLocaleLowerCase("id-ID")));
     if (urut === "Skor rating (Bayesian)") return [...hasil].sort(rankerRating);
     if (urut === "Ulasan terbanyak") return [...hasil].sort((a, b) => (ulasan.ratings[b.slug]?.count ?? 0) - (ulasan.ratings[a.slug]?.count ?? 0) || rankerRating(a, b));
     if (urut === "Judul A–Z") return [...hasil].sort((a, b) => a.title.localeCompare(b.title, "id-ID"));
@@ -503,7 +548,7 @@ export function ContentManager() {
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div><h2 className="text-sm font-extrabold text-[#344638]">Pustaka racikan</h2><p className="mt-1 text-[10px] text-[#929a91]">{filtered.length} dari {items.length} resep CMS</p></div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72"><Search size={15} className="text-[#929a91]" /><span className="sr-only">Cari konten</span><input className="w-full bg-transparent text-xs outline-none placeholder:text-[#a0a79f]" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul, slug, kategori…" /></label>
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72"><Search size={15} className="text-[#929a91]" /><span className="sr-only">Cari konten</span><input className="w-full bg-transparent text-xs outline-none placeholder:text-[#a0a79f]" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul atau slug…" /></label>
               <label className="flex items-center gap-2 text-[10px] font-bold text-[#636d62] (4.63:1 terburuk)">Urutkan<SelectBox><select className={`${SELECT_FIELD_CLASS} min-h-12 rounded-xl border border-[#e4e9e2] bg-white pl-3 text-xs font-semibold text-[#3b493e] outline-none focus:border-[#748f70] sm:min-h-10`} value={urut} onChange={(event) => setUrut(event.target.value as UrutanKonten)}>{urutanKonten.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
             </div>
           </div>
@@ -524,7 +569,7 @@ export function ContentManager() {
             <table className="w-full min-w-[820px] text-left">
               <thead>
                 <tr className="border-b border-[#eef0ec] text-[9px] font-extrabold uppercase tracking-[.12em] text-[#9ba198]">
-                  <th className="px-5 py-3">Judul konten</th><th className="px-4 py-3">Kondisi</th><th className="px-4 py-3">Kategori</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Diperbarui</th><th className="px-5 py-3 text-right">Aksi</th>
+                  <th className="px-5 py-3">Judul konten</th><th className="px-4 py-3">Kondisi</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Diperbarui</th><th className="px-5 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f2ee]">
@@ -554,7 +599,6 @@ export function ContentManager() {
                       </div>
                       <p className="mt-1.5 text-[9px] font-semibold text-[#969d94]">{item.ingredients.filter((entry) => !entry.optional).length} bahan · {item.ingredients.filter((entry) => entry.optional).length} opsional</p>
                     </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-[#616d61] (4.66:1 terburuk)">{primaryFishingType(item.title, item.fishingTypes)}</td>
                     <td className="px-4 py-3.5"><Badge tone={item.status === "published" ? "sage" : item.status === "draft" ? "gold" : "cream"}>{item.status === "published" ? "Published" : item.status === "draft" ? "Draft" : "Archived"}</Badge></td>
                     <td className="px-4 py-3.5 text-[10px] text-[#929a91]">{formattedDate(item.updatedAt)}</td>
                     <td className="px-5 py-3.5">
