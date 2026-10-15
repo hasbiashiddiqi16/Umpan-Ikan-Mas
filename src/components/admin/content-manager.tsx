@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FilePenLine, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
@@ -564,6 +564,9 @@ export function ContentManager() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<number | null>(null);
   const [importingSeeds, setImportingSeeds] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const [excelFailures, setExcelFailures] = useState<{ baris: number; judul: string; pesan: string }[]>([]);
 
   async function load(signal?: AbortSignal) {
     const response = await fetch("/api/admin/recipes", { cache: "no-store", signal });
@@ -612,6 +615,21 @@ export function ContentManager() {
     finally { setImportingSeeds(false); }
   }
 
+  async function importExcel(file: File) {
+    setImportingExcel(true); setError(""); setNotice(""); setExcelFailures([]);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/admin/recipes/import-spreadsheet", { method: "POST", body });
+      const result = await response.json().catch(() => ({})) as { error?: string; created?: number; updated?: number; failed?: { baris: number; judul: string; pesan: string }[] };
+      if (result.failed?.length) setExcelFailures(result.failed);
+      if (!response.ok) throw new Error(result.error ?? "Impor Excel gagal.");
+      setNotice(`Impor Excel selesai: ${result.created ?? 0} resep baru ditambahkan, ${result.updated ?? 0} resep diperbarui.`);
+      await load();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Impor Excel gagal."); }
+    finally { setImportingExcel(false); }
+  }
+
   async function save(payload: ReturnType<typeof toPayload>, id?: number) {
     const response = await fetch(id ? `/api/admin/recipes/${id}` : "/api/admin/recipes", {
       method: id ? "PATCH" : "POST",
@@ -655,6 +673,10 @@ export function ContentManager() {
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog + contoh ulasan"}</button>
+          {/* Unduhan berkas dari API (bukan navigasi halaman), jadi <a> memang yang tepat. */}
+          <a href="/api/admin/recipes/import-spreadsheet/template" download className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0]"><FileDown size={15} /> Template Excel</a>
+          <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><FileSpreadsheet size={15} />{importingExcel ? "Mengimpor…" : "Impor Excel"}</button>
+          <input ref={excelInputRef} type="file" accept=".xlsx,.csv" className="hidden" aria-label="Pilih berkas Excel atau CSV berisi resep" onChange={(event) => { const berkas = event.target.files?.[0]; event.target.value = ""; if (berkas) void importExcel(berkas); }} />
           <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]"><Plus size={16} /> Tulis resep</button>
         </div>
       </div>
@@ -668,6 +690,14 @@ export function ContentManager() {
 
       {notice && <p role="status" className="mb-4 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-xs font-semibold text-[#436444]">{notice}</p>}
       {error && <p role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold text-[#995744]">{error}</p>}
+      {excelFailures.length > 0 && (
+        <div role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs text-[#995744]">
+          <p className="font-bold">Baris yang belum valid — belum ada resep yang disimpan:</p>
+          <ul className="mt-2 grid max-h-44 gap-1 overflow-y-auto pr-1">
+            {excelFailures.map((gagal) => <li key={`${gagal.baris}-${gagal.judul}`}>Baris {gagal.baris} — {gagal.judul}: {gagal.pesan}</li>)}
+          </ul>
+        </div>
+      )}
 
       <section className="overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
         <div className="flex flex-col gap-3 border-b border-[#eef0ec] p-4 sm:p-5">
