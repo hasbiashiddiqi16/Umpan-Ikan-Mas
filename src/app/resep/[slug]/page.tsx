@@ -22,6 +22,14 @@ import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata, siteOrigin } from "@/lib/seo";
 
 export const dynamicParams = true;
+/**
+ * ISR: halaman ini dirender di server dan disimpan sebagai HTML statis,
+ * lalu dibangun ulang di latar belakang paling lambat tiap jam. Angka
+ * rating/ulasan dari database jadi ikut segar tanpa halaman berubah
+ * menjadi render dinamis per kunjungan (yang menunda konten dan memicu
+ * layar loading). 3600 detik = seimbang antara kesegaran dan beban server.
+ */
+export const revalidate = 3600;
 
 async function findRecipe(slug: string) {
   try {

@@ -399,6 +399,43 @@ bawaan Next masih menyediakan 3840 sehingga lebar itu selalu ditawarkan.
   (tampil maks 104px), dan 14 foto JPG >140 KB dikompresi ulang (hemat
   ±0,5 MB) tanpa mengubah dimensinya.
 
+## Render server (SSG/ISR): tanpa splash, skeleton hanya untuk pulau data
+
+Halaman publik tidak lagi pernah menampilkan layar loading satu halaman
+penuh. Sebelumnya setiap halaman — termasuk yang sinkron — membuka dengan
+skeleton generik karena `src/app/loading.tsx` membuat Next menyajikan
+dokumen "cangkang + konten yang ditukar masuk lewat skrip"; hero (elemen
+LCP) ikut tertunda di balik pertukaran itu. Sekarang polanya:
+
+- **SSG/ISR untuk semua halaman publik.** Beranda, `/cuaca`,
+  `/provinsi/[slug]`, dan `/resep/[slug]` mengekspor
+  `export const revalidate = 3600`: HTML statis dibangun ulang di latar
+  belakang paling lambat tiap jam (pengunjung tidak pernah menunggu
+  render), dan angka rating dari database ikut segar maksimal sejam —
+  tanpa halaman berubah menjadi render dinamis per kunjungan.
+- **`loading.tsx` dihapus dari rute publik.** Tanpa batas loading, Next
+  menunggu render selesai saat prerender sehingga HTML awal yang diterima
+  pengunjung sudah memuat judul, hero, dan konten lengkap (terverifikasi:
+  tidak ada batas tertunda di HTML `/`, `/katalog`, `/komunitas`,
+  `/resep/...`). Hanya `/dashboard` (dinamis, di balik login) yang
+  mempertahankan `loading.tsx` sendiri untuk umpan balik navigasi admin.
+- **Yang menunggu data dibungkus `Suspense`, bukan menahan halaman.**
+  Halaman beranda dan cuaca kini sinkron; seksi yang urutannya bergantung
+  pada rating pengunjung (Rekomendasi Terbaik, Racikan Populer, grid
+  provinsi populer, daftar panduan cuaca, statistik provinsi) adalah
+  komponen server async kecil di dalam `<Suspense>` dengan penampung
+  skeleton yang meniru tata letak aslinya (`src/components/skeletons.tsx`),
+  jadi hero tampil duluan dan tidak ada pergeseran tata letak berarti.
+  `getRecipeRatings()` dibungkus `cache()` React agar pulau-pulau dalam
+  satu halaman berbagi satu query.
+- **LCP dijaga strukturnya:** gambar hero beranda tetap satu-satunya yang
+  di-`preload` (muncul sebagai `<link rel="preload" as="image">` di
+  `<head>` dengan `fetchPriority` tinggi), dan kini hero benar-benar
+  berada di cangkang HTML pertama, bukan di segmen tersembunyi.
+  Pemeriksaan PageSpeed Insights untuk angka LCP final dilakukan manual
+  di https://pagespeed.web.dev untuk URL produksi setelah deploy (API
+  publiknya tidak selalu tersedia dari lingkungan pengembangan).
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
