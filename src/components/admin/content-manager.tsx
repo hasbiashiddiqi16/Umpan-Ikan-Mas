@@ -213,6 +213,24 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
 }) {
   const [terbuka, setTerbuka] = useState(false);
   const [kata, setKata] = useState("");
+  const akarRef = useRef<HTMLDivElement>(null);
+
+  // Panel dropdown melayang di atas isi lain (bukan mendorong grid), dan
+  // menutup saat admin mengeklik di luar panel atau menekan Escape.
+  useEffect(() => {
+    if (!terbuka) return;
+    const klikLuar = (event: PointerEvent) => {
+      if (akarRef.current && !akarRef.current.contains(event.target as Node)) setTerbuka(false);
+    };
+    const tombol = (event: KeyboardEvent) => { if (event.key === "Escape") setTerbuka(false); };
+    document.addEventListener("pointerdown", klikLuar);
+    document.addEventListener("keydown", tombol);
+    return () => {
+      document.removeEventListener("pointerdown", klikLuar);
+      document.removeEventListener("keydown", tombol);
+    };
+  }, [terbuka]);
+
   const terpilih = listFrom(value);
   const semuaPilihan = [...options, ...terpilih.filter((item) => !options.includes(item))];
   const tampil = searchable && kata.trim()
@@ -224,7 +242,7 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
     onChange(semuaPilihan.filter((pilihan) => berikutnya.has(pilihan)).join(", "));
   };
   return (
-    <div>
+    <div ref={akarRef} className="relative">
       <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
         <span className={`truncate ${terpilih.length ? "font-semibold" : "font-medium text-[#a1a89f]"}`}>{terpilih.length ? terpilih.join(", ") : placeholder}</span>
         <span className="flex shrink-0 items-center gap-1.5">
@@ -233,7 +251,7 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
         </span>
       </button>
       {terbuka && (
-        <div className="mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_10px_30px_rgba(36,53,39,.08)]">
+        <div className="absolute inset-x-0 top-full z-30 mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_16px_40px_rgba(36,53,39,.16)]">
           {searchable && <input value={kata} onChange={(event) => setKata(event.target.value)} placeholder="Cari provinsi…" aria-label="Cari provinsi" className="mb-1.5 min-h-9 w-full rounded-lg border border-[#e8ece5] bg-[#fbfcfa] px-3 text-xs font-medium text-[#344638] outline-none placeholder:text-[#a1a89f] focus:border-[#748f70]" />}
           <div className="grid max-h-52 gap-0.5 overflow-y-auto">
             {tampil.length ? tampil.map((item) => (
@@ -242,6 +260,55 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
                 <span className="min-w-0 flex-1 truncate">{item}</span>
               </label>
             )) : <p className="px-2.5 py-2 text-[11px] font-medium text-[#959c93]">Tidak ada pilihan yang cocok.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * Dropdown satu pilihan dengan cangkang yang sama persis seperti
+ * `MultiSelectDropdown`, agar semua kolom pilihan di formulir tampil
+ * seragam (Tingkat kesulitan sebelumnya <select> bawaan peramban yang
+ * tampil beda sendiri). Memilih satu nilai langsung menutup panel.
+ */
+function SingleSelectDropdown({ value, options, onChange, placeholder }: {
+  value: string; options: readonly string[]; onChange: (value: string) => void; placeholder: string;
+}) {
+  const [terbuka, setTerbuka] = useState(false);
+  const akarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!terbuka) return;
+    const klikLuar = (event: PointerEvent) => {
+      if (akarRef.current && !akarRef.current.contains(event.target as Node)) setTerbuka(false);
+    };
+    const tombol = (event: KeyboardEvent) => { if (event.key === "Escape") setTerbuka(false); };
+    document.addEventListener("pointerdown", klikLuar);
+    document.addEventListener("keydown", tombol);
+    return () => {
+      document.removeEventListener("pointerdown", klikLuar);
+      document.removeEventListener("keydown", tombol);
+    };
+  }, [terbuka]);
+
+  return (
+    <div ref={akarRef} className="relative">
+      <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
+        <span className={`truncate ${value ? "font-semibold" : "font-medium text-[#a1a89f]"}`}>{value || placeholder}</span>
+        <ChevronDown size={15} aria-hidden="true" className={`shrink-0 text-[#7a857a] transition ${terbuka ? "rotate-180" : ""}`} />
+      </button>
+      {terbuka && (
+        <div className="absolute inset-x-0 top-full z-30 mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_16px_40px_rgba(36,53,39,.16)]">
+          <div className="grid gap-0.5">
+            {options.map((item) => (
+              <button key={item} type="button" onClick={() => { onChange(item); setTerbuka(false); }} className={`flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-left text-xs font-semibold transition ${item === value ? "bg-[#eef5ea] text-[#33523a]" : "text-[#4c5a4d] hover:bg-[#f6f8f5]"}`}>
+                <span className="min-w-0 flex-1 truncate">{item}</span>
+                {item === value && <Check size={13} aria-hidden="true" />}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -423,14 +490,14 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
 
             <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
               <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Kondisi & harga</h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <PilihanField label="Cuaca"><MultiSelectDropdown value={form.weather} options={WEATHER_CONDITIONS} onChange={(value) => update("weather", value)} placeholder="Pilih cuaca" /></PilihanField>
                 <PilihanField label="Kondisi air" hint="Warna air kolam/spot"><MultiSelectDropdown value={form.water} options={WATER_CONDITIONS} onChange={(value) => update("water", value)} placeholder="Pilih kondisi air" /></PilihanField>
                 <PilihanField label="Tipe air"><MultiSelectDropdown value={form.waterBodies} options={WATER_BODIES} onChange={(value) => update("waterBodies", value)} placeholder="Pilih tipe air" /></PilihanField>
                 <Field label="Jenis kolam" hint="Bisa dipilih lebih dari satu. Centang ketiganya bila resep ini cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
                 <PilihanField label="Musim"><MultiSelectDropdown value={form.seasons} options={SEASON_CONDITIONS} onChange={(value) => update("seasons", value)} placeholder="Pilih musim" /></PilihanField>
                 <PilihanField label="Provinsi terkait"><MultiSelectDropdown value={form.provinces} options={provinces.map((province) => province.name)} onChange={(value) => update("provinces", value)} placeholder="Pilih provinsi" searchable /></PilihanField>
-                <Field label="Tingkat kesulitan"><select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Mudah", "Menengah", "Tingkat lanjut"].map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <PilihanField label="Tingkat kesulitan"><SingleSelectDropdown value={form.difficulty} options={["Mudah", "Menengah", "Tingkat lanjut"]} onChange={(value) => update("difficulty", value)} placeholder="Pilih tingkat kesulitan" /></PilihanField>
                 <Field label="Label harga" hint="Harga acuan untuk saringan budget dihitung otomatis dari rentang ini (titik tengahnya), jadi tidak perlu diisi angka terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
               </div>
             </section>
