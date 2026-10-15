@@ -54,20 +54,20 @@ export default async function AdminLoginPage() {
 
           <div className="mx-auto w-full max-w-[390px]">
             <div className="mb-7 grid h-12 w-12 place-items-center rounded-2xl bg-[#edf3e9] text-[#416347]"><LockKeyhole size={21} /></div>
-            <p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#71836f]">Administrator</p>
+            <p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#606f5e] (4.58:1 terburuk)">Administrator</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-.035em] text-[#243328] sm:text-[34px]">Selamat datang kembali</h2>
-            <p className="mt-3 text-sm leading-6 text-[#7b867b]">Masuk untuk membuka dashboard dan mengelola Content Studio UMPAN MAS.</p>
+            <p className="mt-3 text-sm leading-6 text-[#636d63] (4.62:1 terburuk)">Masuk untuk membuka dashboard dan mengelola Content Studio UMPAN MAS.</p>
 
             <div className="mt-8">
               <AdminLoginForm />
             </div>
 
             <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#e7ece4] bg-[#f8faf6] p-4">
-              <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#5b7959]" />
-              <p className="text-xs leading-5 text-[#758174]">Halaman ini hanya untuk administrator. Jangan bagikan password atau biarkan sesi admin terbuka di perangkat umum.</p>
+              <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#567254] (4.58:1 terburuk)" />
+              <p className="text-xs leading-5 text-[#636d62] (4.63:1 terburuk)">Halaman ini hanya untuk administrator. Jangan bagikan password atau biarkan sesi admin terbuka di perangkat umum.</p>
             </div>
 
-            <Link href="/" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#617361] transition hover:text-[#294a32]"><ArrowLeft size={16} /> Kembali ke situs publik</Link>
+            <Link href="/" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#5d6e5d] (4.67:1 terburuk) transition hover:text-[#294a32]"><ArrowLeft size={16} /> Kembali ke situs publik</Link>
           </div>
         </section>
       </div>

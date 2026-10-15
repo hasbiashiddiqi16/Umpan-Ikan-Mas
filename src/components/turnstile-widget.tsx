@@ -69,7 +69,7 @@ export function TurnstileWidget({ onToken }: { onToken: (token: string) => void 
   if (!siteKey) return null;
   return (
     <div className="mt-4">
-      <p className="mb-2 text-[11px] font-semibold text-[#8a9389]">Verifikasi anti-bot (Cloudflare Turnstile)</p>
+      <p className="mb-2 text-[11px] font-semibold text-[#656d65] (4.59:1 terburuk)">Verifikasi anti-bot (Cloudflare Turnstile)</p>
       <div ref={container} />
     </div>
   );

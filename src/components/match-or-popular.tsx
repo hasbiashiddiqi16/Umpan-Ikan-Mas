@@ -40,10 +40,10 @@ export function MatchOrPopularBox({ recipe }: { recipe: Recipe }) {
           <span className="text-2xl font-black text-[#31593a]">{score}%</span>
           <div>
             <p className="text-xs font-bold text-[#415342]">Kecocokan dengan pilihanmu</p>
-            <p className="text-[10px] leading-4 text-[#8b9489]">{ringkasan || "Kondisi pilihanmu"}</p>
+            <p className="text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">{ringkasan || "Kondisi pilihanmu"}</p>
           </div>
         </div>
-        <p className="mt-2 text-[10px] leading-4 text-[#8b9489]">Dihitung dari kondisi yang kamu isi (tipe air, kondisi air, cuaca, jenis pemancingan, provinsi, musim) — bukan dari data katalog.</p>
+        <p className="mt-2 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">Dihitung dari kondisi yang kamu isi (tipe air, kondisi air, cuaca, jenis pemancingan, provinsi, musim) — bukan dari data katalog.</p>
         <p className="mt-1 text-[10px] leading-4 text-[#9aa197]">{MATCH_WEIGHTS_NOTE}</p>
       </div>
     );
@@ -53,13 +53,13 @@ export function MatchOrPopularBox({ recipe }: { recipe: Recipe }) {
     return (
       <div className={kotakPopulerClass}>
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#c2842f]"><Flame size={19} /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#8f6223] (4.57:1 terburuk)"><Flame size={19} /></span>
           <div>
             <p className="text-xs font-bold text-[#6b5a33]">Populer</p>
-            <p className="text-[10px] leading-4 text-[#8b7d59]">{POPULAR_HINT}</p>
+            <p className="text-[10px] leading-4 text-[#766a4b] (4.58:1 terburuk)">{POPULAR_HINT}</p>
           </div>
         </div>
-        <p className="mt-2 text-[10px] leading-4 text-[#8b7d59]">{describeRating(rating)}</p>
+        <p className="mt-2 text-[10px] leading-4 text-[#766a4b] (4.58:1 terburuk)">{describeRating(rating)}</p>
       </div>
     );
   }
@@ -115,8 +115,8 @@ export function MatchOrPopularChip({ recipe }: { recipe: Recipe }) {
   }
   if (isPopularRecipe(ratings, recipe.slug)) {
     return (
-      <span className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#876822]" title={POPULAR_HINT}>
-        🔥 Populer
+      <span className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#846621] (4.62:1 terburuk)" title={POPULAR_HINT}>
+        <Flame size={12} className="mr-1 inline-block" aria-hidden="true" />Populer
       </span>
     );
   }

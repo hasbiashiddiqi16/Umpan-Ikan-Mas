@@ -27,7 +27,7 @@ export function SelectBox({ children, className = "" }: { children: ReactNode; c
         aria-hidden="true"
         data-select-arrow=""
         size={16}
-        className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7f8d80]"
+        className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#626d63] (4.63:1 terburuk)"
       />
     </span>
   );

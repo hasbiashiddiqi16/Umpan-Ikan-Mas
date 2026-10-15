@@ -37,7 +37,7 @@ export function Navbar() {
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Navigasi utama">
           {desktopLinks.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-            return <Link key={link.href} href={link.href} className={`rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${active ? "bg-[#e9efe7] text-[#284a31]" : "text-[#687368] hover:bg-[#f0f3ee] hover:text-[#203a29]"}`}>{link.label}</Link>;
+            return <Link key={link.href} href={link.href} className={`rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${active ? "bg-[#e9efe7] text-[#284a31]" : "text-[#646e64] (4.55:1 terburuk) hover:bg-[#f0f3ee] hover:text-[#203a29]"}`}>{link.label}</Link>;
           })}
         </nav>
         <div className="flex items-center gap-1.5">
@@ -58,7 +58,7 @@ export function MobileBottomNav() {
         {mobileLinks.map(({ label, href, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
-            <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition ${active ? "text-[#315a39]" : "text-[#8a9189] hover:text-[#435b47]"}`} aria-current={active ? "page" : undefined}>
+            <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition ${active ? "text-[#315a39]" : "text-[#656b65] (4.69:1 terburuk) hover:text-[#435b47]"}`} aria-current={active ? "page" : undefined}>
               <Icon size={19} strokeWidth={active ? 2.4 : 1.8} />
               <span>{label}</span>
             </Link>
@@ -79,5 +79,5 @@ export function PageShell({ children }: { children: ReactNode }) {
 }
 
 export function MobilePageTitle({ title }: { title: string }) {
-  return <div className="mb-5 flex items-center gap-2 text-sm font-medium text-[#849085]"><CloudSun size={16} /> {title}</div>;
+  return <div className="mb-5 flex items-center gap-2 text-sm font-medium text-[#636d64] (4.62:1 terburuk)"><CloudSun size={16} /> {title}</div>;
 }

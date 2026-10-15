@@ -36,7 +36,7 @@ export default async function ProvincesPage() {
         </div>
         <SectionHeader eyebrow="Jelajahi daerah" title="Pilih provinsimu" subtitle="Data ini adalah gambaran komunitas dan katalog UMPAN MAS, bukan representasi seluruh spot di daerah." />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">{provinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name)} />)}</div>
-        <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-[#e5eae3] bg-white p-5 sm:flex-row sm:items-center sm:p-6"><div><p className="text-sm font-extrabold text-[#344638]">Belum yakin pilih racikan?</p><p className="mt-1 text-sm text-[#7b857a]">Coba rekomendasi berdasarkan cuaca, kondisi air, dan budget.</p></div><Link href="/ai-umpan" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white">Tanya AI Umpan <ArrowRight size={15} /></Link></div>
+        <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-[#e5eae3] bg-white p-5 sm:flex-row sm:items-center sm:p-6"><div><p className="text-sm font-extrabold text-[#344638]">Belum yakin pilih racikan?</p><p className="mt-1 text-sm text-[#636c62] (4.68:1 terburuk)">Coba rekomendasi berdasarkan cuaca, kondisi air, dan budget.</p></div><Link href="/ai-umpan" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white">Tanya AI Umpan <ArrowRight size={15} /></Link></div>
       </main>
       <Footer />
     </PageShell>

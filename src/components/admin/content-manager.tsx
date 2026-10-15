@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FilePenLine, Fish, Gauge, Globe2, ListChecks, Plus, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { Badge } from "@/components/shared";
+import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { primaryFishingType, recipes as seedRecipes, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
@@ -100,7 +100,7 @@ function formattedDate(value: string) {
 }
 
 function Field({ label, hint, children, wide = false }: { label: string; hint?: string; children: ReactNode; wide?: boolean }) {
-  return <label className={`grid gap-1.5 text-xs font-bold text-[#657164] ${wide ? "sm:col-span-2" : ""}`}><span>{label}</span>{children}{hint && <span className="text-[10px] font-medium leading-4 text-[#959c93]">{hint}</span>}</label>;
+  return <label className={`grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) ${wide ? "sm:col-span-2" : ""}`}><span>{label}</span>{children}{hint && <span className="text-[10px] font-medium leading-4 text-[#959c93]">{hint}</span>}</label>;
 }
 
 /**
@@ -137,7 +137,7 @@ function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onCha
               <ul className="mt-3 grid gap-2">
                 {indexes.map(({ row, index }, order) => (
                   <li key={index} className="grid gap-2 rounded-xl border border-[#e9ece6] bg-white p-2.5 sm:grid-cols-[28px_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,.7fr)_auto] sm:items-center">
-                    <span className="hidden h-7 w-7 place-items-center rounded-lg bg-[#eff4ec] text-[10px] font-bold text-[#668068] sm:grid">{String(order + 1).padStart(2, "0")}</span>
+                    <span className="hidden h-7 w-7 place-items-center rounded-lg bg-[#eff4ec] text-[10px] font-bold text-[#5a715c] (4.56:1 terburuk) sm:grid">{String(order + 1).padStart(2, "0")}</span>
                     <input className={fieldClass} value={row.name} placeholder="Nama bahan" aria-label={`Nama bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { name: event.target.value })} />
                     <input className={fieldClass} value={row.brand} placeholder="Merek / catatan" aria-label={`Merek bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { brand: event.target.value })} />
                     <input className={fieldClass} value={row.amount} placeholder="Takaran" aria-label={`Takaran bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { amount: event.target.value })} />
@@ -149,7 +149,7 @@ function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onCha
                         <ListChecks size={13} /> {row.optional ? "Opsional" : "Inti"}
                       </button>
                       <button type="button" aria-label={`Hapus baris bahan ${order + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                        className="grid h-9 w-9 place-items-center rounded-xl text-[#a26b5b] transition hover:bg-[#fbefec]">
+                        className="grid h-9 w-9 place-items-center rounded-xl text-[#905f50] (4.57:1 terburuk) transition hover:bg-[#fbefec]">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -191,11 +191,11 @@ function RecipePreview({ form }: { form: RecipeForm }) {
         </div>
         <div className="p-4 sm:p-5">
           <h3 className="break-words text-xl font-black tracking-[-.03em] text-[#213426]">{form.title || "Judul resep"}</h3>
-          <p className="mt-2 break-words text-xs leading-5 text-[#758075]">{form.summary || "Ringkasan resep tampil di sini."}</p>
+          <p className="mt-2 break-words text-xs leading-5 text-[#636d63] (4.62:1 terburuk)">{form.summary || "Ringkasan resep tampil di sini."}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {informasi.map(({ label, value, icon: Icon }) => (
               <div key={label} className="min-w-0 rounded-xl border border-[#edf0eb] bg-[#fafbf8] p-2.5">
-                <Icon size={14} className="text-[#6d856d]" />
+                <Icon size={14} className="text-[#5c705c] (4.59:1 terburuk)" />
                 <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[.1em] text-[#969d94]">{label}</p>
                 <p className="mt-0.5 break-words text-[11px] font-bold leading-4 text-[#405142]">{value}</p>
               </div>
@@ -247,14 +247,14 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
       <section role="dialog" aria-modal="true" aria-labelledby="recipe-editor-title" className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-[25px] bg-[#f9faf8] shadow-2xl sm:rounded-[25px]">
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-[#e7ebe4] bg-white/95 px-5 py-4 backdrop-blur">
           <div>
-            <p className="text-[9px] font-extrabold uppercase tracking-[.15em] text-[#899488]">Content Studio / Resep</p>
+            <p className="text-[9px] font-extrabold uppercase tracking-[.15em] text-[#656d64] (4.59:1 terburuk)">Content Studio / Resep</p>
             <h2 id="recipe-editor-title" className="mt-1 text-lg font-black text-[#2b3c2e]">{recipe ? "Edit resep" : "Tulis resep baru"}</h2>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-xl bg-[#eff3ec] p-1" role="tablist" aria-label="Mode editor">
               {([["formulir", "Formulir"], ["pratinjau", "Pratinjau"]] as const).map(([value, label]) => (
                 <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}
-                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition ${tab === value ? "bg-white text-[#315a39] shadow-sm" : "text-[#6d7a6c]"}`}>
+                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition ${tab === value ? "bg-white text-[#315a39] shadow-sm" : "text-[#626e61] (4.59:1 terburuk)"}`}>
                   {value === "pratinjau" && <Eye size={13} />}{label}
                 </button>
               ))}
@@ -275,7 +275,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
               <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
                 <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Contoh: Umpan Putih Kroto" required /></Field>
                 <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="umpan-putih-kroto" required /></Field>
-                <Field label="Kategori" hint="Otomatis dari jenis pemancingan di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}>🎣 {kategori}</span></Field>
+                <Field label="Kategori" hint="Otomatis dari jenis pemancingan di bawah (satu sumber dengan badge & tag kondisi)."><span className={`${fieldClass} inline-flex items-center gap-2 bg-[#f7f9f5] text-[#4d5f4f]`}><Fish size={14} aria-hidden="true" /> {kategori}</span></Field>
                 <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
                 <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
                 <Field label="Foto racikan" hint="Pilih aset lokal yang sudah tersedia agar tidak ada gambar rusak."><select className={fieldClass} value={form.image} onChange={(event) => update("image", event.target.value)}>{imageOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
@@ -328,7 +328,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
           )}
           {error && <p role="alert" className="mx-4 mb-2 rounded-xl border border-[#efdcd5] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold leading-5 text-[#9c513e] sm:mx-6">{error}</p>}
           <div className="sticky bottom-0 flex flex-col-reverse justify-between gap-2 border-t border-[#e6eae4] bg-[#f9faf8]/95 px-4 py-3 backdrop-blur sm:flex-row sm:px-6">
-            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367]">Batal</button>
+            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk)">Batal</button>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button type="button" onClick={() => setTab(tab === "pratinjau" ? "formulir" : "pratinjau")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0]"><Eye size={14} /> {tab === "pratinjau" ? "Kembali ke formulir" : "Lihat pratinjau"}</button>
               <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : "Simpan perubahan"}</button>
@@ -445,9 +445,9 @@ export function ContentManager() {
     <AdminShell>
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#899488]"><Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Konten</span></div>
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#656d64] (4.59:1 terburuk)"><Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Konten</span></div>
           <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Konten resep</h1>
-          <p className="mt-2 text-sm text-[#7a8579]">Susun, tinjau, dan publikasikan racikan umpan ikan mas.</p>
+          <p className="mt-2 text-sm text-[#626c62] (4.69:1 terburuk)">Susun, tinjau, dan publikasikan racikan umpan ikan mas.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog + contoh ulasan"}</button>
@@ -458,8 +458,8 @@ export function ContentManager() {
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Semua konten</p><p className="mt-2 text-2xl font-black text-[#344638]">{counts.all}</p></div>
         <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Tayang publik</p><p className="mt-2 text-2xl font-black text-[#46714b]">{counts.published}</p></div>
-        <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Draft</p><p className="mt-2 text-2xl font-black text-[#9a8047]">{counts.draft}</p></div>
-        <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Diarsipkan</p><p className="mt-2 text-2xl font-black text-[#829082]">{counts.archived}</p></div>
+        <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Draft</p><p className="mt-2 text-2xl font-black text-[#7d6839] (4.61:1 terburuk)">{counts.draft}</p></div>
+        <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Diarsipkan</p><p className="mt-2 text-2xl font-black text-[#626d62] (4.64:1 terburuk)">{counts.archived}</p></div>
       </div>
 
       {notice && <p role="status" className="mb-4 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-xs font-semibold text-[#436444]">{notice}</p>}
@@ -471,13 +471,13 @@ export function ContentManager() {
             <div><h2 className="text-sm font-extrabold text-[#344638]">Pustaka racikan</h2><p className="mt-1 text-[10px] text-[#929a91]">{filtered.length} dari {items.length} resep CMS</p></div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72"><Search size={15} className="text-[#929a91]" /><span className="sr-only">Cari konten</span><input className="w-full bg-transparent text-xs outline-none placeholder:text-[#a0a79f]" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul, slug, kategori…" /></label>
-              <label className="flex items-center gap-2 text-[10px] font-bold text-[#7e897c]">Urutkan<SelectBox><select className={`${SELECT_FIELD_CLASS} min-h-12 rounded-xl border border-[#e4e9e2] bg-white pl-3 text-xs font-semibold text-[#3b493e] outline-none focus:border-[#748f70] sm:min-h-10`} value={urut} onChange={(event) => setUrut(event.target.value as UrutanKonten)}>{urutanKonten.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
+              <label className="flex items-center gap-2 text-[10px] font-bold text-[#636d62] (4.63:1 terburuk)">Urutkan<SelectBox><select className={`${SELECT_FIELD_CLASS} min-h-12 rounded-xl border border-[#e4e9e2] bg-white pl-3 text-xs font-semibold text-[#3b493e] outline-none focus:border-[#748f70] sm:min-h-10`} value={urut} onChange={(event) => setUrut(event.target.value as UrutanKonten)}>{urutanKonten.map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
             </div>
           </div>
-          {urut === "Skor rating (Bayesian)" && <p className="rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[10px] leading-5 text-[#7a8479]">{BAYESIAN_HINT} Resep tanpa ulasan selalu di bawah resep yang sudah diulas.</p>}
+          {urut === "Skor rating (Bayesian)" && <p className="rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[10px] leading-5 text-[#656d64] (4.59:1 terburuk)">{BAYESIAN_HINT} Resep tanpa ulasan selalu di bawah resep yang sudah diulas.</p>}
           <div className="flex gap-2 overflow-x-auto">
             {statusFilters.map((item) => (
-              <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-h-8 shrink-0 rounded-full px-3 text-[10px] font-bold transition ${filter === item ? "bg-[#294b34] text-white" : "bg-[#f3f5f1] text-[#667366] hover:bg-[#e8eee5]"}`}>
+              <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-h-8 shrink-0 rounded-full px-3 text-[10px] font-bold transition ${filter === item ? "bg-[#294b34] text-white" : "bg-[#f3f5f1] text-[#626e62] (4.59:1 terburuk) hover:bg-[#e8eee5]"}`}>
                 {item === "Semua" ? `Semua · ${counts.all}` : item === "published" ? `Tayang · ${counts.published}` : item === "draft" ? `Draft · ${counts.draft}` : `Arsip · ${counts.archived}`}
               </button>
             ))}
@@ -502,38 +502,38 @@ export function ContentManager() {
                         <span className="relative h-10 w-12 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill unoptimized sizes="48px" className="object-cover" /></span>
                         <div className="min-w-0">
                           <p className="max-w-[270px] truncate text-xs font-extrabold text-[#37483a]">{item.title}</p>
-                          <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog ★ {(item.rating / 10).toFixed(1)} · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
-                          <p className="mt-0.5 max-w-[270px] truncate text-[9px] font-semibold text-[#7d8b7e]">{(() => {
+                          <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog {(item.rating / 10).toFixed(1)} dari 5 · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
+                          <p className="mt-0.5 max-w-[270px] truncate text-[9px] font-semibold text-[#626e63] (4.58:1 terburuk)">{(() => {
                             const rating = ulasan.ratings[item.slug];
                             if (!rating || rating.count <= 0) return "Belum ada ulasan pengunjung";
                             const skor = bayesianRatingScore(rating, ulasan.globalAverage || null, ulasan.minReviews);
-                            return `Ulasan nyata ★ ${rating.average.toFixed(1)} dari ${new Intl.NumberFormat("id-ID").format(rating.count)} ulasan${skor === null ? "" : ` · skor peringkat ${skor.toFixed(2)}`}`;
+                            return `Ulasan nyata ${rating.average.toFixed(1)} dari 5 dari ${new Intl.NumberFormat("id-ID").format(rating.count)} ulasan${skor === null ? "" : ` · skor peringkat ${skor.toFixed(2)}`}`;
                           })()}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex max-w-[260px] flex-wrap gap-1.5">
-                        {item.weather.slice(0, 1).map((weather) => <Badge key={weather} className={chipClass}>{weather === "Hujan" ? "🌧️" : weather === "Cerah" ? "☀️" : "☁️"} {weather}</Badge>)}
-                        {item.water.slice(0, 1).map((water) => <Badge key={water} tone="cream" className={chipClass}>💧 {water}</Badge>)}
-                        {item.waterBodies.slice(0, 1).map((body) => <Badge key={body} tone="cream" className={chipClass}>🌊 {body}</Badge>)}
-                        {item.fishingTypes.slice(0, 1).map((type) => <Badge key={type} tone="cream" className={chipClass}>🎣 {type}</Badge>)}
+                        {item.weather.slice(0, 1).map((weather) => <Badge key={weather} className={chipClass}><WeatherIcon weather={weather} size={10} /> {weather}</Badge>)}
+                        {item.water.slice(0, 1).map((water) => <Badge key={water} tone="cream" className={chipClass}><WaterIcon size={10} /> {water}</Badge>)}
+                        {item.waterBodies.slice(0, 1).map((body) => <Badge key={body} tone="cream" className={chipClass}><WaterBodyIcon size={10} /> {body}</Badge>)}
+                        {item.fishingTypes.slice(0, 1).map((type) => <Badge key={type} tone="cream" className={chipClass}><FishingTypeIcon size={10} /> {type}</Badge>)}
                       </div>
                       <p className="mt-1.5 text-[9px] font-semibold text-[#969d94]">{item.ingredients.filter((entry) => !entry.optional).length} bahan · {item.ingredients.filter((entry) => entry.optional).length} opsional</p>
                     </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-[#677467]">{primaryFishingType(item.title, item.fishingTypes)}</td>
+                    <td className="px-4 py-3.5 text-xs font-semibold text-[#616d61] (4.66:1 terburuk)">{primaryFishingType(item.title, item.fishingTypes)}</td>
                     <td className="px-4 py-3.5"><Badge tone={item.status === "published" ? "sage" : item.status === "draft" ? "gold" : "cream"}>{item.status === "published" ? "Published" : item.status === "draft" ? "Draft" : "Archived"}</Badge></td>
                     <td className="px-4 py-3.5 text-[10px] text-[#929a91]">{formattedDate(item.updatedAt)}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/dashboard/konten?edit=${item.id}`} aria-label={`Buka detail ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#657664] hover:bg-[#edf3e9] hover:text-[#345b3a]"><Eye size={14} /></Link>
-                        <button type="button" onClick={() => { setEditing(item); setEditorOpen(true); }} aria-label={`Edit ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#657664] hover:bg-[#edf3e9] hover:text-[#345b3a]"><FilePenLine size={14} /></button>
+                        <Link href={`/dashboard/konten?edit=${item.id}`} aria-label={`Buka detail ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#5f6f5e] (4.59:1 terburuk) hover:bg-[#edf3e9] hover:text-[#345b3a]"><Eye size={14} /></Link>
+                        <button type="button" onClick={() => { setEditing(item); setEditorOpen(true); }} aria-label={`Edit ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#5f6f5e] (4.59:1 terburuk) hover:bg-[#edf3e9] hover:text-[#345b3a]"><FilePenLine size={14} /></button>
                         {item.status !== "published" ? (
-                          <button type="button" onClick={() => void changeStatus(item, "published")} disabled={pending === item.id} aria-label={`Publikasikan ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#547753] hover:bg-[#edf3e9] disabled:opacity-40"><Globe2 size={14} /></button>
+                          <button type="button" onClick={() => void changeStatus(item, "published")} disabled={pending === item.id} aria-label={`Publikasikan ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#517250] (4.65:1 terburuk) hover:bg-[#edf3e9] disabled:opacity-40"><Globe2 size={14} /></button>
                         ) : (
-                          <button type="button" onClick={() => void changeStatus(item, "draft")} disabled={pending === item.id} aria-label={`Jadikan ${item.title} draft`} className="grid h-8 w-8 place-items-center rounded-lg text-[#927c4a] hover:bg-[#f8f4e9] disabled:opacity-40"><FilePenLine size={14} /></button>
+                          <button type="button" onClick={() => void changeStatus(item, "draft")} disabled={pending === item.id} aria-label={`Jadikan ${item.title} draft`} className="grid h-8 w-8 place-items-center rounded-lg text-[#7b693f] (4.58:1 terburuk) hover:bg-[#f8f4e9] disabled:opacity-40"><FilePenLine size={14} /></button>
                         )}
-                        <button type="button" onClick={() => void remove(item)} disabled={pending === item.id} aria-label={`Hapus ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#a26b5b] hover:bg-[#fbefec] disabled:opacity-40"><Trash2 size={14} /></button>
+                        <button type="button" onClick={() => void remove(item)} disabled={pending === item.id} aria-label={`Hapus ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#905f50] (4.57:1 terburuk) hover:bg-[#fbefec] disabled:opacity-40"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -544,9 +544,9 @@ export function ContentManager() {
         ) : (
           <div className="grid min-h-64 place-items-center px-6 py-12 text-center">
             <div>
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#eef3e9] text-[#658063]"><CirclePlus size={21} /></span>
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#eef3e9] text-[#597157] (4.59:1 terburuk)"><CirclePlus size={21} /></span>
               <h3 className="mt-4 text-sm font-extrabold text-[#3b4b3d]">{query || filter !== "Semua" ? "Konten tidak ditemukan" : "Mulai pustaka racikan"}</h3>
-              <p className="mt-1.5 max-w-sm text-xs leading-5 text-[#8a9389]">{query || filter !== "Semua" ? "Coba kata kunci atau status yang lain." : "Buat resep, simpan sebagai draft, lalu publikasikan saat siap."}</p>
+              <p className="mt-1.5 max-w-sm text-xs leading-5 text-[#656d65] (4.59:1 terburuk)">{query || filter !== "Semua" ? "Coba kata kunci atau status yang lain." : "Buat resep, simpan sebagai draft, lalu publikasikan saat siap."}</p>
               <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-bold text-white"><Plus size={14} /> Buat resep pertama <ArrowRight size={13} /></button>
             </div>
           </div>
@@ -558,7 +558,7 @@ export function ContentManager() {
         </div>
       </section>
 
-      <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#edf2e9] px-4 py-3 text-[10px] leading-5 text-[#6b786a]"><Globe2 size={13} className="mt-0.5 shrink-0" />Status <strong>Published</strong> membuat resep tersedia di katalog publik. Draft dan arsip hanya tampil di dashboard.</div>
+      <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#edf2e9] px-4 py-3 text-[10px] leading-5 text-[#626e62] (4.59:1 terburuk)"><Globe2 size={13} className="mt-0.5 shrink-0" />Status <strong>Published</strong> membuat resep tersedia di katalog publik. Draft dan arsip hanya tampil di dashboard.</div>
 
       {editorOpen && <RecipeEditor key={editing?.id ?? "new"} recipe={editing} onClose={() => { setEditorOpen(false); setEditing(undefined); router.replace("/dashboard/konten"); }} onSave={save} />}
     </AdminShell>

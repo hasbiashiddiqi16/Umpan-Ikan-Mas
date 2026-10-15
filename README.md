@@ -328,6 +328,37 @@ dan alt text-nya sendiri, diatur dari satu tempat: `src/data/recipe-photos.ts`.
   `python3 scripts/buat-foto-racikan.py` akan membuat ulang berkas turunan
   yang belum ada (tambahkan `--force` untuk membuat semuanya dari awal).
 
+## Ikon SVG (bukan emoji) dan kontras WCAG AA
+
+Emoji tidak lagi dipakai sebagai ikon utama di situs maupun dashboard.
+Dulu screen reader membacakan nama emoji ("fishing rod", "fire", …) karena
+emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
+
+- **Ikon = SVG Lucide** (`lucide-react`, sudah dipakai situs). Aturannya:
+  ikon di samping teks yang sudah menamai isinya bersifat dekoratif dan
+  diberi `aria-hidden="true"` (screen reader membaca teksnya saja), sedangkan
+  ikon yang berdiri sendiri dibungkus elemen ber-`aria-label` — mis. medali
+  peringkat di hasil sistem pakar adalah tautan ber-`aria-label="Peringkat
+  1: …"`. Pola rating bintang yang sudah ada (SVG + `aria-label` ringkas)
+  dipertahankan.
+- Helper bersama ada di `src/components/shared.tsx`: `WeatherIcon`,
+  `WaterIcon`, `WaterBodyIcon`, `FishingTypeIcon`, dan `CatchIcon`
+  (dipakai badge kartu resep, kartu komunitas, ulasan, dan moderasi).
+  Badge tangkapan di `src/lib/catch-details.ts` kini membawa kunci ikon
+  (`ikan`/`durasi`/`joran`/`laju`), bukan karakter emoji. Pilihan bahan di
+  sistem pakar memakai kunci ikon per bahan dari
+  `src/data/ingredient-knowledge.ts`.
+- Judul bagian yang dulu berawalan emoji (🏆/🔥/🌦️/🗺️/🎯) kini teks bersih;
+  label `eyebrow` di atasnya sudah memberi konteks.
+- **Kontras WCAG AA**: warna teks abu/hijau kecil yang tidak mencapai
+  4,5:1 di latar terang digelapkan sambil mempertahankan rona warnanya
+  (termasuk teks 9–11px di kartu dan dashboard), dan bintang rating
+  digelapkan ke 4,3:1 agar memenuhi kontras grafis 3:1 (WCAG 1.4.11).
+- Terverifikasi: tidak ada karakter emoji tersisa di `src/`, dan halaman
+  publik yang tersaji (/, /katalog, /cuaca, /sistem-pakar, /ai-umpan,
+  /resep/…, /komunitas) mengandung 0 emoji dengan ikon SVG + `aria-label`
+  di seluruh halamannya.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.

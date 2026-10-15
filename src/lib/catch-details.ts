@@ -72,13 +72,16 @@ export function describeCatchSummary(details: CatchDetails): string {
  * muncul kalau datanya benar-benar ada — tidak ada durasi atau joran yang
  * dikarang, dan laju per jam hanya muncul kalau durasinya diisi.
  */
-export function catchBadges(details: CatchDetails): { emoji: string; label: string }[] {
-  const badges: { emoji: string; label: string }[] = [];
-  if (typeof details.catchCount === "number") badges.push({ emoji: "🐟", label: `${angka(details.catchCount, 0)} ekor` });
-  if (typeof details.sessionMinutes === "number") badges.push({ emoji: "⏱️", label: formatSessionDuration(details.sessionMinutes) });
-  if (typeof details.rodCount === "number") badges.push({ emoji: "🎣", label: `${angka(details.rodCount, 0)} joran` });
+/** Kunci ikon SVG untuk badge tangkapan; dipetakan ke Lucide di komponen. */
+export type CatchBadgeIcon = "ikan" | "durasi" | "joran" | "laju";
+
+export function catchBadges(details: CatchDetails): { icon: CatchBadgeIcon; label: string }[] {
+  const badges: { icon: CatchBadgeIcon; label: string }[] = [];
+  if (typeof details.catchCount === "number") badges.push({ icon: "ikan", label: `${angka(details.catchCount, 0)} ekor` });
+  if (typeof details.sessionMinutes === "number") badges.push({ icon: "durasi", label: formatSessionDuration(details.sessionMinutes) });
+  if (typeof details.rodCount === "number") badges.push({ icon: "joran", label: `${angka(details.rodCount, 0)} joran` });
   const laju = catchPerHour(details);
-  if (laju !== null) badges.push({ emoji: "📈", label: `${angka(laju)} ekor/jam` });
+  if (laju !== null) badges.push({ icon: "laju", label: `${angka(laju)} ekor/jam` });
   return badges;
 }
 

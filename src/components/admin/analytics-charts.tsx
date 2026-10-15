@@ -1,4 +1,4 @@
-import { ArrowUpRight, BarChart3, Eye, FileText, PieChart } from "lucide-react";
+import { ArrowUpRight, BarChart3, Eye, FileText, Medal, PieChart } from "lucide-react";
 
 export type DailyAnalytic = { day: string; views: number };
 export type TopPage = { path: string; views: number };
@@ -38,9 +38,9 @@ export function TrafficLineChart({ data }: { data: DailyAnalytic[] }) {
           {points.filter((_, index) => index === points.length - 1 || index % 7 === 0).map((point) => <g key={point.day}><circle cx={point.x} cy={point.y} r="6" fill="#fff" stroke="#4d744c" strokeWidth="3"><title>{shortDate(point.day, true)}: {point.views} kunjungan</title></circle></g>)}
           {dateIndexes.map((index) => points[index] && <text key={points[index].day} x={points[index].x} y={height - 9} textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"} fontSize="10" fill="#98a096">{shortDate(points[index].day, true)}</text>)}
         </svg>
-        {!hasTraffic && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><span className="rounded-full border border-[#e5eae2] bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#899287] shadow-sm">Belum ada kunjungan tercatat</span></div>}
+        {!hasTraffic && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><span className="rounded-full border border-[#e5eae2] bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#656c63] (4.64:1 terburuk) shadow-sm">Belum ada kunjungan tercatat</span></div>}
       </div>
-      <div className="flex items-center justify-between border-t border-[#eef0ec] pt-3 text-[10px] text-[#899287]"><span>30 hari terakhir · UTC</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#5b8057]" />Kunjungan halaman</span></div>
+      <div className="flex items-center justify-between border-t border-[#eef0ec] pt-3 text-[10px] text-[#656c63] (4.64:1 terburuk)"><span>30 hari terakhir · UTC</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#5b8057]" />Kunjungan halaman</span></div>
     </div>
   );
 }
@@ -49,8 +49,8 @@ export function TopPagesChart({ pages }: { pages: TopPage[] }) {
   const max = Math.max(...pages.map((page) => page.views), 1);
   return (
     <div className="space-y-4">
-      {pages.length ? pages.map((page, index) => <div key={page.path}><div className="mb-1.5 flex items-center justify-between gap-3"><span className="truncate text-xs font-semibold text-[#536254]">{index === 0 && <span className="mr-1.5">🏅</span>}{page.path}</span><span className="shrink-0 text-xs font-bold tabular-nums text-[#526153]">{new Intl.NumberFormat("id-ID").format(page.views)}</span></div><div className="h-2 overflow-hidden rounded-full bg-[#eef1eb]"><div className={`h-full rounded-full ${index === 0 ? "bg-[#416748]" : index === 1 ? "bg-[#698967]" : "bg-[#a0b398]"}`} style={{ width: `${Math.max(4, (page.views / max) * 100)}%` }} /></div></div>) : <div className="grid min-h-[160px] place-items-center rounded-xl border border-dashed border-[#e4e9e2] px-4 text-center text-xs leading-5 text-[#899287]">Halaman akan muncul setelah pengunjung membuka situs publik.</div>}
-      <div className="flex items-center gap-2 border-t border-[#eef0ec] pt-3 text-[10px] text-[#899287]"><Eye size={13} /> Page view, 30 hari terakhir</div>
+      {pages.length ? pages.map((page, index) => <div key={page.path}><div className="mb-1.5 flex items-center justify-between gap-3"><span className="truncate text-xs font-semibold text-[#536254]">{index === 0 && <Medal size={13} className="mr-1.5 inline-block text-[#886611] (4.55:1 terburuk)" aria-hidden="true" />}{page.path}</span><span className="shrink-0 text-xs font-bold tabular-nums text-[#526153]">{new Intl.NumberFormat("id-ID").format(page.views)}</span></div><div className="h-2 overflow-hidden rounded-full bg-[#eef1eb]"><div className={`h-full rounded-full ${index === 0 ? "bg-[#416748]" : index === 1 ? "bg-[#698967]" : "bg-[#a0b398]"}`} style={{ width: `${Math.max(4, (page.views / max) * 100)}%` }} /></div></div>) : <div className="grid min-h-[160px] place-items-center rounded-xl border border-dashed border-[#e4e9e2] px-4 text-center text-xs leading-5 text-[#656c63] (4.64:1 terburuk)">Halaman akan muncul setelah pengunjung membuka situs publik.</div>}
+      <div className="flex items-center gap-2 border-t border-[#eef0ec] pt-3 text-[10px] text-[#656c63] (4.64:1 terburuk)"><Eye size={13} /> Page view, 30 hari terakhir</div>
     </div>
   );
 }
@@ -64,11 +64,11 @@ export function ContentDonutChart({ published, drafts, archived }: { published: 
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-around">
       <div className="relative h-[160px] w-[160px] shrink-0"><svg viewBox="0 0 160 160" role="img" aria-label={`Status konten: ${published} tayang, ${drafts} draft, ${archived} arsip`} className="h-full w-full -rotate-90"><circle cx="80" cy="80" r={radius} fill="none" stroke="#eff1ed" strokeWidth="18" />{total > 0 && segments.map((segment) => { const dash = (segment.value / total) * circumference; const offset = accumulated; accumulated += dash; return <circle key={segment.label} cx="80" cy="80" r={radius} fill="none" stroke={segment.color} strokeWidth="18" strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset}><title>{segment.label}: {segment.value}</title></circle>; })}</svg><div className="absolute inset-0 grid place-content-center text-center"><strong className="text-2xl font-black text-[#304234]">{total}</strong><span className="mt-0.5 text-[9px] font-bold uppercase tracking-[.12em] text-[#939a91]">Konten</span></div></div>
-      <div className="grid w-full gap-3 sm:w-auto">{segments.map((segment) => <div key={segment.label} className="flex items-center justify-between gap-5 sm:justify-start"><span className="inline-flex items-center gap-2 text-xs font-semibold text-[#687468]"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />{segment.label}</span><strong className="text-sm font-extrabold tabular-nums text-[#364638]">{segment.value}</strong></div>)}</div>
+      <div className="grid w-full gap-3 sm:w-auto">{segments.map((segment) => <div key={segment.label} className="flex items-center justify-between gap-5 sm:justify-start"><span className="inline-flex items-center gap-2 text-xs font-semibold text-[#626d62] (4.64:1 terburuk)"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />{segment.label}</span><strong className="text-sm font-extrabold tabular-nums text-[#364638]">{segment.value}</strong></div>)}</div>
     </div>
   );
 }
 
 export function ChartHeading({ icon: Icon, label, note }: { icon: typeof BarChart3; label: string; note?: string }) {
-  return <div className="mb-5 flex items-start justify-between gap-3"><div><span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.13em] text-[#8b9488]"><Icon size={14} />{label}</span>{note && <p className="mt-1.5 text-[11px] leading-5 text-[#90988e]">{note}</p>}</div><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#f4f6f2] text-[#70806f]">{Icon === BarChart3 ? <BarChart3 size={15} /> : Icon === FileText ? <FileText size={15} /> : Icon === PieChart ? <PieChart size={15} /> : <ArrowUpRight size={15} />}</span></div>;
+  return <div className="mb-5 flex items-start justify-between gap-3"><div><span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.13em] text-[#666d64] (4.58:1 terburuk)"><Icon size={14} />{label}</span>{note && <p className="mt-1.5 text-[11px] leading-5 text-[#90988e]">{note}</p>}</div><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#f4f6f2] text-[#616e60] (4.61:1 terburuk)">{Icon === BarChart3 ? <BarChart3 size={15} /> : Icon === FileText ? <FileText size={15} /> : Icon === PieChart ? <PieChart size={15} /> : <ArrowUpRight size={15} />}</span></div>;
 }

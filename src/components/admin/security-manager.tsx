@@ -22,7 +22,7 @@ type PasswordState = {
   maxLength: number;
 };
 
-const labelClass = "grid gap-1.5 text-xs font-bold text-[#657164]";
+const labelClass = "grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk)";
 const inputClass = "min-h-11 w-full rounded-xl border border-[#e2e8e0] bg-white px-3.5 text-sm font-medium text-[#2b3b2d] outline-none transition focus:border-[#9db99b] focus:ring-2 focus:ring-[#dcebd8] disabled:opacity-60";
 const hintClass = "text-[10px] font-medium leading-4 text-[#959c93]";
 
@@ -146,11 +146,11 @@ export function SecurityManager() {
     <AdminShell>
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#899488]">
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#656d64] (4.59:1 terburuk)">
             <Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Keamanan</span>
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Keamanan</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#7a8579]">Ganti password untuk masuk ke dashboard ini. Password situs publik (pengunjung) tidak terpengaruh.</p>
+          <p className="mt-2 max-w-2xl text-sm text-[#626c62] (4.69:1 terburuk)">Ganti password untuk masuk ke dashboard ini. Password situs publik (pengunjung) tidak terpengaruh.</p>
         </div>
         <Link href="/" target="_blank" className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] sm:self-auto">
           Lihat situs publik
@@ -178,7 +178,7 @@ export function SecurityManager() {
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="grid content-start gap-4">
             {!readable && (
-              <p className="flex items-start gap-2 rounded-2xl border border-[#f0e2c8] bg-[#fdf8ee] px-4 py-3 text-[11px] font-semibold text-[#8a6a34]">
+              <p className="flex items-start gap-2 rounded-2xl border border-[#f0e2c8] bg-[#fdf8ee] px-4 py-3 text-[11px] font-semibold text-[#846632] (4.59:1 terburuk)">
                 <TriangleAlert size={15} className="mt-0.5 shrink-0" />
                 Basis data belum tersambung, jadi password baru belum bisa disimpan. Sementara ini yang berlaku adalah ADMIN_PASSWORD dari server.
               </p>
@@ -198,7 +198,7 @@ export function SecurityManager() {
                 />
               </label>
               <div className="flex items-end">
-                <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-[#657164]">
+                <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-[#616c60] (4.71:1 terburuk)">
                   <input
                     type="checkbox"
                     checked={showPasswords}
@@ -247,7 +247,7 @@ export function SecurityManager() {
                 type="button"
                 onClick={clearForm}
                 disabled={busy !== "" || kosong}
-                className="inline-flex min-h-11 items-center rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50"
+                className="inline-flex min-h-11 items-center rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50"
               >
                 Kosongkan isian
               </button>
@@ -259,24 +259,24 @@ export function SecurityManager() {
           </div>
 
           <aside className="grid content-start gap-3 rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] p-4">
-            <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.12em] text-[#8b9489]">
-              <ShieldCheck size={14} className="text-[#56805a]" /> Status
+            <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">
+              <ShieldCheck size={14} className="text-[#4d7351] (4.64:1 terburuk)" /> Status
             </p>
             <dl className="grid gap-2 text-[11px]">
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="font-semibold text-[#8b9489]">Sumber password</dt>
+                <dt className="font-semibold text-[#666d65] (4.57:1 terburuk)">Sumber password</dt>
                 <dd className="text-right font-bold text-[#3c5140]">{custom ? "Dipasang di dashboard" : "ADMIN_PASSWORD server"}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="font-semibold text-[#8b9489]">Terakhir diubah</dt>
+                <dt className="font-semibold text-[#666d65] (4.57:1 terburuk)">Terakhir diubah</dt>
                 <dd className="text-right font-bold text-[#3c5140]">{formatDate(state?.updatedAt ?? null)}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="font-semibold text-[#8b9489]">Versi keamanan</dt>
+                <dt className="font-semibold text-[#666d65] (4.57:1 terburuk)">Versi keamanan</dt>
                 <dd className="text-right font-bold text-[#3c5140]">ke-{state?.generation ?? 0}</dd>
               </div>
             </dl>
-            <ul className="grid gap-1.5 border-t border-[#eef0ec] pt-3 text-[10px] font-medium leading-4 text-[#8b9489]">
+            <ul className="grid gap-1.5 border-t border-[#eef0ec] pt-3 text-[10px] font-medium leading-4 text-[#666d65] (4.57:1 terburuk)">
               {ADMIN_PASSWORD_RULES.map((rule) => <li key={rule}>• {rule}</li>)}
             </ul>
             <p className={hintClass}>Password disimpan dalam bentuk teracak (scrypt), bukan teks asli — termasuk untuk Anda.</p>
@@ -291,7 +291,7 @@ export function SecurityManager() {
         </header>
         <div className="grid gap-3 p-4 sm:p-5">
           {!envConfigured && (
-            <p className="flex items-start gap-2 rounded-2xl border border-[#f0e2c8] bg-[#fdf8ee] px-4 py-3 text-[11px] font-semibold text-[#8a6a34]">
+            <p className="flex items-start gap-2 rounded-2xl border border-[#f0e2c8] bg-[#fdf8ee] px-4 py-3 text-[11px] font-semibold text-[#846632] (4.59:1 terburuk)">
               <TriangleAlert size={15} className="mt-0.5 shrink-0" />
               <code>ADMIN_PASSWORD</code> belum diatur di server. Isi dulu di environment sebelum kembali ke password bawaan, supaya Anda tidak terkunci di luar dashboard.
             </p>
@@ -301,7 +301,7 @@ export function SecurityManager() {
               type="button"
               onClick={() => void resetToEnv()}
               disabled={busy !== "" || !readable || !custom}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50"
             >
               {busy === "reset" ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} Pakai password server lagi
             </button>
@@ -316,15 +316,15 @@ export function SecurityManager() {
 
       <section className="mb-2 grid gap-3 rounded-[20px] border border-[#e5eae3] bg-[#fbfcfa] p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>
-          <h2 className="inline-flex items-center gap-2 text-sm font-extrabold text-[#344638]"><ShieldQuestion size={16} className="text-[#56805a]" /> Kalau lupa password</h2>
-          <ol className="mt-2 grid gap-1.5 text-[11px] font-medium leading-5 text-[#7a8579]">
+          <h2 className="inline-flex items-center gap-2 text-sm font-extrabold text-[#344638]"><ShieldQuestion size={16} className="text-[#4d7351] (4.64:1 terburuk)" /> Kalau lupa password</h2>
+          <ol className="mt-2 grid gap-1.5 text-[11px] font-medium leading-5 text-[#626c62] (4.69:1 terburuk)">
             <li>1. Ganti nilai <code>ADMIN_PASSWORD</code> di environment host (mis. Vercel → Settings → Environment Variables), lalu deploy ulang.</li>
             <li>2. Masuk kembali ke dashboard dengan nilai baru itu, lalu pasang password pilihan Anda di halaman ini.</li>
           </ol>
         </div>
         <div>
-          <h2 className="inline-flex items-center gap-2 text-sm font-extrabold text-[#344638]"><ShieldCheck size={16} className="text-[#56805a]" /> Catatan</h2>
-          <ul className="mt-2 grid gap-1.5 text-[11px] font-medium leading-5 text-[#7a8579]">
+          <h2 className="inline-flex items-center gap-2 text-sm font-extrabold text-[#344638]"><ShieldCheck size={16} className="text-[#4d7351] (4.64:1 terburuk)" /> Catatan</h2>
+          <ul className="mt-2 grid gap-1.5 text-[11px] font-medium leading-5 text-[#626c62] (4.69:1 terburuk)">
             <li>• <code>ADMIN_PASSWORD</code> jangan dihapus dari server: ia jadi kunci cadangan sekaligus penanda tangan sesi (bila <code>ADMIN_SESSION_SECRET</code> kosong).</li>
             <li>• Halaman ini tidak mengubah apa pun yang dilihat pengunjung situs.</li>
           </ul>

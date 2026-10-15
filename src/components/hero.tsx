@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, CloudRain, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, CloudRain, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HERO_ALT, HERO_SRC } from "@/lib/brand";
 
 export function Hero() {
@@ -22,7 +22,7 @@ export function Hero() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="#finder" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e4b75c] px-6 text-sm font-bold text-[#263622] shadow-[0_10px_30px_rgba(213,168,76,.22)] transition hover:-translate-y-0.5 hover:bg-[#efc872] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-              🎯 Cari Umpan Saya <ArrowRight size={17} />
+              <Target size={16} aria-hidden="true" /> Cari Umpan Saya <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <Link href="/katalog" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
               Jelajahi Katalog <ArrowRight size={16} />

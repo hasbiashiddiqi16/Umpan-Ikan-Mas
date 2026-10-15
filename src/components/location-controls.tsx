@@ -82,7 +82,7 @@ export function UseMyLocationButton({
         <button type="button" onClick={() => void request()} disabled={busy} className="min-h-8 rounded-lg px-2.5 font-bold text-[#4f6b4f] underline-offset-2 transition hover:bg-[#eef3eb] hover:underline disabled:opacity-50">
           {busy ? "Memperbarui…" : "Perbarui"}
         </button>
-        <button type="button" onClick={forget} className="min-h-8 rounded-lg px-2.5 font-bold text-[#8b7a72] underline-offset-2 transition hover:bg-[#f7f2ef] hover:underline">
+        <button type="button" onClick={forget} className="min-h-8 rounded-lg px-2.5 font-bold text-[#766761] (4.64:1 terburuk) underline-offset-2 transition hover:bg-[#f7f2ef] hover:underline">
           Lupakan
         </button>
         <LocationFeedback feedback={feedback} />
@@ -126,7 +126,7 @@ export function LocationConsentBanner() {
             <p className="mt-1.5 text-sm leading-6 text-[#5f6d60]">
               Dengan izinmu, kolom <strong className="font-bold">provinsi</strong> dan <strong className="font-bold">kota</strong> pada form pencarian, AI Umpan, Sistem Pakar, filter katalog, dan form ulasan langsung menyesuaikan lokasi mancingmu.
             </p>
-            <p className="mt-2 inline-flex items-start gap-1.5 text-[11px] leading-5 text-[#78877a]">
+            <p className="mt-2 inline-flex items-start gap-1.5 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">
               <ShieldCheck size={14} className="mt-0.5 shrink-0" />
               Lokasi diproses di perangkat ini dan tidak dikirim ke server. Tanpa izin, form dibiarkan kosong dan tetap bisa diisi manual.
             </p>
@@ -163,7 +163,7 @@ export function LocationConsentBanner() {
         </p>
       )}
       {feedback?.tone === "error" && feedback.message === LOCATION_MESSAGES.denied && (
-        <p className="mt-2 text-[11px] leading-5 text-[#78877a]">Kamu bisa mengaktifkan izin lokasi lewat pengaturan browser, lalu tekan tombol “Gunakan lokasi saya” di form.</p>
+        <p className="mt-2 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">Kamu bisa mengaktifkan izin lokasi lewat pengaturan browser, lalu tekan tombol “Gunakan lokasi saya” di form.</p>
       )}
     </section>
   );
