@@ -1,6 +1,9 @@
 import {
   DEFAULT_WATER_BODIES,
+  SEASON_CONDITIONS,
   WATER_BODIES,
+  WATER_CONDITIONS,
+  WEATHER_CONDITIONS,
   isWaterBody,
   normalizeFishingText,
   normalizeFishingType,
@@ -52,10 +55,10 @@ export type CmsRecipeInput = Omit<CmsRecipeRecord, "id" | "rating" | "reviewCoun
 // tetapi disimpan kembali sebagai "Galatama".
 const validStatuses = ["draft", "published", "archived"];
 const validDifficulties = ["Mudah", "Menengah", "Tingkat lanjut"];
-const validWeather = ["Hujan", "Mendung", "Cerah", "Berawan", "Panas"];
-const validWater = ["Keruh", "Hijau", "Jernih", "Kekuningan"];
+const validWeather: string[] = [...WEATHER_CONDITIONS];
+const validWater: string[] = [...WATER_CONDITIONS];
 const validTypes = ["Harian", "Lomba", "Galatama", "Galat"];
-const validSeasons = ["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"];
+const validSeasons: string[] = [...SEASON_CONDITIONS];
 
 function stringArray(value: unknown, allowed?: string[]): string[] | null {
   if (!Array.isArray(value) || value.length > 30 || value.some((item) => typeof item !== "string" || item.length > 120)) return null;

@@ -8,8 +8,9 @@ import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Drople
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
-import { FISHING_TYPES, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
-import { slugify } from "@/lib/utils";
+import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
+import { provinces } from "@/data/provinces";
+import { hargaAcuanDariLabel, slugify } from "@/lib/utils";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
@@ -26,14 +27,14 @@ export type ManagedRecipe = {
 type IngredientRow = { name: string; brand: string; amount: string; optional: boolean };
 
 type RecipeForm = {
-  title: string; slug: string; summary: string; status: string; image: string; price: string; priceValue: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
+  title: string; slug: string; summary: string; status: string; image: string; price: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
 };
 
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
 const blankForm: RecipeForm = {
-  title: "", slug: "", summary: "", status: "draft", image: "/images/recipe-putih.jpg",
-  price: "Rp15.000–30.000", priceValue: "20000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
+  title: "", slug: "", summary: "", status: "draft", image: "",
+  price: "Rp15.000–30.000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
   fishingTypes: "Harian", provinces: "Jawa Barat", seasons: "Musim Hujan",
   ingredients: [
     { name: "Pelet ikan", brand: "Pelet Jitu", amount: "50 g", optional: false },
@@ -61,7 +62,7 @@ function filledIngredients(rows: IngredientRow[]): Ingredient[] {
 function formFromRecipe(recipe: ManagedRecipe): RecipeForm {
   return {
     title: recipe.title, slug: recipe.slug, summary: recipe.summary, status: recipe.status, image: recipe.image,
-    price: recipe.price, priceValue: String(recipe.priceValue), difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
+    price: recipe.price, difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
     water: recipe.water.join(", "), waterBodies: recipe.waterBodies.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
     seasons: recipe.seasons.join(", "),
     ingredients: recipe.ingredients.map((item) => ({ name: item.name, brand: item.brand, amount: item.amount, optional: Boolean(item.optional) })),
@@ -76,7 +77,8 @@ function toPayload(form: RecipeForm, status = form.status) {
     slug: form.slug.trim() || slugify(form.title),
     summary: form.summary.trim(),
     status,
-    priceValue: Number(form.priceValue),
+    // Harga acuan tidak lagi diketik manual: diturunkan dari label harga.
+    priceValue: hargaAcuanDariLabel(form.price),
     weather: listFrom(form.weather),
     water: listFrom(form.water),
     waterBodies: listFrom(form.waterBodies),
@@ -187,6 +189,62 @@ function FishingTypePicker({ value, onChange }: { value: string; onChange: (valu
           </label>
         );
       })}
+    </div>
+  );
+}
+
+
+/** Pembungkus kolom khusus dropdown: bukan <label> agar daftar centang di dalamnya sah. */
+function PilihanField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return <div className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk)"><span>{label}</span>{children}{hint && <span className="text-[10px] font-medium leading-4 text-[#959c93]">{hint}</span>}</div>;
+}
+
+/**
+ * Dropdown banyak pilihan untuk kolom kondisi: nilai dipilih dari daftar
+ * resmi, bukan diketik bebas, supaya tidak ada nilai salah ketik yang
+ * ditolak server atau tak pernah cocok dengan saringan publik. Boleh lebih
+ * dari satu (mis. resep cocok untuk Hujan dan Mendung). Nilai disimpan
+ * sebagai teks terpisah koma dalam urutan daftar; nilai lama yang tidak
+ * ada di daftar tetap ditampilkan agar tidak hilang diam-diam saat
+ * menyunting resep lama.
+ */
+function MultiSelectDropdown({ value, options, onChange, placeholder, searchable = false }: {
+  value: string; options: readonly string[]; onChange: (value: string) => void; placeholder: string; searchable?: boolean;
+}) {
+  const [terbuka, setTerbuka] = useState(false);
+  const [kata, setKata] = useState("");
+  const terpilih = listFrom(value);
+  const semuaPilihan = [...options, ...terpilih.filter((item) => !options.includes(item))];
+  const tampil = searchable && kata.trim()
+    ? semuaPilihan.filter((item) => item.toLocaleLowerCase("id-ID").includes(kata.trim().toLocaleLowerCase("id-ID")))
+    : semuaPilihan;
+  const toggle = (item: string) => {
+    const berikutnya = new Set(terpilih);
+    if (berikutnya.has(item)) berikutnya.delete(item); else berikutnya.add(item);
+    onChange(semuaPilihan.filter((pilihan) => berikutnya.has(pilihan)).join(", "));
+  };
+  return (
+    <div>
+      <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
+        <span className={`truncate ${terpilih.length ? "font-semibold" : "font-medium text-[#a1a89f]"}`}>{terpilih.length ? terpilih.join(", ") : placeholder}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {terpilih.length > 0 && <span className="rounded-full bg-[#eef5ea] px-2 py-0.5 text-[10px] font-extrabold text-[#33523a]">{terpilih.length}</span>}
+          <ChevronDown size={15} aria-hidden="true" className={`text-[#7a857a] transition ${terbuka ? "rotate-180" : ""}`} />
+        </span>
+      </button>
+      {terbuka && (
+        <div className="mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_10px_30px_rgba(36,53,39,.08)]">
+          {searchable && <input value={kata} onChange={(event) => setKata(event.target.value)} placeholder="Cari provinsi…" aria-label="Cari provinsi" className="mb-1.5 min-h-9 w-full rounded-lg border border-[#e8ece5] bg-[#fbfcfa] px-3 text-xs font-medium text-[#344638] outline-none placeholder:text-[#a1a89f] focus:border-[#748f70]" />}
+          <div className="grid max-h-52 gap-0.5 overflow-y-auto">
+            {tampil.length ? tampil.map((item) => (
+              <label key={item} className={`flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition ${terpilih.includes(item) ? "bg-[#eef5ea] text-[#33523a]" : "text-[#4c5a4d] hover:bg-[#f6f8f5]"}`}>
+                <input type="checkbox" checked={terpilih.includes(item)} onChange={() => toggle(item)} className="h-4 w-4 shrink-0 accent-[#345d3a]" />
+                <span className="min-w-0 flex-1 truncate">{item}</span>
+              </label>
+            )) : <p className="px-2.5 py-2 text-[11px] font-medium text-[#959c93]">Tidak ada pilihan yang cocok.</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -337,7 +395,9 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                   <span>Foto racikan</span>
                   <div className="flex flex-wrap items-start gap-3">
                     <span className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea]">
-                      <Image src={fotoPratinjau} alt="" fill sizes="128px" unoptimized={fotoUnggahan} className="object-cover" />
+                      {form.image
+                        ? <Image src={fotoPratinjau} alt="" fill sizes="128px" unoptimized={fotoUnggahan} className="object-cover" />
+                        : <span className="grid h-full w-full place-items-center text-[#93a192]"><ImageUp size={20} aria-hidden="true" /></span>}
                     </span>
                     <div className="grid min-w-0 gap-2">
                       <div className="flex flex-wrap gap-2">
@@ -352,7 +412,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                           </button>
                         )}
                       </div>
-                      <p className="text-[10px] font-medium leading-4 text-[#959c93]">{fotoUnggahan ? "Sedang memakai foto unggahanmu." : "Sedang memakai foto bawaan katalog."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB); foto tersimpan begitu dipilih, tanpa perlu memilih dari daftar.</p>
+                      <p className="text-[10px] font-medium leading-4 text-[#959c93]">{fotoUnggahan ? "Sedang memakai foto unggahanmu." : form.image ? "Sedang memakai foto bawaan katalog." : "Belum ada foto."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB); foto tersimpan begitu dipilih. Boleh dikosongkan — halaman publik akan memakai foto bawaan katalog.</p>
                       {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
                     </div>
                   </div>
@@ -364,15 +424,14 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
             <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
               <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Kondisi & harga</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Field label="Cuaca" hint="Pisahkan dengan koma"><input className={fieldClass} value={form.weather} onChange={(event) => update("weather", event.target.value)} placeholder="Hujan, Mendung" /></Field>
-                <Field label="Kondisi air" hint="Warna air: pisahkan dengan koma"><input className={fieldClass} value={form.water} onChange={(event) => update("water", event.target.value)} placeholder="Keruh, Hijau" /></Field>
-                <Field label="Tipe air" hint="Kolam, Sungai, atau Danau"><input className={fieldClass} value={form.waterBodies} onChange={(event) => update("waterBodies", event.target.value)} placeholder="Kolam" /></Field>
+                <PilihanField label="Cuaca"><MultiSelectDropdown value={form.weather} options={WEATHER_CONDITIONS} onChange={(value) => update("weather", value)} placeholder="Pilih cuaca" /></PilihanField>
+                <PilihanField label="Kondisi air" hint="Warna air kolam/spot"><MultiSelectDropdown value={form.water} options={WATER_CONDITIONS} onChange={(value) => update("water", value)} placeholder="Pilih kondisi air" /></PilihanField>
+                <PilihanField label="Tipe air"><MultiSelectDropdown value={form.waterBodies} options={WATER_BODIES} onChange={(value) => update("waterBodies", value)} placeholder="Pilih tipe air" /></PilihanField>
                 <Field label="Jenis kolam" hint="Bisa dipilih lebih dari satu. Centang ketiganya bila resep ini cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
-                <Field label="Musim"><input className={fieldClass} value={form.seasons} onChange={(event) => update("seasons", event.target.value)} placeholder="Musim Hujan, Peralihan" /></Field>
-                <Field label="Provinsi terkait"><input className={fieldClass} value={form.provinces} onChange={(event) => update("provinces", event.target.value)} placeholder="Jawa Barat, Banten" /></Field>
+                <PilihanField label="Musim"><MultiSelectDropdown value={form.seasons} options={SEASON_CONDITIONS} onChange={(value) => update("seasons", value)} placeholder="Pilih musim" /></PilihanField>
+                <PilihanField label="Provinsi terkait"><MultiSelectDropdown value={form.provinces} options={provinces.map((province) => province.name)} onChange={(value) => update("provinces", value)} placeholder="Pilih provinsi" searchable /></PilihanField>
                 <Field label="Tingkat kesulitan"><select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Mudah", "Menengah", "Tingkat lanjut"].map((item) => <option key={item}>{item}</option>)}</select></Field>
-                <Field label="Label harga"><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
-                <Field label="Harga acuan (angka, Rp)"><input className={fieldClass} type="number" min="0" max="100000000" value={form.priceValue} onChange={(event) => update("priceValue", event.target.value)} /></Field>
+                <Field label="Label harga" hint="Harga acuan untuk saringan budget dihitung otomatis dari rentang ini (titik tengahnya), jadi tidak perlu diisi angka terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
               </div>
             </section>
 

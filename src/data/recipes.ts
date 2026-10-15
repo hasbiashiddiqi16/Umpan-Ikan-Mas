@@ -9,6 +9,16 @@ export type FishingType = "Harian" | "Lomba" | "Galatama";
 export const FISHING_TYPES: FishingType[] = ["Harian", "Lomba", "Galatama"];
 
 /**
+ * Daftar resmi nilai kondisi. Dipakai bersama oleh formulir dashboard,
+ * validasi server (CMS), dan saringan publik, supaya tidak ada lagi nilai
+ * hasil ketikan bebas yang ditolak server atau tak pernah cocok dengan
+ * saringan mana pun.
+ */
+export const WEATHER_CONDITIONS: Weather[] = ["Hujan", "Mendung", "Cerah", "Berawan", "Panas"];
+export const WATER_CONDITIONS: WaterCondition[] = ["Keruh", "Hijau", "Jernih", "Kekuningan"];
+export const SEASON_CONDITIONS: string[] = ["Musim Hujan", "Musim Panas", "Kemarau", "Peralihan"];
+
+/**
  * Sebutan lama untuk kolam galatama yang sempat terlanjur dipakai di situs
  * (dan tersimpan di basis data). Tetap dibaca sebagai "Galatama" agar resep
  * dan ulasan lama tidak hilang saat penyebutannya diperbaiki.
