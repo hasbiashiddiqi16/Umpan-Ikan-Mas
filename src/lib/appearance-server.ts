@@ -1,11 +1,14 @@
 import "server-only";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsMedia, cmsSettings } from "@/db/schema";
 import {
   MEDIA_KEYS,
   defaultAppearance,
+  isRecipePhotoKeyForSlug,
   mediaUrl,
+  recipePhotoKey,
+  versionedRecipePhotoKey,
   resolvePopupSettings,
   type AppearanceState,
   type MediaInfo,
@@ -79,6 +82,27 @@ export async function saveMediaFile(key: string, mimeType: string, bytes: Buffer
   await db.insert(cmsMedia)
     .values({ key, mimeType, data, byteSize: bytes.length })
     .onConflictDoUpdate({ target: cmsMedia.key, set: { mimeType, data, byteSize: bytes.length, updatedAt: new Date() } });
+}
+
+/**
+ * Menyimpan foto racikan baru dengan kunci berversi lalu menghapus kunci
+ * lama milik resep yang sama: alamat foto publik selalu berubah setiap
+ * foto diganti (cache pengoptimal gambar/CDN tidak menyajikan foto lama)
+ * dan tabel media tidak menumpuk. Kegagalan membersihkan kunci lama
+ * tidak menggagalkan unggahan — kuncinya hanya jadi yatim tak terpakai.
+ */
+export async function replaceRecipePhoto(slug: string, mimeType: string, bytes: Buffer): Promise<string> {
+  const version = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const key = versionedRecipePhotoKey(slug, version);
+  await saveMediaFile(key, mimeType, bytes);
+  try {
+    const rows = await db.select({ key: cmsMedia.key }).from(cmsMedia).where(like(cmsMedia.key, `${recipePhotoKey(slug)}%`));
+    const stale = rows.map((row) => row.key).filter((candidate) => candidate !== key && isRecipePhotoKeyForSlug(candidate, slug));
+    if (stale.length) await db.delete(cmsMedia).where(inArray(cmsMedia.key, stale));
+  } catch {
+    // Pembersihan kunci lama bersifat pemeliharaan; abaikan bila gagal.
+  }
+  return key;
 }
 
 export async function deleteMediaFile(key: string): Promise<void> {

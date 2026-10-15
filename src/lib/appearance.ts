@@ -50,12 +50,33 @@ export const RECIPE_PHOTO_MAX_BYTES = 3_000_000;
 
 /**
  * Foto racikan unggahan disimpan di tabel media yang sama dengan aset
- * tampilan, dengan kunci dinamis per slug resep (`recipe-<slug>`), dan
- * dilayani lewat `/api/media/recipe-<slug>` — jadi alamat fotonya stabil
- * dan halaman publik tidak perlu dibangun ulang saat foto diganti.
+ * tampilan, dengan kunci dinamis per resep. Berbeda dengan logo/hero yang
+ * alamatnya sengaja tetap, kunci foto racikan MEMAKAI VERSI
+ * (`recipe-<slug>-v<versi>`): halaman publik menampilkan foto lewat
+ * pengoptimal gambar yang menyimpan hasil berdasarkan alamat, jadi
+ * alamat yang sama akan terus menyajikan foto lama dari cache walau
+ * berkasnya sudah diganti di basis data. Kunci tanpa versi
+ * (`recipe-<slug>`) hanya tinggal dari unggahan lama.
  */
 export function recipePhotoKey(slug: string): string {
   return `recipe-${slug}`;
+}
+
+/** Kunci media berversi untuk satu kali unggahan foto racikan. */
+export function versionedRecipePhotoKey(slug: string, version: string): string {
+  return `${recipePhotoKey(slug)}-v${version}`;
+}
+
+/**
+ * Apakah kunci media ini milik foto racikan resep `slug` (kunci lama
+ * maupun berversi)? Segmen versi adalah satu segmen huruf-angka sesudah
+ * "-v" tanpa tanda hubung, jadi kunci resep lain yang slug-nya hanya
+ * mirip (mis. "...-varian-baru") tidak ikut teranggap milik resep ini.
+ */
+export function isRecipePhotoKeyForSlug(key: string, slug: string): boolean {
+  const base = recipePhotoKey(slug);
+  if (key === base) return true;
+  return new RegExp(`^${base}-v[a-z0-9]{10,}$`).test(key);
 }
 
 /** Apakah kunci media ini foto racikan unggahan (`recipe-<slug>`)? */
