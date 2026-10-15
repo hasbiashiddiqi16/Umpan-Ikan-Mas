@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart, ShieldCheck, UserRound } from "lucide-react";
 import { recipes } from "@/data/recipes";
+import { cmsRecipeToRecipe, mergeRecipesBySlug, type CmsRecipeRecord } from "@/lib/cms";
 import { RecipeCard } from "@/components/recipe-card";
 import { EmptyState, SectionHeader } from "@/components/shared";
 
@@ -31,7 +32,23 @@ export function ProfileView() {
       window.removeEventListener("storage", update);
     };
   }, []);
-  const savedRecipes = recipes.filter((recipe) => favoriteSlugs.includes(recipe.slug));
+  const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>([]);
+  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/public/recipes", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] })
+      .then((body) => {
+        setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record)));
+        setShadowedSlugs(body.shadowedSlugs ?? []);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  // Favorit dicocokkan ke daftar publik gabungan agar resep dari dashboard ikut tampil.
+  const managedSlugs = new Set(shadowedSlugs);
+  const allRecipes = mergeRecipesBySlug(recipes.filter((recipe) => !managedSlugs.has(recipe.slug)), publishedRecipes);
+  const savedRecipes = allRecipes.filter((recipe) => favoriteSlugs.includes(recipe.slug));
   function clearFavorites() {
     localStorage.setItem(FAVORITES_KEY, "[]");
     setFavoriteSlugs([]);

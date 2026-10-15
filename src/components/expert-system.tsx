@@ -69,7 +69,7 @@ function ExpertRecipeEvidence({ result, index }: { result: NonNullable<ReturnTyp
   );
 }
 
-export function ExpertSystem() {
+export function ExpertSystem({ initialRecipes, initialManagedSlugs }: { initialRecipes?: Recipe[]; initialManagedSlugs?: string[] }) {
   // Provinsi dibiarkan kosong sampai lokasi diizinkan atau dipilih manual.
   const [preferences, setPreferences] = useState<UserPreferences>({ ...defaultPreferences, province: "" });
   // Mulai tanpa bahan terpilih: skor dan analisis hanya muncul setelah pengunjung
@@ -79,8 +79,8 @@ export function ExpertSystem() {
     setPreferences((current) => ({ ...current, province: place.province }));
   });
   const [localReviews, setLocalReviews] = useState<ReturnType<typeof readCommunityReviews>>([]);
-  const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>([]);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
+  const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>(() => initialRecipes ?? []);
+  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>(() => initialManagedSlugs ?? []);
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
   const [analysisCount, setAnalysisCount] = useState(0);
   const [notice, setNotice] = useState("");

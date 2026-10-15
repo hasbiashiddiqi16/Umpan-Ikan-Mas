@@ -21,7 +21,7 @@ export function revalidateRecipePages(slugs: string[], provinceNames: string[] =
   try {
     for (const slug of new Set(slugs.filter(Boolean))) revalidatePath(`/resep/${slug}`);
     for (const slug of new Set(provinceSlugs(provinceNames))) revalidatePath(`/provinsi/${slug}`);
-    for (const path of ["/", "/katalog", "/cuaca", "/komunitas", "/provinsi"]) revalidatePath(path);
+    for (const path of ["/", "/katalog", "/cuaca", "/komunitas", "/provinsi", "/ai-umpan", "/sistem-pakar"]) revalidatePath(path);
   } catch {
     // Cache akan tetap segar lewat ISR berkala; penyimpanan tidak gagal.
   }

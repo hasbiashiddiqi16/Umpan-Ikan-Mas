@@ -17,6 +17,7 @@ import { db, databaseEnvName } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
+import { getPublicRecipes } from "@/lib/public-recipes";
 import { formatCount } from "@/lib/utils";
 import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata, siteOrigin } from "@/lib/seo";
@@ -89,6 +90,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params;
   const recipe = await findRecipe(slug);
   if (!recipe) notFound();
+  const relatedRecipes = await getPublicRecipes();
   // Hanya contoh ulasan berlabel yang dikirim ke halaman: bukan bukti komunitas.
   const sampleReviews = reviews.filter((review) => review.recipeSlug === recipe.slug && review.sample);
   const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
@@ -180,7 +182,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <div className="min-w-0 rounded-[22px] border border-[#e7eae4] bg-white p-5"><h2 className="text-sm font-extrabold text-[#304033]">Saran kecil sebelum mancing</h2><ul className="mt-4 space-y-3 text-sm leading-5 text-[#636d63] (4.62:1 terburuk)"><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Siapkan air tambahan untuk mengatur tekstur.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Gunakan essen sedikit dulu, lalu sesuaikan.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Catat cuaca dan kondisi kolam saat mencoba.</li></ul></div>
           </aside>
         </div>
-        <section className="mt-16"><SectionHeader eyebrow="Mungkin juga cocok" title="Racikan lainnya" action={<Link href="/katalog" className="text-sm font-bold text-[#365b3b]">Lihat katalog <ArrowLeft className="ml-1 inline rotate-180" size={14} /></Link>} /><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{recipes.filter((item) => item.slug !== recipe.slug).slice(0, 3).map((item, index) => <RecipeCard key={item.slug} recipe={item} />)}</div></section>
+        <section className="mt-16"><SectionHeader eyebrow="Mungkin juga cocok" title="Racikan lainnya" action={<Link href="/katalog" className="text-sm font-bold text-[#365b3b]">Lihat katalog <ArrowLeft className="ml-1 inline rotate-180" size={14} /></Link>} /><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{relatedRecipes.filter((item) => item.slug !== recipe.slug).slice(0, 3).map((item, index) => <RecipeCard key={item.slug} recipe={item} />)}</div></section>
       </main>
       <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-[#e5e9e2] bg-white/95 p-3 backdrop-blur-lg sm:px-6 lg:hidden"><Link href="#bahan" className="mx-auto flex min-h-12 max-w-xl items-center justify-center rounded-xl bg-[#294b34] text-sm font-bold text-white shadow-lg"><Fish size={16} aria-hidden="true" /> Gunakan Resep Ini</Link></div>
       <Footer />

@@ -11,6 +11,7 @@ import { provinces } from "@/data/provinces";
 import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata } from "@/lib/seo";
 import { getRecipeRatings } from "@/lib/review-summary";
+import { getPublicRecipes } from "@/lib/public-recipes";
 import { RecipeCardSkeleton } from "@/components/skeletons";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -50,10 +51,10 @@ type Recipe = (typeof recipes)[number];
 async function ProvinceStats({ province, regionalRecipes }: { province: Province; regionalRecipes: Recipe[] }) {
   const recipeRatings = await getRecipeRatings();
   const visitorReviewCount = regionalRecipes.reduce((total, recipe) => total + (recipeRatings[recipe.slug]?.count ?? 0), 0);
-  const popularCount = Math.min(province.recipeCount, 24);
+  const popularCount = Math.min(regionalRecipes.length, 24);
   return (
     <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
-      {[{ value: province.recipeCount, label: "racikan tercatat", icon: BookOpen }, { value: visitorReviewCount, label: "ulasan pengunjung", icon: MessageCircle }, { value: popularCount, label: "racikan populer", icon: Sparkles }].map(({ value, label, icon: Icon }) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-3.5 sm:p-4"><Icon size={16} className="text-[#dbc783]" /><p className="mt-3 text-xl font-black sm:text-2xl">{new Intl.NumberFormat("id-ID").format(value)}</p><p className="mt-1 text-[10px] leading-4 text-white/65 sm:text-xs">{label}</p></div>)}
+      {[{ value: regionalRecipes.length, label: "racikan tercatat", icon: BookOpen }, { value: visitorReviewCount, label: "ulasan pengunjung", icon: MessageCircle }, { value: popularCount, label: "racikan populer", icon: Sparkles }].map(({ value, label, icon: Icon }) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-3.5 sm:p-4"><Icon size={16} className="text-[#dbc783]" /><p className="mt-3 text-xl font-black sm:text-2xl">{new Intl.NumberFormat("id-ID").format(value)}</p><p className="mt-1 text-[10px] leading-4 text-white/65 sm:text-xs">{label}</p></div>)}
     </div>
   );
 }
@@ -74,9 +75,10 @@ function ProvinceStatsSkeleton() {
  */
 async function ProvinceRecipesSection({ province, regionalRecipes }: { province: Province; regionalRecipes: Recipe[] }) {
   const recipeRatings = await getRecipeRatings();
+  const allRecipes = await getPublicRecipes();
   const displayedRecipes = regionalRecipes.length
     ? regionalRecipes
-    : [...recipes]
+    : [...allRecipes]
         .sort((a, b) => (recipeRatings[b.slug]?.count ?? 0) - (recipeRatings[a.slug]?.count ?? 0) || (recipeRatings[b.slug]?.average ?? 0) - (recipeRatings[a.slug]?.average ?? 0))
         .slice(0, 8);
   const provinceUrl = absoluteUrl(`/provinsi/${province.slug}`);
@@ -131,7 +133,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
   const { slug } = await params;
   const province = provinces.find((item) => item.slug === slug);
   if (!province) notFound();
-  const regionalRecipes = recipes.filter((recipe) => recipe.provinces.includes(province.name));
+  const regionalRecipes = (await getPublicRecipes()).filter((recipe) => recipe.provinces.includes(province.name));
   // Angka ulasan (statistik + urutan cadangan) dihitung di pulau `Suspense`
   // di bawah — hanya dari ulasan asli yang sudah disetujui, bukan contoh.
   const provinceUrl = absoluteUrl(`/provinsi/${province.slug}`);
