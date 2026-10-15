@@ -32,21 +32,34 @@ export type PublicRecipeData = {
  * Hasilnya di-cache per render (React `cache`) agar beberapa pulau
  * Suspense di satu halaman tidak mengulang query yang sama.
  */
+async function bacaDariBasisData(): Promise<PublicRecipeData> {
+  const [publishedRows, managedRows] = await Promise.all([
+    db.select().from(cmsRecipes).where(eq(cmsRecipes.status, "published")),
+    db.select({ slug: cmsRecipes.slug, status: cmsRecipes.status }).from(cmsRecipes),
+  ]);
+  const managed = publishedRows.map((row) => cmsRecipeToRecipe(normalizeCmsRecipeRecord(row as unknown as CmsRecipeRecord)));
+  const belumTerbit = new Set(managedRows.filter((row) => row.status !== "published").map((row) => row.slug));
+  const katalogTerlihat = seedRecipes.filter((recipe) => !belumTerbit.has(recipe.slug));
+  return {
+    recipes: mergeRecipesBySlug(katalogTerlihat, managed),
+    managedSlugs: managedRows.map((row) => row.slug),
+  };
+}
+
 export const getPublicRecipeData = cache(async (): Promise<PublicRecipeData> => {
   try {
-    const [publishedRows, managedRows] = await Promise.all([
-      db.select().from(cmsRecipes).where(eq(cmsRecipes.status, "published")),
-      db.select({ slug: cmsRecipes.slug, status: cmsRecipes.status }).from(cmsRecipes),
-    ]);
-    const managed = publishedRows.map((row) => cmsRecipeToRecipe(normalizeCmsRecipeRecord(row as unknown as CmsRecipeRecord)));
-    const belumTerbit = new Set(managedRows.filter((row) => row.status !== "published").map((row) => row.slug));
-    const katalogTerlihat = seedRecipes.filter((recipe) => !belumTerbit.has(recipe.slug));
-    return {
-      recipes: mergeRecipesBySlug(katalogTerlihat, managed),
-      managedSlugs: managedRows.map((row) => row.slug),
-    };
+    return await bacaDariBasisData();
   } catch {
-    return { recipes: [...seedRecipes], managedSlugs: [] };
+    // Kegagalan koneksi sesaat (pooler basis data penuh/koneksi putus)
+    // biasanya lolos pada percobaan kedua; tanpa coba ulang, halaman ISR
+    // akan menyimpan versi katalog bawaan sebagai hitungan yang basi.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      return await bacaDariBasisData();
+    } catch (error) {
+      console.error("Gagal membaca daftar resep publik dari basis data:", error);
+      return { recipes: [...seedRecipes], managedSlugs: [] };
+    }
   }
 });
 
