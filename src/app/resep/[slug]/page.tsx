@@ -13,7 +13,7 @@ import { recipeBadge } from "@/lib/recipe-badge";
 import { RecipeCard } from "@/components/recipe-card";
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
-import { db } from "@/db";
+import { db, databaseEnvName } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
@@ -32,13 +32,36 @@ export const dynamicParams = true;
 export const revalidate = 3600;
 
 async function findRecipe(slug: string) {
+  let record: CmsRecipeRecord | undefined;
+  let databaseFailed = false;
   try {
-    const [record] = await db.select().from(cmsRecipes).where(eq(cmsRecipes.slug, slug)).limit(1);
-    if (record) return record.status === "published" ? cmsRecipeToRecipe(record as CmsRecipeRecord) : undefined;
-  } catch {
-    // Seed recipes remain available when PostgreSQL is temporarily unavailable.
+    const [row] = await db.select().from(cmsRecipes).where(eq(cmsRecipes.slug, slug)).limit(1);
+    record = row as unknown as CmsRecipeRecord | undefined;
+  } catch (error) {
+    // Gangguan sesaat basis data (mis. pooler koneksi penuh) TIDAK boleh
+    // berubah menjadi "resep tidak ditemukan": halaman ini memakai ISR,
+    // jadi 404 hasil render yang gagal akan disimpan sampai satu jam dan
+    // menimpa halaman sehat — persis kejadian resep terbit yang tiba-tiba
+    // 404 padahal datanya utuh di basis data.
+    databaseFailed = true;
+    console.error(`Gagal membaca resep "${slug}" dari basis data:`, error);
   }
-  return recipes.find((item) => item.slug === slug);
+  if (record) {
+    if (record.status !== "published") return undefined;
+    // Galat saat memetakan resep terbit dibiarkan terlihat sebagai galat
+    // server, bukan ditelan menjadi 404 yang menyesatkan.
+    return cmsRecipeToRecipe(record);
+  }
+  // Resep katalog bawaan tetap tersedia saat basis data tak terjangkau.
+  const seed = recipes.find((item) => item.slug === slug);
+  if (seed) return seed;
+  if (databaseFailed && databaseEnvName()) {
+    // Basis data terkonfigurasi tetapi sedang tak terjangkau, dan resepnya
+    // bukan katalog bawaan: gagalkan render agar ISR mempertahankan
+    // salinan sehat terakhir (bila ada) alih-alih menyimpan 404 ini.
+    throw new Error("Basis data resep sedang tidak terjangkau. Coba lagi sesaat lagi.");
+  }
+  return undefined;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
