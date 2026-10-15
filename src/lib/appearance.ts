@@ -45,6 +45,24 @@ export function isMediaKey(value: string): value is MediaKey {
   return (MEDIA_KEYS as readonly string[]).includes(value);
 }
 
+/** Batas ukuran foto racikan unggahan dashboard (sama seperti poster popup). */
+export const RECIPE_PHOTO_MAX_BYTES = 3_000_000;
+
+/**
+ * Foto racikan unggahan disimpan di tabel media yang sama dengan aset
+ * tampilan, dengan kunci dinamis per slug resep (`recipe-<slug>`), dan
+ * dilayani lewat `/api/media/recipe-<slug>` — jadi alamat fotonya stabil
+ * dan halaman publik tidak perlu dibangun ulang saat foto diganti.
+ */
+export function recipePhotoKey(slug: string): string {
+  return `recipe-${slug}`;
+}
+
+/** Apakah kunci media ini foto racikan unggahan (`recipe-<slug>`)? */
+export function isRecipePhotoKey(value: string): boolean {
+  return /^recipe-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+}
+
 /**
  * Memastikan isi berkas benar-benar gambar dari jenis yang didukung, bukan
  * sekadar mengandalkan tipe kiriman peramban. Signature: PNG, JPEG, WEBP.

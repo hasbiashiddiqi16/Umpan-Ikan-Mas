@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { MEDIA_DEFAULTS, isMediaKey } from "@/lib/appearance";
+import { MEDIA_DEFAULTS, isMediaKey, isRecipePhotoKey } from "@/lib/appearance";
 import { readMediaFile } from "@/lib/appearance-server";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ type RouteContext = { params: Promise<{ key: string }> };
  */
 export async function GET(request: Request, context: RouteContext) {
   const { key } = await context.params;
-  if (!isMediaKey(key)) return new Response("Aset tidak dikenal.", { status: 404 });
+  if (!isMediaKey(key) && !isRecipePhotoKey(key)) return new Response("Aset tidak dikenal.", { status: 404 });
 
   try {
     const file = await readMediaFile(key);
@@ -34,6 +34,11 @@ export async function GET(request: Request, context: RouteContext) {
   } catch {
     // Database belum siap (mis. pratinjau lokal): pakai berkas bawaan.
   }
+
+  // Selain aset bawaan berkunci tetap, tidak ada berkas cadangan di
+  // `public/`: foto racikan unggahan (`recipe-<slug>`) hanya ada di basis
+  // data, jadi sampai di sini berarti fotonya memang tidak ada.
+  if (!isMediaKey(key)) return new Response("Foto tidak ditemukan.", { status: 404 });
 
   // Berkas bawaan disajikan langsung (200), bukan dialihkan (307): pengoptimal
   // gambar Next menolak sumber yang membalas redirect, jadi logo/poster/hero

@@ -66,7 +66,7 @@ export async function savePopupSettings(popup: PopupSettings): Promise<PopupSett
   return popup;
 }
 
-export async function readMediaFile(key: MediaKey): Promise<{ mimeType: string; bytes: Buffer } | null> {
+export async function readMediaFile(key: string): Promise<{ mimeType: string; bytes: Buffer } | null> {
   const [row] = await db.select().from(cmsMedia).where(eq(cmsMedia.key, key)).limit(1);
   if (!row) return null;
   const bytes = Buffer.from(row.data, "base64");
@@ -74,13 +74,13 @@ export async function readMediaFile(key: MediaKey): Promise<{ mimeType: string; 
   return { mimeType: row.mimeType, bytes };
 }
 
-export async function saveMediaFile(key: MediaKey, mimeType: string, bytes: Buffer): Promise<void> {
+export async function saveMediaFile(key: string, mimeType: string, bytes: Buffer): Promise<void> {
   const data = bytes.toString("base64");
   await db.insert(cmsMedia)
     .values({ key, mimeType, data, byteSize: bytes.length })
     .onConflictDoUpdate({ target: cmsMedia.key, set: { mimeType, data, byteSize: bytes.length, updatedAt: new Date() } });
 }
 
-export async function deleteMediaFile(key: MediaKey): Promise<void> {
+export async function deleteMediaFile(key: string): Promise<void> {
   await db.delete(cmsMedia).where(eq(cmsMedia.key, key));
 }
