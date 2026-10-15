@@ -294,6 +294,71 @@ Sebelumnya komposisi di `/sistem-pakar` hanya "menjumlahkan persentase mengikuti
 
 Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** aturan/pengganti/harga (termasuk 781 kombinasi bahan yang harus tetap berjumlah 100%), **40 uji interaktif jsdom** memakai komponen asli (klik bahan, "Pakai X", versi hemat, ubah provinsi ke Papua, ubah budget kecil/besar), dan **29 uji halaman tersaji + regresi** (semua halaman penting 200, `/dashboard` tetap 307 + noindex, API evaluasi tetap 401 tanpa sesi).
 
+## Foto adonan per resep dan alt text unik
+
+Dulu 200 resep katalog memutar tiga berkas yang sama (`recipe-putih.jpg`,
+`recipe-pelet.jpg`, `recipe-jagung.jpg`). Sekarang setiap resep punya foto
+dan alt text-nya sendiri, diatur dari satu tempat: `src/data/recipe-photos.ts`.
+
+- **20 resep inti** punya foto adonan tersendiri yang dipetakan dari slug di
+  `CORE_RECIPE_PHOTOS` (berkas di `public/images/recipes/<slug>.jpg`; tiga
+  resep pertama tetap memakai berkas klasik yang memang cocok dengan isinya).
+- **Resep turunan katalog** memakai berkas tersendiri per slug
+  (`/images/recipes/<slug>.jpg`), dibuat oleh `scripts/buat-foto-racikan.py`
+  dari foto adonan keluarga bahannya (dipilih lewat kata kunci nama, sama
+  seperti daftar `PHOTO_FAMILIES`) lalu dipotong/dibalik/di-grading berbeda
+  per slug berdasarkan hash slug — tidak ada dua resep berbagi berkas yang
+  sama (terverifikasi 200/200 unik, termasuk hash berkasnya).
+- **Alt text unik per resep** disimpan di field `imageAlt`, diturunkan oleh
+  `buildRecipeImageAlt` dari nama resep, warna adonan pada fotonya, bahan
+  inti, jenis pemancingan, dan kondisi air. Field yang sama dipakai kartu
+  katalog, kartu rekomendasi, halaman detail (termasuk metadata berbagi/Open
+  Graph), dan resep CMS dari dashboard — tidak ada lagi alt generik yang
+  diulang antarresep.
+- **Dashboard**: pemilih "Foto racikan" menawarkan seluruh foto adonan
+  katalog (`RECIPE_PHOTO_OPTIONS`), bukan tiga berkas lama.
+- **Foto pengirim ulasan tidak dikarang.** Ulasan pengunjung saat ini tidak
+  memiliki unggahan foto, jadi kartu komunitas menampilkan foto racikan
+  katalog dari resep yang dicoba dengan label "Ilustrasi racikan" dan alt
+  yang menyatakannya sebagai ilustrasi katalog — bukan seolah-olah foto
+  kiriman pemancingnya. Bila unggahan foto ulasan ditambahkan nanti, foto
+  itulah yang harus menggantikan ilustrasi ini.
+- Menambah/mengganti foto resep cukup menimpa berkas bernama slug resep di
+  `public/images/recipes/`; menjalankan ulang
+  `python3 scripts/buat-foto-racikan.py` akan membuat ulang berkas turunan
+  yang belum ada (tambahkan `--force` untuk membuat semuanya dari awal).
+
+## Ikon SVG (bukan emoji) dan kontras WCAG AA
+
+Emoji tidak lagi dipakai sebagai ikon utama di situs maupun dashboard.
+Dulu screen reader membacakan nama emoji ("fishing rod", "fire", …) karena
+emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
+
+- **Ikon = SVG Lucide** (`lucide-react`, sudah dipakai situs). Aturannya:
+  ikon di samping teks yang sudah menamai isinya bersifat dekoratif dan
+  diberi `aria-hidden="true"` (screen reader membaca teksnya saja), sedangkan
+  ikon yang berdiri sendiri dibungkus elemen ber-`aria-label` — mis. medali
+  peringkat di hasil sistem pakar adalah tautan ber-`aria-label="Peringkat
+  1: …"`. Pola rating bintang yang sudah ada (SVG + `aria-label` ringkas)
+  dipertahankan.
+- Helper bersama ada di `src/components/shared.tsx`: `WeatherIcon`,
+  `WaterIcon`, `WaterBodyIcon`, `FishingTypeIcon`, dan `CatchIcon`
+  (dipakai badge kartu resep, kartu komunitas, ulasan, dan moderasi).
+  Badge tangkapan di `src/lib/catch-details.ts` kini membawa kunci ikon
+  (`ikan`/`durasi`/`joran`/`laju`), bukan karakter emoji. Pilihan bahan di
+  sistem pakar memakai kunci ikon per bahan dari
+  `src/data/ingredient-knowledge.ts`.
+- Judul bagian yang dulu berawalan emoji (🏆/🔥/🌦️/🗺️/🎯) kini teks bersih;
+  label `eyebrow` di atasnya sudah memberi konteks.
+- **Kontras WCAG AA**: warna teks abu/hijau kecil yang tidak mencapai
+  4,5:1 di latar terang digelapkan sambil mempertahankan rona warnanya
+  (termasuk teks 9–11px di kartu dan dashboard), dan bintang rating
+  digelapkan ke 4,3:1 agar memenuhi kontras grafis 3:1 (WCAG 1.4.11).
+- Terverifikasi: tidak ada karakter emoji tersisa di `src/`, dan halaman
+  publik yang tersaji (/, /katalog, /cuaca, /sistem-pakar, /ai-umpan,
+  /resep/…, /komunitas) mengandung 0 emoji dengan ikon SVG + `aria-label`
+  di seluruh halamannya.
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.

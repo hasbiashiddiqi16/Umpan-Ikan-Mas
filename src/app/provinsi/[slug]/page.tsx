@@ -90,7 +90,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
       {provinceStructuredData && <JsonLd data={provinceStructuredData} />}
       {breadcrumbStructuredData && <JsonLd data={breadcrumbStructuredData} />}
       <main className="mx-auto min-h-[70vh] max-w-7xl px-5 pb-16 pt-7 sm:px-8 sm:pt-10">
-        <nav aria-label="Breadcrumb" className="mb-5 text-sm font-semibold text-[#758176]">
+        <nav aria-label="Breadcrumb" className="mb-5 text-sm font-semibold text-[#636d64] (4.62:1 terburuk)">
           <ol className="flex min-w-0 items-center gap-2">
             <li><Link href="/" className="hover:text-[#355a3a]">Beranda</Link></li>
             <li aria-hidden="true">/</li>
@@ -108,7 +108,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
             {[{ value: province.recipeCount, label: "racikan tercatat", icon: BookOpen }, { value: visitorReviewCount, label: "ulasan pengunjung", icon: MessageCircle }, { value: popularCount, label: "racikan populer", icon: Sparkles }].map(({ value, label, icon: Icon }) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-3.5 sm:p-4"><Icon size={16} className="text-[#dbc783]" /><p className="mt-3 text-xl font-black sm:text-2xl">{new Intl.NumberFormat("id-ID").format(value)}</p><p className="mt-1 text-[10px] leading-4 text-white/65 sm:text-xs">{label}</p></div>)}
           </div>
         </section>
-        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#7b725d]">Angka ulasan dihitung hanya dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
+        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan dihitung hanya dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
         {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} /></section>}
       </main>
       <Footer />

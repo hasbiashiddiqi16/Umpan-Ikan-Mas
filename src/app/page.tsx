@@ -55,24 +55,24 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl space-y-16 px-5 pt-8 sm:space-y-20 sm:px-8 sm:pt-12 lg:pt-14">
           <QuickFinder />
           <section>
-            <SectionHeader eyebrow="Pilihan sistem" title="🏆 Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
           </section>
           <section>
-            <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "🔥 Racikan Populer" : "🔥 Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
             <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} /></div>)}</div>
           </section>
           <section>
-            <SectionHeader eyebrow="Baca situasinya" title="🌦️ Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Baca situasinya" title="Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((index) => <WeatherCard key={index} index={index} />)}</div>
           </section>
           <section>
-            <SectionHeader eyebrow="Dari berbagai daerah" title="🗺️ Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Dari berbagai daerah" title="Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name, ratings)} />)}</div>
-            <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#788176]">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
+            <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#656d64] (4.59:1 terburuk)">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
           </section>
           <section>
-            <SectionHeader eyebrow="Dari pinggir kolam" title="🎣 Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
             <div className="grid gap-4 lg:grid-cols-3">{fishingReports.slice(0, 3).map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} />)}</div>
           </section>
           <section className="relative isolate overflow-hidden rounded-[28px] bg-[#1e3d2b] px-6 py-9 text-white sm:px-10 sm:py-12 lg:px-14">

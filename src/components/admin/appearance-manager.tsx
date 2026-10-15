@@ -24,7 +24,7 @@ import { PROMO_SEEN_WINDOW_MS, clearPromoSeen } from "@/lib/promo-storage";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
 const areaClass = "min-h-24 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-3 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
-const labelClass = "grid gap-1.5 text-xs font-bold text-[#657164]";
+const labelClass = "grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk)";
 const hintClass = "text-[10px] font-medium leading-4 text-[#959c93]";
 
 const formatBytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
@@ -195,11 +195,11 @@ export function AppearanceManager() {
     <AdminShell>
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#899488]">
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#656d64] (4.59:1 terburuk)">
             <Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Tampilan</span>
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Logo &amp; popup</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#7a8579]">Kelola logo situs dan popup sambutan yang dilihat pengunjung baru — sama persis dengan yang tampil di situs publik.</p>
+          <p className="mt-2 max-w-2xl text-sm text-[#626c62] (4.69:1 terburuk)">Kelola logo situs dan popup sambutan yang dilihat pengunjung baru — sama persis dengan yang tampil di situs publik.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button type="button" onClick={() => setPreviewOpen(true)} disabled={!previewAppearance}
@@ -244,7 +244,7 @@ export function AppearanceManager() {
               <button type="button" disabled={busy === "logo"} onClick={() => fileInputs.current.logo?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                 {busy === "logo" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo baru
               </button>
-              <button type="button" disabled={busy === "logo" || !logo?.custom} onClick={() => void resetMedia("logo")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "logo" || !logo?.custom} onClick={() => void resetMedia("logo")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
@@ -288,7 +288,7 @@ export function AppearanceManager() {
               <button type="button" disabled={busy === "logo-footer"} onClick={() => fileInputs.current["logo-footer"]?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                 {busy === "logo-footer" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo footer
               </button>
-              <button type="button" disabled={busy === "logo-footer" || !footerLogo?.custom} onClick={() => void resetMedia("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "logo-footer" || !footerLogo?.custom} onClick={() => void resetMedia("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
@@ -307,7 +307,7 @@ export function AppearanceManager() {
         </header>
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#8b9489]">Pratinjau di beranda</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">Pratinjau di beranda</p>
             {/* Memakai gradasi dan pemotongan yang sama seperti bagian hero asli. */}
             <div className="mt-2 overflow-hidden rounded-xl border border-[#e8ece5] bg-[#173326]">
               <div className="relative aspect-[16/9] w-full">
@@ -343,7 +343,7 @@ export function AppearanceManager() {
               <button type="button" disabled={busy === "hero"} onClick={() => fileInputs.current.hero?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                 {busy === "hero" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah gambar hero
               </button>
-              <button type="button" disabled={busy === "hero" || !hero?.custom} onClick={() => void resetMedia("hero")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "hero" || !hero?.custom} onClick={() => void resetMedia("hero")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
@@ -410,7 +410,7 @@ export function AppearanceManager() {
                         <button type="button" disabled={busy === key} onClick={() => fileInputs.current[key]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                           {busy === key ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
                         </button>
-                        <button type="button" disabled={busy === key || !info?.custom} onClick={() => void resetMedia(key)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                        <button type="button" disabled={busy === key || !info?.custom} onClick={() => void resetMedia(key)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                           <Trash2 size={13} /> Hapus
                         </button>
                       </div>
@@ -437,7 +437,7 @@ export function AppearanceManager() {
                     <button type="button" disabled={busy === "popup-latar"} onClick={() => fileInputs.current["popup-latar"]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                       {busy === "popup-latar" ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
                     </button>
-                    <button type="button" disabled={busy === "popup-latar" || !media?.latar.custom} onClick={() => void resetMedia("popup-latar")} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#677367] transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                    <button type="button" disabled={busy === "popup-latar" || !media?.latar.custom} onClick={() => void resetMedia("popup-latar")} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                       <Trash2 size={13} /> Hapus
                     </button>
                   </div>
@@ -456,7 +456,7 @@ export function AppearanceManager() {
                 </label>
 
                 <div className="grid gap-3">
-                  <p className="text-xs font-bold text-[#657164]">Kotak statistik <span className={hintClass}>({form.statistik.length} dari maksimal 3)</span></p>
+                  <p className="text-xs font-bold text-[#616c60] (4.71:1 terburuk)">Kotak statistik <span className={hintClass}>({form.statistik.length} dari maksimal 3)</span></p>
                   {form.statistik.map((stat, index) => (
                     <div key={index} className="grid gap-2 sm:grid-cols-[110px_1fr_auto]">
                       <input className={fieldClass} value={stat.value} maxLength={8} placeholder="200" aria-label={`Angka statistik ${index + 1}`}
@@ -465,7 +465,7 @@ export function AppearanceManager() {
                         onChange={(event) => setForm({ ...form, statistik: form.statistik.map((item, i) => i === index ? { ...item, label: event.target.value } : item) })} />
                       <button type="button" aria-label={`Hapus statistik ${index + 1}`} disabled={form.statistik.length <= 2}
                         onClick={() => setForm({ ...form, statistik: form.statistik.filter((_, i) => i !== index) })}
-                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#a26b5b] transition hover:bg-[#fbefec] disabled:opacity-40">
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#905f50] (4.57:1 terburuk) transition hover:bg-[#fbefec] disabled:opacity-40">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -477,7 +477,7 @@ export function AppearanceManager() {
                 </div>
 
                 <div className="grid gap-3">
-                  <p className="text-xs font-bold text-[#657164]">Sorotan fitur <span className={hintClass}>({form.fitur.length} dari 2–4)</span></p>
+                  <p className="text-xs font-bold text-[#616c60] (4.71:1 terburuk)">Sorotan fitur <span className={hintClass}>({form.fitur.length} dari 2–4)</span></p>
                   {form.fitur.map((feature, index) => (
                     <div key={index} className="grid gap-2 sm:grid-cols-[120px_1fr_auto]">
                       <select className={fieldClass} value={feature.icon} aria-label={`Ikon fitur ${index + 1}`}
@@ -488,7 +488,7 @@ export function AppearanceManager() {
                         onChange={(event) => setForm({ ...form, fitur: form.fitur.map((item, i) => i === index ? { ...item, text: event.target.value } : item) })} />
                       <button type="button" aria-label={`Hapus fitur ${index + 1}`} disabled={form.fitur.length <= 2}
                         onClick={() => setForm({ ...form, fitur: form.fitur.filter((_, i) => i !== index) })}
-                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#a26b5b] transition hover:bg-[#fbefec] disabled:opacity-40">
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#905f50] (4.57:1 terburuk) transition hover:bg-[#fbefec] disabled:opacity-40">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -505,7 +505,7 @@ export function AppearanceManager() {
           <div className="grid content-start gap-4">
             <div className="rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
               <p className="text-xs font-extrabold text-[#354639]">Yang dilihat pengunjung</p>
-              <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#68766a]">
+              <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#606d62] (4.67:1 terburuk)">
                 <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, dan lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam — setelah halaman tenang (± 1,4 detik).</li>
                 <li>• Selama masa itu, pengunjung yang berpindah halaman tidak melihatnya berulang kali.</li>
                 <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>

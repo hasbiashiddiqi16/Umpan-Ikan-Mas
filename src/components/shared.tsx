@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { Search, Star } from "lucide-react";
+import { Cloud, CloudRain, CloudSun, Droplets, Fish, FishingHook, Gauge, Search, Star, Sun, Timer, Waves } from "lucide-react";
+import type { CatchBadgeIcon } from "@/lib/catch-details";
 import { FOOTER_LOGO_ALT, FOOTER_LOGO_SRC, LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { describeRating } from "@/lib/rating-utils";
 
@@ -18,9 +19,9 @@ export function Badge({ children, tone = "sage", className = "", title }: { chil
 export function Rating({ value, count, compact = false }: { value: number; count?: number; compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-sm" aria-label={`Rating ${value.toFixed(1)} dari 5${count ? `, ${count} ulasan` : ""}`}>
-      <Star size={14} fill="currentColor" className="text-[#d6a344]" aria-hidden="true" />
+      <Star size={14} fill="currentColor" className="text-[#886611] (4.55:1 terburuk)" aria-hidden="true" />
       <span className="font-bold text-[#27332a]">{value.toFixed(1)}</span>
-      {count !== undefined && !compact && <span className="text-[#7b817a]">({count})</span>}
+      {count !== undefined && !compact && <span className="text-[#666b65] (4.67:1 terburuk)">({count})</span>}
     </span>
   );
 }
@@ -40,11 +41,42 @@ export function RecipeRating({ rating }: { rating?: { count: number; average: nu
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8d968c]" title={describeRating(rating)}>
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#656c64] (4.64:1 terburuk)" title={describeRating(rating)}>
       <Star size={13} className="text-[#c3cbc0]" aria-hidden="true" />
       Belum ada rating
     </span>
   );
+}
+
+/**
+ * Ikon SVG untuk lencana meta (cuaca, air, jenis pemancingan, tangkapan).
+ * Ikon-ikon ini **dekoratif** (`aria-hidden`): teks di sebelahnya sudah menamai
+ * isinya, jadi screen reader cukup membaca teksnya — bukan nama emoji/ikon.
+ * Ikon yang berdiri sendiri tanpa teks pendamping wajib dibungkus elemen
+ * ber-`aria-label` oleh pemakainya (mis. medali peringkat di sistem pakar).
+ */
+export function WeatherIcon({ weather, size = 12, className = "" }: { weather: string; size?: number; className?: string }) {
+  const Icon = weather === "Hujan" ? CloudRain : weather === "Cerah" || weather === "Panas" ? Sun : weather === "Berawan" ? CloudSun : Cloud;
+  return <Icon size={size} className={className} aria-hidden="true" />;
+}
+
+export function WaterIcon({ size = 12, className = "" }: { size?: number; className?: string }) {
+  return <Droplets size={size} className={className} aria-hidden="true" />;
+}
+
+export function WaterBodyIcon({ size = 12, className = "" }: { size?: number; className?: string }) {
+  return <Waves size={size} className={className} aria-hidden="true" />;
+}
+
+export function FishingTypeIcon({ size = 12, className = "" }: { size?: number; className?: string }) {
+  return <Fish size={size} className={className} aria-hidden="true" />;
+}
+
+const CATCH_ICONS = { ikan: Fish, durasi: Timer, joran: FishingHook, laju: Gauge } satisfies Record<CatchBadgeIcon, typeof Fish>;
+
+export function CatchIcon({ icon, size = 12, className = "" }: { icon: CatchBadgeIcon; size?: number; className?: string }) {
+  const Icon = CATCH_ICONS[icon];
+  return <Icon size={size} className={className} aria-hidden="true" />;
 }
 
 export function SectionHeader({
@@ -63,9 +95,9 @@ export function SectionHeader({
   return (
     <div className="mb-7 flex min-w-0 items-end justify-between gap-5">
       <div className="min-w-0 max-w-2xl">
-        {eyebrow && <p className={`mb-2 text-xs font-bold uppercase tracking-[.16em] ${light ? "text-[#c6d9c4]" : "text-[#718272]"}`}>{eyebrow}</p>}
+        {eyebrow && <p className={`mb-2 text-xs font-bold uppercase tracking-[.16em] ${light ? "text-[#c6d9c4]" : "text-[#606e61] (4.62:1 terburuk)"}`}>{eyebrow}</p>}
         <h2 className={`break-words text-2xl font-extrabold tracking-tight sm:text-[2rem] ${light ? "text-white" : "text-[#1d2d22]"}`}>{title}</h2>
-        {subtitle && <p className={`mt-2 max-w-xl break-words text-sm leading-6 sm:text-base ${light ? "text-white/70" : "text-[#6f766f]"}`}>{subtitle}</p>}
+        {subtitle && <p className={`mt-2 max-w-xl break-words text-sm leading-6 sm:text-base ${light ? "text-white/70" : "text-[#666d66] (4.57:1 terburuk)"}`}>{subtitle}</p>}
       </div>
       {action && <div className="hidden shrink-0 sm:block">{action}</div>}
     </div>
@@ -87,7 +119,7 @@ export function SearchInput({
 }) {
   return (
     <label className={`flex min-h-12 items-center gap-3 rounded-2xl border border-[#e3e7df] bg-white px-4 transition focus-within:border-[#718d69] focus-within:ring-4 focus-within:ring-[#496c4f]/10 ${className}`}>
-      <Search size={18} className="shrink-0 text-[#869086]" aria-hidden="true" />
+      <Search size={18} className="shrink-0 text-[#656d65] (4.59:1 terburuk)" aria-hidden="true" />
       <span className="sr-only">{label}</span>
       <input
         type="search"
@@ -104,9 +136,9 @@ export function SearchInput({
 export function EmptyState({ title = "Umpan tidak ditemukan.", description = "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." }: { title?: string; description?: string }) {
   return (
     <div className="col-span-full flex min-h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-[#d9dfd7] bg-[#fbfcf9] px-6 py-12 text-center">
-      <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[#edf2e9] text-2xl" aria-hidden="true">🎣</div>
+      <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[#edf2e9] text-[#4e6b52]" aria-hidden="true"><Fish size={26} aria-hidden="true" /></div>
       <h3 className="text-lg font-bold text-[#26372b]">{title}</h3>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#737b72]">{description}</p>
+      <p className="mt-2 max-w-md text-sm leading-6 text-[#656d64] (4.59:1 terburuk)">{description}</p>
       <Link href="/katalog" className="mt-5 text-sm font-bold text-[#315c3b] underline-offset-4 hover:underline">Jelajahi katalog</Link>
     </div>
   );

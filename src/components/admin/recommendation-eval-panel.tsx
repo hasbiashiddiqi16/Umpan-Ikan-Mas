@@ -82,9 +82,9 @@ export function RecommendationEvalPanel() {
       {data && (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Hit-rate@3 (ketat)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.strict)}</p><p className="mt-1 text-[10px] text-[#8b9489]">{data.current.strict.evaluable ? `${data.current.strict.hits} dari ${data.current.strict.evaluable} ulasan berhasil` : "Belum ada ulasan yang bisa dinilai"}</p></div>
-            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Hit-rate@3 (rating saja)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.ratingOnly)}</p><p className="mt-1 text-[10px] text-[#8b9489]">{data.current.ratingOnly.evaluable ? `${data.current.ratingOnly.hits} dari ${data.current.ratingOnly.evaluable} ulasan` : "Belum ada ulasan rating ≥ 4"}</p></div>
-            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#879085]">Sampel ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.sample.approvedRealReviews}</p><p className="mt-1 text-[10px] leading-4 text-[#8b9489]">{data.sample.withCatchCount} menyertakan angka tangkapan · {data.sample.withSessionMinutes} menyebut durasi · {data.sample.withRodCount} menyebut jumlah joran · {data.sample.strictSuccess} dinilai berhasil</p></div>
+            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Hit-rate@3 (ketat)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.strict)}</p><p className="mt-1 text-[10px] text-[#666d65] (4.57:1 terburuk)">{data.current.strict.evaluable ? `${data.current.strict.hits} dari ${data.current.strict.evaluable} ulasan berhasil` : "Belum ada ulasan yang bisa dinilai"}</p></div>
+            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Hit-rate@3 (rating saja)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.ratingOnly)}</p><p className="mt-1 text-[10px] text-[#666d65] (4.57:1 terburuk)">{data.current.ratingOnly.evaluable ? `${data.current.ratingOnly.hits} dari ${data.current.ratingOnly.evaluable} ulasan` : "Belum ada ulasan rating ≥ 4"}</p></div>
+            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Sampel ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.sample.approvedRealReviews}</p><p className="mt-1 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">{data.sample.withCatchCount} menyertakan angka tangkapan · {data.sample.withSessionMinutes} menyebut durasi · {data.sample.withRodCount} menyebut jumlah joran · {data.sample.strictSuccess} dinilai berhasil</p></div>
           </div>
 
           <div className={`mt-4 flex items-start gap-2 rounded-xl border px-4 py-3 text-[11px] leading-5 ${data.recommendation.dapatDituning ? "border-[#cfe0cb] bg-[#f1f7ef] text-[#43603f]" : "border-[#eadfc2] bg-[#fbf7ec] text-[#776a45]"}`}>
@@ -96,26 +96,26 @@ export function RecommendationEvalPanel() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
             <div>
-              <p className="text-[11px] font-extrabold text-[#435445]">Bobot yang dipakai sekarang <span className="font-semibold text-[#8b9489]">· {data.weightsVersion}</span></p>
+              <p className="text-[11px] font-extrabold text-[#435445]">Bobot yang dipakai sekarang <span className="font-semibold text-[#666d65] (4.57:1 terburuk)">· {data.weightsVersion}</span></p>
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {bobot.map(([key, nilai]) => <li key={key} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="font-semibold text-[#4b5b4d]">{LABELS[key] ?? key}</span><span className="font-black tabular-nums text-[#31593a]">{nilai}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#8b9489]">Bobot ini masih dugaan awal dan hanya berubah lewat <code className="rounded bg-[#f2f5f0] px-1">src/lib/recommendation-config.ts</code> setelah evaluasi.</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">Bobot ini masih dugaan awal dan hanya berubah lewat <code className="rounded bg-[#f2f5f0] px-1">src/lib/recommendation-config.ts</code> setelah evaluasi.</p>
             </div>
             <div>
               <p className="text-[11px] font-extrabold text-[#435445]">Kandidat bobot yang diuji</p>
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {data.candidates.map((kandidat) => <li key={kandidat.nama} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="min-w-0 truncate font-semibold text-[#4b5b4d]">{kandidat.nama}</span><span className="shrink-0 font-black tabular-nums text-[#31593a]">{formatHitRate(kandidat.strict)}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#8b9489]">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}; semuanya masih ikut di hit-rate versi longgar (rating saja).</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}; semuanya masih ikut di hit-rate versi longgar (rating saja).</p>
             </div>
           </div>
         </>
       )}
 
-      {!data && !error && <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#879085]"><FlaskConical size={14} /> Menghitung hit-rate@3 dari ulasan nyata…</div>}
+      {!data && !error && <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#666d64] (4.58:1 terburuk)"><FlaskConical size={14} /> Menghitung hit-rate@3 dari ulasan nyata…</div>}
 
-      <p className="mt-4 rounded-xl bg-[#f6f8f4] px-3.5 py-3 text-[10px] leading-5 text-[#7c867b]">
+      <p className="mt-4 rounded-xl bg-[#f6f8f4] px-3.5 py-3 text-[10px] leading-5 text-[#646d63] (4.61:1 terburuk)">
         Angka ini dihitung dari ulasan nyata yang sudah disetujui, dan ulasan yang sedang diuji selalu dikeluarkan dari bukti pemutus seri. Laporan teks untuk tuning: <code className="rounded bg-white px-1">npm run eval:rekomendasi</code> (bisa diarahkan ke server lain dengan <code className="rounded bg-white px-1">BASE_URL</code>).
       </p>
     </section>

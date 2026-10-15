@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Heart, Users } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
-import { Badge, RecipeRating } from "@/components/shared";
+import { Badge, FishingTypeIcon, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
 import { MatchOrPopularBadge } from "@/components/match-or-popular";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
 import { useRecipeRatings } from "@/lib/use-ratings";
@@ -53,14 +53,14 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e8ebe5] bg-white shadow-[0_7px_25px_rgba(41,55,43,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(41,55,43,.12)]">
       <div className="relative h-[190px] shrink-0 overflow-hidden bg-[#e8e6d9] sm:h-[205px]">
         <Link href={`/resep/${recipe.slug}`} aria-label={`Lihat resep ${recipe.name}`} className="absolute inset-0 z-0">
-          <Image src={recipe.image} alt={`${recipe.name}, bahan racikan umpan ikan mas`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
+          <Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
           <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/60 via-transparent to-[#16241b]/5" />
         </Link>
         <div className="pointer-events-none absolute left-3.5 top-3.5 flex flex-wrap gap-2">
           {/* Badge & tag kondisi dibaca dari field yang sama (jenis pemancingan resep). */}
           <Badge tone={badge.tone} title={badge.title}>{badge.label}</Badge>
         </div>
-        <button type="button" onClick={toggleFavorite} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#b65b42]" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
+        <button type="button" onClick={toggleFavorite} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#a4523b] (4.68:1 terburuk)" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
           <Heart size={18} fill={favorite ? "currentColor" : "none"} />
         </button>
         <MatchOrPopularBadge recipe={recipe} matchScore={matchScore} />
@@ -75,9 +75,9 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
-          <Badge className={cardMetaBadgeClass}><span className="truncate" title={recipe.weather[0]}>{recipe.weather[0] === "Hujan" ? "🌧️" : recipe.weather[0] === "Cerah" || recipe.weather[0] === "Panas" ? "☀️" : "☁️"} {recipe.weather[0]}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={recipe.water[0]}>💧 {recipe.water[0]}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="truncate" title={`Jenis pemancingan: ${tagJenis}`}>🎣 {tagJenis}</span></Badge>
+          <Badge className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.weather[0]}><WeatherIcon weather={recipe.weather[0]} className="shrink-0" /> {recipe.weather[0]}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.water[0]}><WaterIcon className="shrink-0" /> {recipe.water[0]}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={`Jenis pemancingan: ${tagJenis}`}><FishingTypeIcon className="shrink-0" /> {tagJenis}</span></Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</p><p className="mt-0.5 text-sm font-extrabold text-[#26382b]">{recipe.price}</p></div>

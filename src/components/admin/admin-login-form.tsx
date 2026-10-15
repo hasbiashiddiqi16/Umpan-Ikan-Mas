@@ -86,7 +86,7 @@ export function AdminLoginForm() {
       <div>
         <label htmlFor="admin-password" className="mb-2 block text-sm font-semibold text-[#354539]">Password admin</label>
         <div className="relative">
-          <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-4 top-0 flex items-center text-[#89958a]"><LockKeyhole size={17} /></span>
+          <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-4 top-0 flex items-center text-[#656d65] (4.59:1 terburuk)"><LockKeyhole size={17} /></span>
           <input
             ref={passwordRef}
             id="admin-password"
@@ -110,7 +110,7 @@ export function AdminLoginForm() {
             onClick={handleTogglePassword}
             aria-pressed={showPassword}
             aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-            className="absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center rounded-r-2xl text-[#8a968a] transition hover:bg-[#eef2eb] hover:text-[#46634a]"
+            className="absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center rounded-r-2xl text-[#636c63] (4.67:1 terburuk) transition hover:bg-[#eef2eb] hover:text-[#46634a]"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
