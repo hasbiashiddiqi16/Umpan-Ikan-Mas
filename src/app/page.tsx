@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight, Bot, ChevronRight, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/navigation";
@@ -7,6 +8,7 @@ import { QuickFinder } from "@/components/quick-finder";
 import { RecipeCard } from "@/components/recipe-card";
 import { WeatherCard, ProvinceCard, CommunityCard } from "@/components/cards";
 import { Footer, SectionHeader } from "@/components/shared";
+import { RecipeCardSkeleton } from "@/components/skeletons";
 import { recipes, defaultPreferences } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { fishingReports } from "@/data/fishingReports";
@@ -36,39 +38,98 @@ function popularRecipeFor(provinceName: string, ratings: Record<string, { count:
 
 const popularProvinceNames = ["Jawa Barat", "Jawa Tengah", "Jawa Timur", "Banten", "DKI Jakarta", "Sumatera Utara", "Riau", "Sumatera Selatan", "Lampung", "Bali"];
 
-export default async function HomePage() {
-  // Semua angka komunitas di halaman ini berasal dari satu sumber: tabel ulasan.
+/**
+ * ISR: halaman ini dirender di server dan disimpan sebagai HTML statis,
+ * lalu dibangun ulang di latar belakang paling lambat tiap jam. Angka
+ * rating/ulasan dari database jadi ikut segar tanpa halaman berubah
+ * menjadi render dinamis per kunjungan (yang menunda konten dan memicu
+ * layar loading). 3600 detik = seimbang antara kesegaran dan beban server.
+ */
+export const revalidate = 3600;
+
+/**
+ * Dua seksi yang urutannya ditentukan rating pengunjung. Sengaja dipisah
+ * sebagai komponen server async di dalam `Suspense`: halaman induk sinkron
+ * sehingga hero (elemen LCP) dan seksi statis langsung ada di HTML awal,
+ * bukan tertahan menunggu query rating — pengunjung tidak lagi disambut
+ * layar loading menyeluruh.
+ */
+async function RatedRecipeSections() {
   const ratings = await getRecipeRatings();
   const bestRecommendations = getRecommendedRecipes(recipes, defaultPreferences, ratings).slice(0, 3);
-  // "Racikan Populer" diurutkan dari JUMLAH ulasan, bukan rating. Rata-rata di
-  // sini hanya pemutus seri ketika jumlah ulasannya sama — pada kondisi itu
-  // urutannya setara dengan skor Bayesian, jadi rumusnya tidak perlu diulang.
   const popularRecipes = [...recipes]
     .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0))
     .slice(0, 5);
   const adaUlasan = Object.values(ratings).some((rating) => rating.count > 0);
+  return (
+    <>
+      <section>
+        <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
+      </section>
+      <section>
+        <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
+        <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} /></div>)}</div>
+      </section>
+    </>
+  );
+}
+
+/** Grid provinsi populer; label resep terpopuler per provinsi berasal dari rating. */
+async function PopularProvinceGrid() {
+  const ratings = await getRecipeRatings();
   const popularProvinces = provinces.filter((province) => popularProvinceNames.includes(province.name));
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name, ratings)} />)}</div>;
+}
+
+/** Penampung selama pulau rating dimuat: meniru tata letak aslinya. */
+function RatedSectionsSkeleton() {
+  return (
+    <>
+      {[0, 1].map((section) => (
+        <section key={section} aria-hidden="true">
+          <div className="mb-8">
+            <div className="mb-3 h-3 w-28 animate-pulse rounded bg-[#e9eee6]" />
+            <div className="h-8 w-64 animate-pulse rounded bg-[#e9eee6]" />
+            <div className="mt-3 h-4 w-full max-w-xl animate-pulse rounded bg-[#f0f3ed]" />
+          </div>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((card) => <RecipeCardSkeleton key={card} />)}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
+/** Penampung grid provinsi selama label populernya dimuat. */
+function ProvinceGridSkeleton() {
+  return (
+    <div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((item) => <div key={item} className="h-[104px] animate-pulse rounded-[20px] bg-[#edf1eb]" />)}
+    </div>
+  );
+}
+
+export default function HomePage() {
+  // Halaman ini sengaja TIDAK async: hero dan seksi statis langsung masuk
+  // HTML awal (SSG/ISR). Hanya seksi yang urutannya bergantung pada rating
+  // pengunjung yang menunggu data — di dalam `Suspense` di bawah — dan semua
+  // angka komunitas tetap berasal dari satu sumber: tabel ulasan.
   return (
     <PageShell>
       <main className="pb-16 lg:pb-0">
         <Hero />
         <div className="mx-auto max-w-7xl space-y-16 px-5 pt-8 sm:space-y-20 sm:px-8 sm:pt-12 lg:pt-14">
           <QuickFinder />
-          <section>
-            <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kondisi umum di Indonesia; rating muncul setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div>
-          </section>
-          <section>
-            <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
-            <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{popularRecipes.map((recipe, index) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} /></div>)}</div>
-          </section>
+          <Suspense fallback={<RatedSectionsSkeleton />}><RatedRecipeSections /></Suspense>
           <section>
             <SectionHeader eyebrow="Baca situasinya" title="Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((index) => <WeatherCard key={index} index={index} />)}</div>
           </section>
           <section>
             <SectionHeader eyebrow="Dari berbagai daerah" title="Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{popularProvinces.map((province) => <ProvinceCard key={province.slug} province={province} popularRecipe={popularRecipeFor(province.name, ratings)} />)}</div>
+            <Suspense fallback={<ProvinceGridSkeleton />}><PopularProvinceGrid /></Suspense>
             <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#656d64] (4.59:1 terburuk)">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
           </section>
           <section>

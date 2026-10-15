@@ -22,6 +22,14 @@ import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata, siteOrigin } from "@/lib/seo";
 
 export const dynamicParams = true;
+/**
+ * ISR: halaman ini dirender di server dan disimpan sebagai HTML statis,
+ * lalu dibangun ulang di latar belakang paling lambat tiap jam. Angka
+ * rating/ulasan dari database jadi ikut segar tanpa halaman berubah
+ * menjadi render dinamis per kunjungan (yang menunda konten dan memicu
+ * layar loading). 3600 detik = seimbang antara kesegaran dan beban server.
+ */
+export const revalidate = 3600;
 
 async function findRecipe(slug: string) {
   try {
@@ -124,7 +132,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
         </nav>
         <section className="min-w-0 overflow-hidden rounded-[28px] border border-[#e5e9e2] bg-white shadow-[0_12px_38px_rgba(38,55,40,.07)]">
           <div className="grid lg:grid-cols-[.95fr_1.05fr]">
-            <div className="relative min-h-[270px] overflow-hidden bg-[#e4e3d6] sm:min-h-[380px] lg:min-h-[440px]"><Image src={recipe.image} alt={recipe.imageAlt} fill preload sizes="(max-width: 1023px) 100vw, 48vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#1b3022]/35 via-transparent to-transparent" /><span title={recipeBadge(recipe).title} className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] break-words rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#3a513d] backdrop-blur-sm">{recipeBadge(recipe).label} · Ikan mas</span></div>
+            <div className="relative min-h-[270px] overflow-hidden bg-[#e4e3d6] sm:min-h-[380px] lg:min-h-[440px]"><Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 1023px) 100vw, 48vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#1b3022]/35 via-transparent to-transparent" /><span title={recipeBadge(recipe).title} className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] break-words rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#3a513d] backdrop-blur-sm">{recipeBadge(recipe).label} · Ikan mas</span></div>
             <div className="min-w-0 flex flex-col justify-center p-5 sm:p-8 lg:p-10">
               <div className="flex flex-wrap items-center gap-2"><span title="Resep dari katalog UMPAN MAS yang dikurasi redaksi — bukan kiriman pengunjung" className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#846621] (4.62:1 terburuk)">Racikan katalog</span><MatchOrPopularChip recipe={recipe} /></div>
               <h1 className="mt-4 break-words text-3xl font-black tracking-[-.04em] text-[#213426] sm:text-4xl lg:text-[2.75rem]">{recipe.name}</h1>

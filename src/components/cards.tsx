@@ -72,7 +72,7 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
   const photoAlt = resepDicoba ? `${resepDicoba.imageAlt} (ilustrasi racikan katalog)` : `Adonan ${report.recipe} (ilustrasi racikan katalog)`;
   return (
     <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e6eae3] bg-white shadow-[0_8px_26px_rgba(41,55,43,.04)]">
-      {showPhoto && <div className="relative h-48 shrink-0 overflow-hidden bg-[#e9e6da]"><Image src={photo} alt={photoAlt} fill sizes="(max-width: 768px) 90vw, 35vw" className="object-cover" /><span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">Ilustrasi racikan</span></div>}
+      {showPhoto && <div className="relative h-48 shrink-0 overflow-hidden bg-[#e9e6da]"><Image src={photo} alt={photoAlt} fill sizes="(max-width: 768px) 90vw, (max-width: 1280px) 45vw, 33vw" className="object-cover" /><span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">Ilustrasi racikan</span></div>}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-bold text-[#405543]" style={{ backgroundColor: report.color }}>{report.initials}</span>
@@ -94,7 +94,7 @@ export function RecommendationCard({ recipe, score, isPrimary = false, rating }:
     <article className={`overflow-hidden rounded-[26px] border bg-white ${isPrimary ? "border-[#d7e1d3] shadow-[0_18px_50px_rgba(39,68,44,.09)]" : "border-[#e8ebe5]"}`}>
       <div className={`grid md:grid-cols-[.88fr_1.12fr] ${isPrimary ? "" : ""}`}>
         <div className="relative min-h-[220px] bg-[#e5e5d7] md:min-h-[280px]">
-          <Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 768px) 100vw, 38vw" className="object-cover" />
+          <Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 44vw, 560px" className="object-cover" />
           <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-extrabold text-[#35573a] shadow-sm">{isPrimary ? <span className="inline-flex items-center gap-1.5"><Medal size={13} aria-hidden="true" /> TERBAIK UNTUKMU</span> : "ALTERNATIF"}</span>
           <span className="absolute bottom-4 right-4 grid h-[66px] w-[66px] place-items-center rounded-full border-4 border-white bg-[#244732] text-center text-white shadow-lg"><span><strong className="block text-xl leading-none">{score}%</strong><small className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-white/75">match</small></span></span>
         </div>

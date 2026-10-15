@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviews } from "@/db/schema";
@@ -42,7 +43,12 @@ export async function getRatingSummary(): Promise<RatingSummary> {
   };
 }
 
-export async function getRecipeRatings(): Promise<RecipeRatingMap> {
+/**
+ * Dibungkus `cache()` React: beberapa pulau `Suspense` dalam satu halaman
+ * (mis. beranda) boleh memanggil ini bersamaan tanpa menggandakan query —
+ * dalam satu render server hasilnya dipakai ulang.
+ */
+export const getRecipeRatings = cache(async (): Promise<RecipeRatingMap> => {
   try {
     const rows = await db
       .select({
@@ -60,4 +66,4 @@ export async function getRecipeRatings(): Promise<RecipeRatingMap> {
     // Basis data belum tersambung: jangan mengarang angka, kembalikan kosong.
     return {};
   }
-}
+});

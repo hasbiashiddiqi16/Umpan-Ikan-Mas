@@ -359,6 +359,83 @@ emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
   /resep/…, /komunitas) mengandung 0 emoji dengan ikon SVG + `aria-label`
   di seluruh halamannya.
 
+## Ukuran gambar: `sizes` per konteks, satu `priority`, format AVIF/WebP
+
+Semua URL `/_next/image` dulu bisa meminta lebar 3840, termasuk thumbnail
+kartu. Penyebabnya bukan satu hal: atribut `sizes` belum mengikuti konteks
+tampil, beberapa logo ikut memakai `priority`, dan daftar `deviceSizes`
+bawaan Next masih menyediakan 3840 sehingga lebar itu selalu ditawarkan.
+
+- **`sizes` per konteks** (browser memilih lebar terkecil yang cukup dari
+  `srcset`, termasuk faktor DPR):
+  - kartu resep (grid katalog 1/2/3 kolom): `(max-width: 640px) 90vw,
+    (max-width: 1280px) 45vw, 33vw` — ponsel ±384px, desktop ±640px;
+  - kartu komunitas: `(max-width: 768px) 90vw, (max-width: 1280px) 45vw, 33vw`;
+  - kartu rekomendasi: `(max-width: 768px) 100vw, (max-width: 1280px) 44vw, 560px`;
+  - hero beranda: `(max-width: 1279px) 100vw, 1280px`; hero halaman resep:
+    `(max-width: 1023px) 100vw, 48vw`.
+- **`priority`/`preload` hanya untuk hero beranda** (`src/components/hero.tsx`).
+  Logo navigasi, logo halaman login, dan hero halaman resep tidak lagi
+  dipreload — halaman resep tetap mendapat gambar utamanya lebih dulu lewat
+  urutan dokumen tanpa preload paksa.
+- **`deviceSizes` dibatasi** `[640, 750, 828, 1080, 1200, 1920, 2048]` di
+  `next.config.ts`: 3840 dibuang, jadi tidak ada lagi penawaran/permintaan
+  `w=3840`; 2048 tetap cukup untuk hero 1280px pada DPR 2.
+- **Format AVIF/WebP aktif** (`images.formats: ["image/avif", "image/webp"]`):
+  terverifikasi server membalas `image/avif` untuk browser yang menerima
+  AVIF, `image/webp` sebagai cadangan, dan JPEG untuk sisanya. Contoh
+  thumbnail kartu `w=384` kini ±18 KB dari berkas asli 190 KB.
+- **Semua gambar lain ikut dioptimalkan** — tidak ada lagi `unoptimized`
+  di `src/`. Logo navbar/footer (tampil 36–44px) kini melewati pengoptimal:
+  dari berkas PNG 512px 145 KB menjadi AVIF `w=64` ±2 KB dengan `srcset`
+  1x/2x saja (48/96). Poster popup (tampil ≤430px ponsel / ≤820px desktop)
+  memakai `sizes` sesuai lebar modalnya: dari 88–122 KB menjadi ±22–28 KB
+  AVIF. Pratinjau dashboard dan thumbnail konten juga teroptimasi.
+  Syaratnya, `/api/media/[key]` kini menyajikan berkas bawaan langsung
+  dengan status 200 (membaca `public/`), bukan redirect 307 — pengoptimal
+  Next menolak sumber ber-redirect, jadi tanpa ini logo/poster bawaan gagal
+  dioptimalkan. Unggahan dashboard tetap didahulukan dari database.
+- Berkas sumber ikut dipangkas: logo PNG 512px 145 KB → PNG8 256px 24 KB
+  (tampil maks 104px), dan 14 foto JPG >140 KB dikompresi ulang (hemat
+  ±0,5 MB) tanpa mengubah dimensinya.
+
+## Render server (SSG/ISR): tanpa splash, skeleton hanya untuk pulau data
+
+Halaman publik tidak lagi pernah menampilkan layar loading satu halaman
+penuh. Sebelumnya setiap halaman — termasuk yang sinkron — membuka dengan
+skeleton generik karena `src/app/loading.tsx` membuat Next menyajikan
+dokumen "cangkang + konten yang ditukar masuk lewat skrip"; hero (elemen
+LCP) ikut tertunda di balik pertukaran itu. Sekarang polanya:
+
+- **SSG/ISR untuk semua halaman publik.** Beranda, `/cuaca`,
+  `/provinsi/[slug]`, dan `/resep/[slug]` mengekspor
+  `export const revalidate = 3600`: HTML statis dibangun ulang di latar
+  belakang paling lambat tiap jam (pengunjung tidak pernah menunggu
+  render), dan angka rating dari database ikut segar maksimal sejam —
+  tanpa halaman berubah menjadi render dinamis per kunjungan.
+- **`loading.tsx` dihapus dari rute publik.** Tanpa batas loading, Next
+  menunggu render selesai saat prerender sehingga HTML awal yang diterima
+  pengunjung sudah memuat judul, hero, dan konten lengkap (terverifikasi:
+  tidak ada batas tertunda di HTML `/`, `/katalog`, `/komunitas`,
+  `/resep/...`). Hanya `/dashboard` (dinamis, di balik login) yang
+  mempertahankan `loading.tsx` sendiri untuk umpan balik navigasi admin.
+- **Yang menunggu data dibungkus `Suspense`, bukan menahan halaman.**
+  Halaman beranda dan cuaca kini sinkron; seksi yang urutannya bergantung
+  pada rating pengunjung (Rekomendasi Terbaik, Racikan Populer, grid
+  provinsi populer, daftar panduan cuaca, statistik provinsi) adalah
+  komponen server async kecil di dalam `<Suspense>` dengan penampung
+  skeleton yang meniru tata letak aslinya (`src/components/skeletons.tsx`),
+  jadi hero tampil duluan dan tidak ada pergeseran tata letak berarti.
+  `getRecipeRatings()` dibungkus `cache()` React agar pulau-pulau dalam
+  satu halaman berbagi satu query.
+- **LCP dijaga strukturnya:** gambar hero beranda tetap satu-satunya yang
+  di-`preload` (muncul sebagai `<link rel="preload" as="image">` di
+  `<head>` dengan `fetchPriority` tinggi), dan kini hero benar-benar
+  berada di cangkang HTML pertama, bukan di segmen tersembunyi.
+  Pemeriksaan PageSpeed Insights untuk angka LCP final dilakukan manual
+  di https://pagespeed.web.dev untuk URL produksi setelah deploy (API
+  publiknya tidak selalu tersedia dari lingkungan pengembangan).
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
