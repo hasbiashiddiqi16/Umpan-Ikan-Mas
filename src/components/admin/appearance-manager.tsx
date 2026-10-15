@@ -48,7 +48,6 @@ function PosterPreview({ src, intrinsicWidth, intrinsicHeight, frameClass, alt, 
           src={src}
           width={intrinsicWidth}
           height={intrinsicHeight}
-          unoptimized
           sizes="420px"
           alt={alt}
           // Ukuran asli berkas ditampilkan supaya admin tahu rasio yang dipakai.
@@ -227,13 +226,13 @@ export function AppearanceManager() {
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr]">
           <div className="grid content-start gap-3">
             <div className="grid place-items-center rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
-              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="Pratinjau logo situs" width={104} height={104} unoptimized className="h-26 w-26 object-contain" />
+              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="Pratinjau logo situs" width={104} height={104} className="h-26 w-26 object-contain" />
             </div>
             <p className="text-center text-[10px] leading-4 text-[#929a91]">Diperbarui: {formatDate(logo?.updatedAt ?? null)}</p>
           </div>
           <div className="grid content-start gap-3">
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] px-4 py-3">
-              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="" width={40} height={40} unoptimized className="h-10 w-10 shrink-0 rounded-xl" />
+              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl" />
               <span className="text-[15px] font-black tracking-[.07em] text-[#21392a]">UMPAN MAS</span>
               <span className="ml-auto text-[10px] font-semibold text-[#929a91]">Contoh pemakaian di navbar</span>
             </div>
@@ -270,7 +269,6 @@ export function AppearanceManager() {
                 alt="Pratinjau logo footer"
                 width={64}
                 height={64}
-                unoptimized
                 className="h-16 w-16 object-contain"
               />
               <span className="text-lg font-extrabold tracking-tight text-white">UMPAN MAS</span>
@@ -315,7 +313,6 @@ export function AppearanceManager() {
                   src={`${hero?.url ?? "/api/media/hero"}?v=${hero?.updatedAt ?? "bawaan"}`}
                   alt="Pratinjau gambar hero"
                   fill
-                  unoptimized
                   sizes="640px"
                   className="object-cover object-center"
                 />
@@ -427,7 +424,7 @@ export function AppearanceManager() {
                   </div>
                   <div className="mt-3 rounded-xl border border-[#e8ece5] bg-[#f1f4ef] p-2">
                     <div className="relative mx-auto w-full max-w-[190px] overflow-hidden rounded-lg" style={{ aspectRatio: POPUP_LATAR_RATIO }}>
-                      <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} alt="Pratinjau latar popup mode teks" fill unoptimized sizes="190px" className="object-cover object-center" />
+                      <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} alt="Pratinjau latar popup mode teks" fill sizes="190px" className="object-cover object-center" />
                     </div>
                   </div>
                   <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) karena dipakai sebagai latar — persis seperti tampilan pengunjung. Pilih gambar yang gelap atau berkontras rendah di area teks, karena teks popup berwarna putih.</p>

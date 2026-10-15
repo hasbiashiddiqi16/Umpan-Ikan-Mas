@@ -257,11 +257,11 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
         {posterMode && (
           <>
             <div className="sm:hidden">
-              <Image src={settings.media.mobile.url} width={860} height={1280} alt="" unoptimized loading="eager"
+              <Image src={settings.media.mobile.url} width={860} height={1280} alt="" loading="eager" sizes="(max-width: 640px) 92vw, 430px"
                 style={{ maxHeight }} className="block h-auto w-full" />
             </div>
             <div className="hidden sm:block">
-              <Image src={settings.media.desktop.url} width={1640} height={1040} alt="" unoptimized loading="eager"
+              <Image src={settings.media.desktop.url} width={1640} height={1040} alt="" loading="eager" sizes="(max-width: 900px) 92vw, 820px"
                 style={{ maxHeight }} className="block h-auto w-full" />
             </div>
           </>
@@ -273,7 +273,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
             className="relative w-full"
             style={{ aspectRatio: POPUP_LATAR_RATIO, maxWidth: MAX_WIDTH.mobile, maxHeight, margin: "0 auto", containerType: "inline-size" }}
           >
-            <Image src={settings.media.latar.url} alt="" fill unoptimized loading="eager" sizes="430px" className="object-cover object-center" />
+            <Image src={settings.media.latar.url} alt="" fill loading="eager" sizes="430px" className="object-cover object-center" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,28,19,.72)_0%,rgba(11,28,19,.62)_42%,rgba(11,28,19,.88)_100%)]" />
             <PopupText settings={settings} compact={false} />
           </div>
@@ -302,7 +302,7 @@ function PopupText({ settings, compact }: { settings: AppearanceState["popup"]; 
         className="inline-flex w-fit items-center rounded-full border border-white/25 bg-white/10 font-bold uppercase text-[#f0e2bd]"
         style={{ gap: "1.8cqw", padding: "1.4cqw 2.6cqw", fontSize: "2.3cqw", letterSpacing: ".16em" }}
       >
-        <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} unoptimized className="shrink-0" style={{ width: "4.6cqw", height: "4.6cqw" }} />
+        <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} className="shrink-0" style={{ width: "4.6cqw", height: "4.6cqw" }} />
         UMPAN MAS
       </span>
 

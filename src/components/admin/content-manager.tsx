@@ -186,7 +186,7 @@ function RecipePreview({ form }: { form: RecipeForm }) {
       </p>
       <section className="overflow-hidden rounded-[22px] border border-[#e5e9e2] bg-white">
         <div className="relative h-44 w-full bg-[#e4e3d6]">
-          {form.image && <Image src={form.image} alt="" fill unoptimized sizes="640px" className="object-cover" />}
+          {form.image && <Image src={form.image} alt="" fill sizes="640px" className="object-cover" />}
           <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{kategori} · Ikan mas</span>
         </div>
         <div className="p-4 sm:p-5">
@@ -499,7 +499,7 @@ export function ContentManager() {
                   <tr key={item.id} className="transition hover:bg-[#fafbf9]">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <span className="relative h-10 w-12 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill unoptimized sizes="48px" className="object-cover" /></span>
+                        <span className="relative h-10 w-12 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill sizes="48px" className="object-cover" /></span>
                         <div className="min-w-0">
                           <p className="max-w-[270px] truncate text-xs font-extrabold text-[#37483a]">{item.title}</p>
                           <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog {(item.rating / 10).toFixed(1)} dari 5 · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>

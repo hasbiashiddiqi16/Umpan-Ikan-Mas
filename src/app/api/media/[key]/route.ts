@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { MEDIA_DEFAULTS, isMediaKey } from "@/lib/appearance";
 import { readMediaFile } from "@/lib/appearance-server";
 
@@ -33,5 +35,21 @@ export async function GET(request: Request, context: RouteContext) {
     // Database belum siap (mis. pratinjau lokal): pakai berkas bawaan.
   }
 
-  return Response.redirect(new URL(MEDIA_DEFAULTS[key], request.url), 307);
+  // Berkas bawaan disajikan langsung (200), bukan dialihkan (307): pengoptimal
+  // gambar Next menolak sumber yang membalas redirect, jadi logo/poster/hero
+  // bawaan tidak akan teroptimasi — dan bisa gagal tampil — bila hanya
+  // dialihkan ke `public/`.
+  try {
+    const bawaan = MEDIA_DEFAULTS[key];
+    const bytes = await readFile(path.join(process.cwd(), "public", bawaan));
+    return new Response(new Uint8Array(bytes), {
+      headers: {
+        "Content-Type": bawaan.endsWith(".png") ? "image/png" : "image/jpeg",
+        "Content-Length": String(bytes.length),
+        "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
+      },
+    });
+  } catch {
+    return Response.redirect(new URL(MEDIA_DEFAULTS[key], request.url), 307);
+  }
 }

@@ -385,9 +385,19 @@ bawaan Next masih menyediakan 3840 sehingga lebar itu selalu ditawarkan.
   terverifikasi server membalas `image/avif` untuk browser yang menerima
   AVIF, `image/webp` sebagai cadangan, dan JPEG untuk sisanya. Contoh
   thumbnail kartu `w=384` kini ±18 KB dari berkas asli 190 KB.
-- Gambar berukuran tetap (logo, pratinjau dashboard, poster popup) memakai
-  `width`/`height` dan sebagian `unoptimized` karena dilayani dari
-  `/api/media/`; mereka tidak melewati pengoptimal sama sekali.
+- **Semua gambar lain ikut dioptimalkan** — tidak ada lagi `unoptimized`
+  di `src/`. Logo navbar/footer (tampil 36–44px) kini melewati pengoptimal:
+  dari berkas PNG 512px 145 KB menjadi AVIF `w=64` ±2 KB dengan `srcset`
+  1x/2x saja (48/96). Poster popup (tampil ≤430px ponsel / ≤820px desktop)
+  memakai `sizes` sesuai lebar modalnya: dari 88–122 KB menjadi ±22–28 KB
+  AVIF. Pratinjau dashboard dan thumbnail konten juga teroptimasi.
+  Syaratnya, `/api/media/[key]` kini menyajikan berkas bawaan langsung
+  dengan status 200 (membaca `public/`), bukan redirect 307 — pengoptimal
+  Next menolak sumber ber-redirect, jadi tanpa ini logo/poster bawaan gagal
+  dioptimalkan. Unggahan dashboard tetap didahulukan dari database.
+- Berkas sumber ikut dipangkas: logo PNG 512px 145 KB → PNG8 256px 24 KB
+  (tampil maks 104px), dan 14 foto JPG >140 KB dikompresi ulang (hemat
+  ±0,5 MB) tanpa mengubah dimensinya.
 
 ## Izin lokasi (opsional)
 
