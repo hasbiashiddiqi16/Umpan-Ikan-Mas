@@ -390,7 +390,14 @@ bawaan Next masih menyediakan 3840 sehingga lebar itu selalu ditawarkan.
   dari berkas PNG 512px 145 KB menjadi AVIF `w=64` ±2 KB dengan `srcset`
   1x/2x saja (48/96). Poster popup (tampil ≤430px ponsel / ≤820px desktop)
   memakai `sizes` sesuai lebar modalnya: dari 88–122 KB menjadi ±22–28 KB
-  AVIF. Pratinjau dashboard dan thumbnail konten juga teroptimasi.
+  AVIF. Thumbnail konten di dashboard juga teroptimasi. Satu pengecualian:
+  pratinjau di dashboard Tampilan (logo, logo footer, hero, poster popup,
+  latar popup) sengaja `unoptimized` — pratinjau itu memakai penanda versi
+  `?v=` agar gambar yang baru diunggah langsung terlihat, sedangkan
+  pengoptimal Next menolak `src` lokal ber-query string (400 "url
+  parameter is not allowed") sehingga pratinjaunya sempat hilang/rusak.
+  Berkasnya dimuat langsung dari `/api/media/...` yang memang ringan;
+  gambar publik tetap teroptimasi penuh.
   Syaratnya, `/api/media/[key]` kini menyajikan berkas bawaan langsung
   dengan status 200 (membaca `public/`), bukan redirect 307 — pengoptimal
   Next menolak sumber ber-redirect, jadi tanpa ini logo/poster bawaan gagal
