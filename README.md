@@ -294,6 +294,40 @@ Sebelumnya komposisi di `/sistem-pakar` hanya "menjumlahkan persentase mengikuti
 
 Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** aturan/pengganti/harga (termasuk 781 kombinasi bahan yang harus tetap berjumlah 100%), **40 uji interaktif jsdom** memakai komponen asli (klik bahan, "Pakai X", versi hemat, ubah provinsi ke Papua, ubah budget kecil/besar), dan **29 uji halaman tersaji + regresi** (semua halaman penting 200, `/dashboard` tetap 307 + noindex, API evaluasi tetap 401 tanpa sesi).
 
+## Foto adonan per resep dan alt text unik
+
+Dulu 200 resep katalog memutar tiga berkas yang sama (`recipe-putih.jpg`,
+`recipe-pelet.jpg`, `recipe-jagung.jpg`). Sekarang setiap resep punya foto
+dan alt text-nya sendiri, diatur dari satu tempat: `src/data/recipe-photos.ts`.
+
+- **20 resep inti** punya foto adonan tersendiri yang dipetakan dari slug di
+  `CORE_RECIPE_PHOTOS` (berkas di `public/images/recipes/<slug>.jpg`; tiga
+  resep pertama tetap memakai berkas klasik yang memang cocok dengan isinya).
+- **Resep turunan katalog** memakai berkas tersendiri per slug
+  (`/images/recipes/<slug>.jpg`), dibuat oleh `scripts/buat-foto-racikan.py`
+  dari foto adonan keluarga bahannya (dipilih lewat kata kunci nama, sama
+  seperti daftar `PHOTO_FAMILIES`) lalu dipotong/dibalik/di-grading berbeda
+  per slug berdasarkan hash slug — tidak ada dua resep berbagi berkas yang
+  sama (terverifikasi 200/200 unik, termasuk hash berkasnya).
+- **Alt text unik per resep** disimpan di field `imageAlt`, diturunkan oleh
+  `buildRecipeImageAlt` dari nama resep, warna adonan pada fotonya, bahan
+  inti, jenis pemancingan, dan kondisi air. Field yang sama dipakai kartu
+  katalog, kartu rekomendasi, halaman detail (termasuk metadata berbagi/Open
+  Graph), dan resep CMS dari dashboard — tidak ada lagi alt generik yang
+  diulang antarresep.
+- **Dashboard**: pemilih "Foto racikan" menawarkan seluruh foto adonan
+  katalog (`RECIPE_PHOTO_OPTIONS`), bukan tiga berkas lama.
+- **Foto pengirim ulasan tidak dikarang.** Ulasan pengunjung saat ini tidak
+  memiliki unggahan foto, jadi kartu komunitas menampilkan foto racikan
+  katalog dari resep yang dicoba dengan label "Ilustrasi racikan" dan alt
+  yang menyatakannya sebagai ilustrasi katalog — bukan seolah-olah foto
+  kiriman pemancingnya. Bila unggahan foto ulasan ditambahkan nanti, foto
+  itulah yang harus menggantikan ilustrasi ini.
+- Menambah/mengganti foto resep cukup menimpa berkas bernama slug resep di
+  `public/images/recipes/`; menjalankan ulang
+  `python3 scripts/buat-foto-racikan.py` akan membuat ulang berkas turunan
+  yang belum ada (tambahkan `--force` untuk membuat semuanya dari awal).
+
 ## Izin lokasi (opsional)
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.

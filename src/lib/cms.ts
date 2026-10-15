@@ -12,6 +12,7 @@ import {
 } from "@/data/recipes";
 import type { CmsIngredient } from "@/db/schema";
 import { slugify } from "@/lib/utils";
+import { buildRecipeImageAlt } from "@/data/recipe-photos";
 
 export type CmsRecipeStatus = "draft" | "published" | "archived";
 
@@ -177,6 +178,12 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
     priceValue: record.priceValue,
     difficulty: record.difficulty as Recipe["difficulty"],
     image: record.image,
+    imageAlt: buildRecipeImageAlt({
+      name: record.title,
+      ingredients: record.ingredients,
+      fishingTypes: orderFishingTypes(record.title, record.fishingTypes),
+      water: record.water,
+    }),
     weather: record.weather as Recipe["weather"],
     water: record.water as Recipe["water"],
     waterBodies: resolveWaterBodies(record),

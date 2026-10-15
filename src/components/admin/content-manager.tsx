@@ -10,6 +10,7 @@ import { Badge } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { primaryFishingType, recipes as seedRecipes, type Ingredient } from "@/data/recipes";
 import { slugify } from "@/lib/utils";
+import { RECIPE_PHOTO_OPTIONS } from "@/data/recipe-photos";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
@@ -31,11 +32,8 @@ type RecipeForm = {
 
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
-const imageOptions = [
-  { value: "/images/recipe-putih.jpg", label: "Umpan putih · kroto" },
-  { value: "/images/recipe-pelet.jpg", label: "Pelet · pandan" },
-  { value: "/images/recipe-jagung.jpg", label: "Jagung · kroto" },
-];
+/** Pilihan foto editor: seluruh foto adonan katalog, bukan tiga berkas lama. */
+const imageOptions = RECIPE_PHOTO_OPTIONS;
 
 const blankForm: RecipeForm = {
   title: "", slug: "", summary: "", status: "draft", image: "/images/recipe-putih.jpg",

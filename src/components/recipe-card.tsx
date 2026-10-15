@@ -53,7 +53,7 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e8ebe5] bg-white shadow-[0_7px_25px_rgba(41,55,43,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(41,55,43,.12)]">
       <div className="relative h-[190px] shrink-0 overflow-hidden bg-[#e8e6d9] sm:h-[205px]">
         <Link href={`/resep/${recipe.slug}`} aria-label={`Lihat resep ${recipe.name}`} className="absolute inset-0 z-0">
-          <Image src={recipe.image} alt={`${recipe.name}, bahan racikan umpan ikan mas`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
+          <Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
           <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/60 via-transparent to-[#16241b]/5" />
         </Link>
         <div className="pointer-events-none absolute left-3.5 top-3.5 flex flex-wrap gap-2">

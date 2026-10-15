@@ -1,4 +1,5 @@
 import { provinceDirectory } from "@/data/province-directory";
+import { CORE_RECIPE_PHOTOS, buildRecipeImageAlt, generatedRecipeImage } from "@/data/recipe-photos";
 
 export type Weather = "Hujan" | "Mendung" | "Cerah" | "Berawan" | "Panas";
 export type WaterCondition = "Keruh" | "Hijau" | "Jernih" | "Kekuningan";
@@ -140,6 +141,8 @@ export type Recipe = {
   priceValue: number;
   difficulty: "Mudah" | "Menengah" | "Tingkat lanjut";
   image: string;
+  /** Alt text unik per resep, diturunkan dari nama, warna adonan, dan bahan inti. */
+  imageAlt: string;
   weather: Weather[];
   water: WaterCondition[];
   /** Tipe perairan (kolam/sungai/danau) — lihat `waterBodiesFromText`. */
@@ -160,7 +163,7 @@ export type Recipe = {
  * dirakit: `category` (dari jenis pemancingan) dan `waterBodies` (dari teks
  * resep, lihat `waterBodiesFromText`).
  */
-type CoreRecipe = Omit<Recipe, "category" | "waterBodies">;
+type CoreRecipe = Omit<Recipe, "category" | "waterBodies" | "imageAlt">;
 
 const coreRecipes: CoreRecipe[] = [
   {
@@ -692,7 +695,7 @@ const generatedRecipes: CoreRecipe[] = additionalRecipeNames.map((name, index) =
     price: index % 5 === 0 ? "< Rp15.000" : index % 5 === 1 ? "Rp15.000–30.000" : index % 5 === 2 ? "Rp30.000–50.000" : index % 5 === 3 ? "Rp45.000–60.000" : "> Rp50.000",
     priceValue: index % 5 === 0 ? 14000 : index % 5 === 1 ? 24000 : index % 5 === 2 ? 38000 : index % 5 === 3 ? 52000 : 62000,
     difficulty: catalogDifficulties[index % catalogDifficulties.length],
-    image: index % 3 === 0 ? "/images/recipe-putih.jpg" : index % 3 === 1 ? "/images/recipe-pelet.jpg" : "/images/recipe-jagung.jpg",
+    image: generatedRecipeImage(slugForGeneratedRecipe(name, index)),
     provinces: [recipeProvinceAssignments[catalogIndex]],
     summary: `${name} adalah ${catalogSummaries[index % catalogSummaries.length].toLocaleLowerCase("id-ID")}`,
     ingredients: template.ingredients.map((ingredient) => ({ ...ingredient })),
@@ -728,7 +731,7 @@ const amisOilIngredient: Ingredient = { name: "Minyak ikan amis", brand: AMIS_OI
  * - Tuna kaleng amis (Deho / Sunbell) selama resep belum memakai ikan kalengan,
  *   plus minyaknya.
  */
-function withOptionalAdditions(recipe: Recipe, fromCatalog: boolean): Recipe {
+function withOptionalAdditions(recipe: Omit<Recipe, "imageAlt">, fromCatalog: boolean): Omit<Recipe, "imageAlt"> {
   // Resep inti yang memang berbasis kroto (mis. Umpan Putih Kroto) memakai kroto
   // sebagai bahan inti. Resep turunan katalog mewarisi bahan template, jadi kroto
   // warisan tersebut cukup ditandai opsional agar tidak menyesatkan.
@@ -760,9 +763,11 @@ function withOptionalAdditions(recipe: Recipe, fromCatalog: boolean): Recipe {
 export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes].map((recipe, index) => {
   const fishingTypes = orderFishingTypes(recipe.name, recipe.fishingTypes);
   const waterBodies = waterBodiesFromText(recipe.name, recipe.summary, recipe.suitable);
-  return withOptionalAdditions(
+  const lengkap = withOptionalAdditions(
     {
       ...recipe,
+      // Foto per resep: resep inti dari peta slug, turunan dari berkas slug-nya.
+      image: CORE_RECIPE_PHOTOS[recipe.slug] ?? recipe.image,
       fishingTypes,
       category: fishingTypes[0],
       // Label tipe air hanya dari teks resep; sisanya memakai label bawaan
@@ -771,6 +776,7 @@ export const recipes: Recipe[] = [...normalizedCoreRecipes, ...generatedRecipes]
     },
     index < normalizedCoreRecipes.length,
   );
+  return { ...lengkap, imageAlt: buildRecipeImageAlt(lengkap) };
 });
 
 /** Cakupan Jabodetabek dihitung dari resep berlabel DKI Jakarta, Jawa Barat, dan Banten. */
