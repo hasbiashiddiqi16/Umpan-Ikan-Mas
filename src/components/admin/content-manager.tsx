@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FilePenLine, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
@@ -564,6 +564,9 @@ export function ContentManager() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<number | null>(null);
   const [importingSeeds, setImportingSeeds] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const [excelFailures, setExcelFailures] = useState<{ baris: number; judul: string; pesan: string }[]>([]);
 
   async function load(signal?: AbortSignal) {
     const response = await fetch("/api/admin/recipes", { cache: "no-store", signal });
@@ -610,6 +613,21 @@ export function ContentManager() {
       await load();
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Sinkronisasi gagal."); }
     finally { setImportingSeeds(false); }
+  }
+
+  async function importExcel(file: File) {
+    setImportingExcel(true); setError(""); setNotice(""); setExcelFailures([]);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/admin/recipes/import-spreadsheet", { method: "POST", body });
+      const result = await response.json().catch(() => ({})) as { error?: string; created?: number; updated?: number; failed?: { baris: number; judul: string; pesan: string }[] };
+      if (result.failed?.length) setExcelFailures(result.failed);
+      if (!response.ok) throw new Error(result.error ?? "Impor Excel gagal.");
+      setNotice(`Impor Excel selesai: ${result.created ?? 0} resep baru ditambahkan, ${result.updated ?? 0} resep diperbarui.`);
+      await load();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Impor Excel gagal."); }
+    finally { setImportingExcel(false); }
   }
 
   async function save(payload: ReturnType<typeof toPayload>, id?: number) {
@@ -659,6 +677,27 @@ export function ContentManager() {
         </div>
       </div>
 
+      <section aria-label="Impor resep dari Excel" className="mb-5 rounded-[20px] border border-[#d8e4d2] bg-[#f3f7f0] p-4 shadow-[0_5px_20px_rgba(36,53,39,.03)] sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3.5">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#294b34] text-white shadow-sm"><FileSpreadsheet size={21} aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold tracking-tight text-[#2c4231]">Impor resep dari Excel</h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-[#5c6a5c]">Tambah banyak resep sekaligus tanpa mengisi formulir satu per satu: unduh template-nya, isi satu baris untuk satu resep, lalu unggah kembali berkasnya di sini. Baris yang tidak valid tidak akan disimpan dan dilaporkan per baris.</p>
+              <p className="mt-2.5 flex flex-wrap gap-1.5">
+                {["Format .xlsx / .csv", "Maks 2 MB", "Maks 200 baris", "Slug sama = diperbarui"].map((catatan) => <span key={catatan} className="rounded-full border border-[#dbe5d5] bg-white px-2.5 py-1 text-[10px] font-bold text-[#506550]">{catatan}</span>)}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:shrink-0">
+            {/* Unduhan berkas dari API (bukan navigasi halaman), jadi <a download> memang yang tepat. */}
+            <a href="/api/admin/recipes/import-spreadsheet/template" download className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#203d29]"><FileDown size={16} aria-hidden="true" /> Download Template Excel</a>
+            <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d8c5] bg-white px-5 text-xs font-extrabold text-[#3c5a41] transition hover:bg-[#eef4ea] disabled:opacity-60"><FileSpreadsheet size={16} aria-hidden="true" />{importingExcel ? "Mengimpor…" : "Upload Excel"}</button>
+          </div>
+        </div>
+        <input ref={excelInputRef} type="file" accept=".xlsx,.csv" className="hidden" aria-label="Pilih berkas Excel atau CSV berisi resep" onChange={(event) => { const berkas = event.target.files?.[0]; event.target.value = ""; if (berkas) void importExcel(berkas); }} />
+      </section>
+
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Semua konten</p><p className="mt-2 text-2xl font-black text-[#344638]">{counts.all}</p></div>
         <div className="rounded-2xl border border-[#e6eae4] bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#929a91]">Tayang publik</p><p className="mt-2 text-2xl font-black text-[#46714b]">{counts.published}</p></div>
@@ -668,6 +707,14 @@ export function ContentManager() {
 
       {notice && <p role="status" className="mb-4 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-xs font-semibold text-[#436444]">{notice}</p>}
       {error && <p role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold text-[#995744]">{error}</p>}
+      {excelFailures.length > 0 && (
+        <div role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs text-[#995744]">
+          <p className="font-bold">Baris yang belum valid — belum ada resep yang disimpan:</p>
+          <ul className="mt-2 grid max-h-44 gap-1 overflow-y-auto pr-1">
+            {excelFailures.map((gagal) => <li key={`${gagal.baris}-${gagal.judul}`}>Baris {gagal.baris} — {gagal.judul}: {gagal.pesan}</li>)}
+          </ul>
+        </div>
+      )}
 
       <section className="overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
         <div className="flex flex-col gap-3 border-b border-[#eef0ec] p-4 sm:p-5">
