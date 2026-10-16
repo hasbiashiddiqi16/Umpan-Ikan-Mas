@@ -28,7 +28,24 @@ function createDatabase(): Database {
   // (Supabase pooler, Neon, Netlify Database) yang mewajibkan TLS.
   const { value: connectionString } = normalizeDatabaseUrl(process.env.DATABASE_URL || process.env.NETLIFY_DB_URL);
   // Tanpa override, paket Netlify memakai NETLIFY_DB_URL dari lingkungan.
-  return drizzle({ client: getDatabase(connectionString ? { connectionString } : {}), schema });
+  const connection = getDatabase(connectionString ? { connectionString } : {});
+  if (connection.driver === "server") {
+    // Batasi jejak koneksi SETIAP instance serverless. Connection string
+    // produksi menunjuk pooler Supabase mode session (port 5432) yang
+    // hanya menyediakan 15 slot klien; bawaan pg.Pool adalah maks 10
+    // koneksi per instance yang ditahan sampai 10 detik menganggur,
+    // jadi dua instance sibuk saja cukup menghabiskan pooler
+    // (EMAXCONNSESSION) dan semua bacaan basis data ikut gagal.
+    // pg-pool membaca nilai ini saat membuat/melepas klien, jadi
+    // pengaturan setelah pool terbentuk tetap berlaku: maks 3 koneksi
+    // per instance, koneksi menganggur dilepas setelah 5 detik, dan
+    // antrean koneksi menyerah setelah 10 detik (galatnya lalu
+    // ditangani coba-ulang di `bacaDenganCobaUlang`).
+    connection.pool.options.max = 3;
+    connection.pool.options.idleTimeoutMillis = 5_000;
+    connection.pool.options.connectionTimeoutMillis = 10_000;
+  }
+  return drizzle({ client: connection, schema });
 }
 
 let database: Database | undefined;
