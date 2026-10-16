@@ -11,12 +11,12 @@ export const metadata: Metadata = createPageMetadata({
   noIndex: true,
 });
 
-export default async function MasukPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+export default async function MasukPage({ searchParams }: { searchParams: Promise<{ next?: string; pesan?: string }> }) {
+  const { next, pesan } = await searchParams;
   return (
     <PageShell>
       <main className="mx-auto flex min-h-[70vh] w-full max-w-7xl items-center px-5 py-12 sm:px-8">
-        <MasukForm next={next} />
+        <MasukForm next={next} pesan={pesan} />
       </main>
       <Footer />
     </PageShell>
