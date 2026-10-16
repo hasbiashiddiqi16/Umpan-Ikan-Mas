@@ -14,11 +14,12 @@ import { recipeBadge } from "@/lib/recipe-badge";
 import { RecipeCard } from "@/components/recipe-card";
 import { recipes } from "@/data/recipes";
 import { reviews } from "@/data/reviews";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
 import { getPublicRecipes } from "@/lib/public-recipes";
+import { bacaDenganCobaUlang } from "@/lib/db-retry";
 import { formatCount } from "@/lib/utils";
 import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata, siteOrigin } from "@/lib/seo";
@@ -44,15 +45,14 @@ const findRecipe = cache(async (slug: string) => {
   let record: CmsRecipeRecord | undefined;
   let databaseFailed = false;
   try {
-    record = await bacaResep(slug);
-  } catch {
-    // Kegagalan koneksi sesaat (pooler basis data penuh/koneksi putus)
-    // biasanya lolos pada percobaan kedua dengan koneksi baru.
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      record = await bacaResep(slug);
-    } catch (error) {
-      databaseFailed = true;
+    record = await bacaDenganCobaUlang(() => bacaResep(slug));
+  } catch (error) {
+    // Gagal setelah tiga percobaan. Hanya dihitung kegagalan basis
+    // data bila basis data memang terkonfigurasi; tanpa konfigurasi
+    // (pengembangan lokal) resep non-katalog memang tidak ada, jadi
+    // 404 adalah jawaban yang benar, bukan halaman galat.
+    databaseFailed = isDatabaseConfigured();
+    if (databaseFailed) {
       console.error(`Gagal membaca resep "${slug}" dari basis data:`, error);
     }
   }
