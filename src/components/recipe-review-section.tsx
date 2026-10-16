@@ -58,6 +58,17 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
   const [turnstileToken, setTurnstileToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const onTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
+  // Pengguna yang masuk: nama ulasan terisi otomatis dari akunnya (server
+  // juga menautkan ulasan ke akun). Pengunjung anonim tetap isi manual.
+  useEffect(() => {
+    let aktif = true;
+    void fetch("/api/user/me", { headers: { Accept: "application/json" } })
+      .then(async (r) => (r.ok ? (await r.json()) as { user?: { name?: string } | null } : { user: null }))
+      .then((data) => { if (aktif && data.user?.name) setName((cur) => cur || data.user!.name!.slice(0, 60)); })
+      .catch(() => undefined);
+    return () => { aktif = false; };
+  }, []);
+
   const { markTouched: markLocationTouched } = useLocationAutofill((place) => {
     setProvince(place.province);
     if (place.city) setCity(place.city);

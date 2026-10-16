@@ -74,6 +74,21 @@ npm run supabase:check   # atau: node scripts/supabase-check.mjs
 
 Perintah itu memeriksa variabel lingkungan, format kunci, ketersediaan endpoint REST, dan (bila `DATABASE_URL` disetel) koneksi PostgreSQL — nilainya tidak pernah ditampilkan, hanya statusnya.
 
+## Akun pengguna (Supabase Auth)
+
+Pengunjung bisa **daftar dan masuk** untuk membagikan resep sendiri. Akun memakai **Supabase Auth** dengan dua cara masuk: **email + kata sandi** dan **Google**. Tidak ada kunci rahasia (service role) di aplikasi: peramban hanya memakai kunci publishable, sesi disimpan Supabase sebagai cookie, dan setiap route `/api/user/*` memeriksa sesi itu di server (`src/lib/auth-user.ts`) sebelum menyentuh basis data lewat jalur Drizzle yang sudah ada.
+
+Yang didapat pengguna setelah masuk:
+
+- **Bagikan resep — langsung tayang.** Formulir `/bagikan` memakai validasi yang sama persis dengan dashboard admin (`validateCmsRecipeInput`). Resep terkirim berstatus `published` dengan penulis nama akun dan `owner_id` id pengguna; slug dibuat unik otomatis. Batas wajar 10 resep per akun per hari mencegah spam. Hanya pemilik (atau admin) yang boleh menyunting/menghapusnya; admin tetap bisa mengarsipkan resep bermasalah dari dashboard. Foto diunggah lewat `/api/user/recipes/[id]/photo` dengan pemeriksaan yang sama seperti dashboard (maks 3 MB, tipe berkas diperiksa dari isi berkasnya).
+- **Akun Saya (`/profil`).** Tiga tab: **Resep Saya** (sunting/hapus + status tayang), **Ulasan Saya** (semua ulasan yang dikirim saat masuk beserta status moderasinya), dan **Favorit** tersinkron. Nama tampil bisa diganti dari halaman ini.
+- **Favorit tersinkron antarperangkat.** Favorit pengunjung anonim tetap lokal (localStorage `umpan-mas-favorites`). Saat masuk, daftar lokal dan daftar akun **digabung** (tidak ada yang terhapus) lalu disimpan ke tabel `user_favorites`; perubahan berikutnya ikut terkirim, jadi membuka situs di perangkat lain menampilkan favorit yang sama.
+- **Ulasan tetap boleh anonim.** Formulir ulasan tidak berubah bagi pengunjung biasa. Bila ulasan dikirim saat masuk, server mengisi `cms_reviews.user_id` dan memakai nama akun, sehingga ulasan itu muncul di tab Ulasan Saya pengirimnya. Aturan lama (token perangkat, batas kiriman, honeypot/Turnstile, moderasi editor) tetap berlaku untuk semua kiriman.
+
+Rute `/masuk`, `/daftar`, `/bagikan`, `/profil`, dan `/auth` diberi `noindex` oleh `src/proxy.ts` dan metadata halamannya. Migrasi `20261016150000_add_user_accounts` menambahkan `cms_recipes.owner_id`, `cms_reviews.user_id`, dan tabel `user_favorites`.
+
+**Yang perlu diatur sekali di Supabase (dashboard proyek, bukan kode):** aktifkan provider **Email** dan **Google** di *Authentication → Providers* (Google butuh Client ID/Secret dari Google Cloud), lalu di *Authentication → URL Configuration* isi **Site URL** dengan alamat produksi dan tambahkan `<alamat-produksi>/auth/callback` ke **Redirect URLs**. Tanpa itu, tombol Google menjawab galat "provider is not enabled" dan tautan konfirmasi email tidak kembali ke situs — aplikasi menampilkannya sebagai pesan yang mudah dipahami, bukan halaman galat.
+
 ## Admin Content Studio
 
 Buka `/login` untuk masuk ke dashboard. Halaman dashboard dan endpoint `/api/admin/*` dilindungi oleh sesi admin HttpOnly yang kedaluwarsa setelah 8 jam.
@@ -155,12 +170,12 @@ Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/kata
 
 **Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
-## Ulasan komunitas: tersimpan di server, tanpa akun
+## Ulasan komunitas: tersimpan di server, akun opsional
 
 Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan ke semua pengunjung — bukan lagi hanya di peramban pengirimnya. Peramban tetap punya salinan sementara supaya ulasan langsung tampil, tetapi sumber kebenarannya server:
 
 - **Kiriman lewat API, bukan penyimpanan peramban.** `POST /api/public/reviews` menyimpan baris dengan status `pending`, lalu editor menyetujuinya di dashboard (**Studio → Ulasan**). `GET /api/public/reviews[?slug=]` mengirim ulasan yang sudah disetujui (dan tidak bertanggal masa depan) ke semua orang. Menghapus data peramban hanya menghapus salinan lokal; ulasan yang sudah terkirim tetap ada di server dan tetap tampil.
-- **Tanpa akun: token perangkat anonim.** `POST /api/public/reviews/token` menerbitkan token bertanda tangan HMAC (`x-review-device`, berlaku 400 hari) yang berisi id acak. Peramban menyimpannya di `localStorage` (`umpan-mas-review-device-v1`). Token yang hilang diperbarui otomatis tanpa kehilangan id-nya; token yang dikarang klien selalu ditolak server.
+- **Token perangkat anonim.** `POST /api/public/reviews/token` menerbitkan token bertanda tangan HMAC (`x-review-device`, berlaku 400 hari) yang berisi id acak. Peramban menyimpannya di `localStorage` (`umpan-mas-review-device-v1`). Token yang hilang diperbarui otomatis tanpa kehilangan id-nya; token yang dikarang klien selalu ditolak server.
 - **Satu ulasan per resep per perangkat per 24 jam.** Server menghitung baris milik perangkat itu untuk resep tersebut (`cms_reviews_device_recipe_created_idx`) dan menjawab `429` beserta pesan serta header `Retry-After`. Kiriman identik yang terulang (mis. percobaan ulang jaringan) **tidak digandakan** — dijawab dengan ID ulasan yang sudah ada. Ulasan yang **ditolak** moderator tidak dihitung, jadi penulisnya boleh memperbaiki kirimannya.
 - **Batas yang diketahui.** Menghapus data peramban (atau berpindah peramban) membuat perangkat mendapat id baru, seperti orang yang berganti perangkat — aturan 24 jam per resep mengikuti id itu. Jaring pengamannya adalah batas per IP di bawah, ditambah antrean moderasi yang menahan kiriman sebelum tampil.
 - **Batasan tambahan.** Batas bawaan 8 ulasan per perangkat per hari dan 24 per IP per hari; IP dikenali dari `x-real-ip`/`x-forwarded-for` (entri terakhir, yaitu proxy terdekat) dan hanya disimpan sebagai sidik jari HMAC. Tidak ada IP, token, atau nama mentah yang disimpan sebagai data pelacakan.

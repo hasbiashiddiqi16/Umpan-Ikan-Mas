@@ -19,7 +19,7 @@ import { updateSession } from "@/utils/supabase/middleware";
  *    meski ada tautan atau percobaan pengindeksan dari luar.
  */
 const AUTH_GATE_PREFIXES = ["/dashboard"] as const;
-const NO_INDEX_PREFIXES = ["/dashboard", "/login"] as const;
+const NO_INDEX_PREFIXES = ["/dashboard", "/login", "/masuk", "/daftar", "/bagikan", "/profil", "/auth"] as const;
 
 function cocokDengan(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

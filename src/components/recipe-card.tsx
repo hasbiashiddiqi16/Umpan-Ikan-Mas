@@ -10,18 +10,10 @@ import { MatchOrPopularBadge } from "@/components/match-or-popular";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
 import { useRecipeRatings } from "@/lib/use-ratings";
 
-const FAVORITES_KEY = "umpan-mas-favorites";
+import { readLocalFavorites, toggleFavorite } from "@/lib/favorites-client";
 const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
 
-function getStoredFavorites(): string[] {
-  try {
-    const stored = localStorage.getItem(FAVORITES_KEY);
-    const parsed: unknown = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
-  } catch {
-    return [];
-  }
-}
+function getStoredFavorites(): string[] { return readLocalFavorites(); }
 
 export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?: number }) {
   const [favorite, setFavorite] = useState(false);
@@ -41,12 +33,9 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
     return () => window.removeEventListener("umpan:favorites-change", update);
   }, [recipe.slug]);
 
-  function toggleFavorite() {
-    const current = getStoredFavorites();
-    const next = favorite ? current.filter((slug) => slug !== recipe.slug) : [...new Set([...current, recipe.slug])];
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+  function ubahFavorit() {
+    toggleFavorite(recipe.slug, !favorite);
     setFavorite(!favorite);
-    window.dispatchEvent(new CustomEvent("umpan:favorites-change", { detail: next }));
   }
 
   return (
@@ -60,7 +49,7 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
           {/* Badge & tag kondisi dibaca dari field yang sama (jenis pemancingan resep). */}
           <Badge tone={badge.tone} title={badge.title}>{badge.label}</Badge>
         </div>
-        <button type="button" onClick={toggleFavorite} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#a4523b] (4.68:1 terburuk)" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
+        <button type="button" onClick={ubahFavorit} aria-label={favorite ? `Hapus ${recipe.name} dari favorit` : `Simpan ${recipe.name} ke favorit`} aria-pressed={favorite} className={`absolute right-3.5 top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/55 shadow-sm backdrop-blur-md transition ${favorite ? "bg-[#fbf0e8] text-[#a4523b] (4.68:1 terburuk)" : "bg-white/90 text-[#536357] hover:bg-white"}`}>
           <Heart size={18} fill={favorite ? "currentColor" : "none"} />
         </button>
         <MatchOrPopularBadge recipe={recipe} matchScore={matchScore} />
