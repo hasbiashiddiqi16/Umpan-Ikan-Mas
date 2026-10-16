@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { and, eq, isNull, lte, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
+import { bacaDenganCobaUlang, sedangPrerenderBuild } from "@/lib/db-retry";
 import { cmsReviews } from "@/db/schema";
 
 import { BAYESIAN_MIN_REVIEWS, globalReviewAverage } from "@/lib/rating-utils";
@@ -48,22 +49,39 @@ export async function getRatingSummary(): Promise<RatingSummary> {
  * (mis. beranda) boleh memanggil ini bersamaan tanpa menggandakan query —
  * dalam satu render server hasilnya dipakai ulang.
  */
+async function bacaRatingDariBasisData(): Promise<RecipeRatingMap> {
+  const rows = await db
+    .select({
+      slug: cmsReviews.recipeSlug,
+      total: sql<number>`count(*)::int`,
+      average: sql<number>`coalesce(avg(${cmsReviews.rating}), 0)::float8`,
+    })
+    .from(cmsReviews)
+    .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`)))
+    .groupBy(cmsReviews.recipeSlug);
+  return Object.fromEntries(
+    rows.map((row) => [row.slug, { count: Number(row.total) || 0, average: Number(row.average) || 0 }]),
+  );
+}
+
 export const getRecipeRatings = cache(async (): Promise<RecipeRatingMap> => {
+  // Tanpa basis data terkonfigurasi (pengembangan lokal), memang
+  // belum ada ulasan yang bisa dihitung — jangan mengarang angka.
+  if (!isDatabaseConfigured()) return {};
   try {
-    const rows = await db
-      .select({
-        slug: cmsReviews.recipeSlug,
-        total: sql<number>`count(*)::int`,
-        average: sql<number>`coalesce(avg(${cmsReviews.rating}), 0)::float8`,
-      })
-      .from(cmsReviews)
-      .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`)))
-      .groupBy(cmsReviews.recipeSlug);
-    return Object.fromEntries(
-      rows.map((row) => [row.slug, { count: Number(row.total) || 0, average: Number(row.average) || 0 }]),
-    );
-  } catch {
-    // Basis data belum tersambung: jangan mengarang angka, kembalikan kosong.
-    return {};
+    return await bacaDenganCobaUlang(bacaRatingDariBasisData);
+  } catch (error) {
+    console.error("Gagal membaca rating resep dari basis data:", error);
+    // Saat build (prerender) kegagalan tidak boleh menggagalkan
+    // build; halaman menggambar ulang dengan rating asli pada
+    // revalidasi pertama.
+    if (sedangPrerenderBuild()) return {};
+    // Runtime: JANGAN kembalikan peta kosong. Halaman pemakai
+    // (beranda, cuaca, provinsi) memakai ISR, jadi peta kosong hasil
+    // satu kegagalan sesaat akan tersimpan sebagai urutan "belum ada
+    // ulasan" sampai satu jam. Melempar membuat gambar ulang gagal
+    // tanpa menyimpan apa pun — pola yang sama seperti daftar resep
+    // publik di `public-recipes.ts`.
+    throw new Error("Basis data ulasan sedang tidak terjangkau. Coba lagi sesaat lagi.");
   }
 });
