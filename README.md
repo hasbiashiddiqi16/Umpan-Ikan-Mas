@@ -19,13 +19,13 @@ Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan b
 
 ### Memakai PostgreSQL Supabase sebagai basis data
 
-Supabase kini hanya menerbitkan alamat **IPv6** untuk koneksi langsung (`db.<project-ref>.supabase.co`). Vercel dan host ber-IPv4 lain tidak bisa menjangkaunya — gejalanya `getaddrinfo ENOTFOUND db.<ref>.supabase.co` di `/api/health`. Pakai **Session pooler** yang IPv4:
+Supabase kini hanya menerbitkan alamat **IPv6** untuk koneksi langsung (`db.<project-ref>.supabase.co`). Vercel dan host ber-IPv4 lain tidak bisa menjangkaunya — gejalanya `getaddrinfo ENOTFOUND db.<ref>.supabase.co` di `/api/health`. Pakai **Transaction pooler** yang IPv4:
 
 ```
-postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<wilayah>.pooler.supabase.com:5432/postgres?sslmode=require
+postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<wilayah>.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
-String itu disalin dari Supabase → tombol **Connect** → *Session pooler* (password basis data, bukan kunci API). Tempel apa adanya sebagai `DATABASE_URL` di host Anda, lalu deploy ulang — tabel `cms_*` dibuat otomatis saat deploy (lihat bagian berikutnya).
+String itu disalin dari Supabase → tombol **Connect** → *Transaction pooler* (password basis data, bukan kunci API). Mode transaksi (port 6543) wajib untuk hosting serverless seperti Vercel: koneksi server dikembalikan setiap transaksi selesai. Mode session (port 5432) hanya menyediakan 15 slot klien dan pernah jenuh (`EMAXCONNSESSION`) karena setiap instance serverless menahan koneksinya sendiri. Kode aplikasi juga membatasi pool per instance (maks 3 koneksi, idle 5 detik) di `src/db/index.ts` sebagai pengaman tambahan. Tempel apa adanya sebagai `DATABASE_URL` di host Anda, lalu deploy ulang — tabel `cms_*` dibuat otomatis saat deploy (lihat bagian berikutnya).
 
 Aplikasi menyesuaikan connection string sendiri: host non-lokal mendapat `sslmode=require`, dan khusus host Supabase ditambah `uselibpqcompat=true` karena sertifikat Supabase ditandatangani CA internal yang tidak ada di trust store Node — tanpa itu `pg` menolak koneksi dengan "self-signed certificate in certificate chain". TLS tetap aktif, hanya verifikasi sertifikat yang dilewati (semantik `sslmode=require` di libpq). `sslmode=disable`, `sslmode=verify-full`, dan `sslmode=verify-ca` yang Anda tulis sendiri tidak pernah diubah. `/api/health` melaporkan hasilnya di kolom `ssl`: `required` (terverifikasi), `required-unverified` (Supabase), `disabled`, atau `default`.
 

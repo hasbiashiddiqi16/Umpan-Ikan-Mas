@@ -30,17 +30,19 @@ function createDatabase(): Database {
   // Tanpa override, paket Netlify memakai NETLIFY_DB_URL dari lingkungan.
   const connection = getDatabase(connectionString ? { connectionString } : {});
   if (connection.driver === "server") {
-    // Batasi jejak koneksi SETIAP instance serverless. Connection string
-    // produksi menunjuk pooler Supabase mode session (port 5432) yang
-    // hanya menyediakan 15 slot klien; bawaan pg.Pool adalah maks 10
-    // koneksi per instance yang ditahan sampai 10 detik menganggur,
-    // jadi dua instance sibuk saja cukup menghabiskan pooler
-    // (EMAXCONNSESSION) dan semua bacaan basis data ikut gagal.
-    // pg-pool membaca nilai ini saat membuat/melepas klien, jadi
-    // pengaturan setelah pool terbentuk tetap berlaku: maks 3 koneksi
-    // per instance, koneksi menganggur dilepas setelah 5 detik, dan
-    // antrean koneksi menyerah setelah 10 detik (galatnya lalu
-    // ditangani coba-ulang di `bacaDenganCobaUlang`).
+    // Batasi jejak koneksi SETIAP instance serverless. Produksi memakai
+    // pooler Supabase mode transaksi (port 6543), yang mengembalikan
+    // koneksi server setiap transaksi selesai — jauh lebih tahan untuk
+    // serverless daripada mode session (port 5432, 15 slot klien yang
+    // pernah jenuh dengan EMAXCONNSESSION). Batas per instance ini
+    // tetap dipasang sebagai pengaman: instance serverless bisa
+    // bermunculan banyak dan berumur pendek, sementara bawaan pg.Pool
+    // adalah maks 10 koneksi per instance. pg-pool membaca nilai ini
+    // saat membuat/melepas klien, jadi pengaturan setelah pool
+    // terbentuk tetap berlaku: maks 3 koneksi per instance, koneksi
+    // menganggur dilepas setelah 5 detik, dan antrean koneksi menyerah
+    // setelah 10 detik (galatnya lalu ditangani coba-ulang di
+    // `bacaDenganCobaUlang`).
     connection.pool.options.max = 3;
     connection.pool.options.idleTimeoutMillis = 5_000;
     connection.pool.options.connectionTimeoutMillis = 10_000;

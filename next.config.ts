@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Mengizinkan host preview Arena saat menjalankan Next.js dalam mode development.
   allowedDevOrigins: ["*.e2b.app"],
+  experimental: {
+    // Batasi halaman yang digambar bersamaan saat build (prerender).
+    // Tanpa batas, puluhan halaman statis membaca basis data sekaligus
+    // dari banyak worker; query build berebut koneksi pooler dan gagal,
+    // sehingga hasil build berisi data cadangan (katalog bawaan/rating
+    // kosong) yang kemudian disajikan setelah deploy sampai gambar
+    // ulang runtime pertama. Empat halaman sejajar menjaga bacaan
+    // build tetap ringan; pooler mode transaksi menangani sisanya.
+    staticGenerationMaxConcurrency: 4,
+  },
   compress: true,
   poweredByHeader: false,
   images: {
