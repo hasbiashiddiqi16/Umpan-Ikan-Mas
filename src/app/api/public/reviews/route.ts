@@ -7,6 +7,7 @@ import { databaseErrorResponse } from "@/lib/database-status";
 import { ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import { isFutureReviewDate } from "@/lib/review-dates";
 import { checkReviewLimits, hashReviewValue, isReviewHoneypotFilled, isTurnstileConfigured, readReviewDevice, reviewClientIp, reviewPayloadHash, verifyTurnstileToken } from "@/lib/review-guard";
+import { getCurrentUser } from "@/lib/auth-user";
 
 export const dynamic = "force-dynamic";
 
@@ -96,8 +97,12 @@ export async function POST(request: Request) {
     const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
     const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
+    // Bila pengirim sedang masuk, ulasan terhubung ke akunnya dan nama yang
+    // tampil adalah nama akun. Ulasan anonim tetap berjalan seperti sebelumnya.
+    const account = await getCurrentUser().catch(() => null);
+    const pengirim = account?.name ?? name;
     // Sidik jari isi kiriman + penjagaan anti-spam (24 jam per resep per perangkat).
-    const payloadHash = reviewPayloadHash([recipeSlug, name, location, rating, item.weather, item.water, waterBody, item.fishingType, catchCount, sessionMinutes, rodCount, comment]);
+    const payloadHash = reviewPayloadHash([recipeSlug, pengirim, location, rating, item.weather, item.water, waterBody, item.fishingType, catchCount, sessionMinutes, rodCount, comment]);
     const hit = await checkReviewLimits({ deviceId: device.id, ipHash: hashReviewValue(`ip:${ip}`), recipeSlug, payloadHash });
     if (hit) {
       // Kiriman ulang yang identik (mis. percobaan ulang jaringan) dijawab dengan
@@ -111,7 +116,7 @@ export async function POST(request: Request) {
     }
     const [created] = await db
       .insert(cmsReviews)
-      .values({ recipeSlug, name, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, sessionMinutes, rodCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash })
+      .values({ recipeSlug, name: pengirim, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, sessionMinutes, rodCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash, userId: account?.id ?? null })
       .returning({ id: cmsReviews.id });
     return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
   } catch (error) {

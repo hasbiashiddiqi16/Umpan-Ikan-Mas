@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 /** `optional` menandai tambahan yang boleh dilewati, mis. kroto atau bahan amis. */
 export type CmsIngredient = { name: string; brand: string; amount: string; optional?: boolean };
@@ -35,10 +35,17 @@ export const cmsRecipes = pgTable("cms_recipes", {
   suitable: jsonb("suitable").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   notSuitable: jsonb("not_suitable").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   author: varchar("author", { length: 100 }).notNull().default("Tim UMPAN MAS"),
+  /**
+   * Pemilik resep bila dibagikan pengguna terdaftar (id Supabase Auth).
+   * Kosong berarti resep redaksi/katalog. Resep pengguna tayang langsung,
+   * tetapi hanya pemiliknya (atau admin) yang boleh mengubah/menghapusnya.
+   */
+  ownerId: uuid("owner_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("cms_recipes_slug_unique").on(table.slug),
+  index("cms_recipes_owner_idx").on(table.ownerId),
   index("cms_recipes_status_updated_idx").on(table.status, table.updatedAt),
 ]);
 
@@ -73,6 +80,12 @@ export const cmsReviews = pgTable("cms_reviews", {
   ipHash: varchar("ip_hash", { length: 64 }),
   /** Sidik jari isi kiriman, untuk menolak kiriman ulang/kembar yang sama. */
   payloadHash: varchar("payload_hash", { length: 64 }),
+  /**
+   * Pengirim terdaftar (id Supabase Auth) bila ulasan dikirim saat masuk.
+   * Ulasan anonim tetap boleh; kolom ini hanya menghubungkan ulasan ke
+   * halaman akun pengirimnya.
+   */
+  userId: uuid("user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("cms_reviews_seed_key_unique").on(table.seedKey),
@@ -80,6 +93,20 @@ export const cmsReviews = pgTable("cms_reviews", {
   index("cms_reviews_recipe_idx").on(table.recipeSlug),
   index("cms_reviews_device_recipe_created_idx").on(table.device, table.recipeSlug, table.createdAt),
   index("cms_reviews_ip_created_idx").on(table.ipHash, table.createdAt),
+]);
+
+/**
+ * Resep favorit milik pengguna terdaftar. Favorit pengunjung anonim tetap
+ * disimpan lokal di perangkat (localStorage); saat masuk, keduanya digabung
+ * dan tabel ini menjadi sumber yang tersinkron antarperangkat.
+ */
+export const userFavorites = pgTable("user_favorites", {
+  userId: uuid("user_id").notNull(),
+  recipeSlug: varchar("recipe_slug", { length: 180 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("user_favorites_user_slug_unique").on(table.userId, table.recipeSlug),
+  index("user_favorites_user_idx").on(table.userId),
 ]);
 
 export const analyticsEvents = pgTable("analytics_events", {

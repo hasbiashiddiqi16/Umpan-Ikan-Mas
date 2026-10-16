@@ -22,14 +22,7 @@ import type { DetectedPlace } from "@/lib/location";
 // Pilihan cepat memakai daftar jenis pemancingan yang sama dengan data resep,
 // jadi tidak ada lagi kategori "Premium"/"Ekonomis" yang tidak dipakai badge.
 const categories = ["Semua", ...FISHING_TYPES];
-const FAVORITES_KEY = "umpan-mas-favorites";
-
-function readFavorites(): string[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch { return []; }
-}
+import { readLocalFavorites as readFavorites } from "@/lib/favorites-client";
 
 export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRecipes?: ReturnType<typeof cmsRecipeToRecipe>[]; initialManagedSlugs?: string[] }) {
   // Rating dari ulasan asli; dipakai untuk urutan dan label kartu.
