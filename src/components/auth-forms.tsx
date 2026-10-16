@@ -35,12 +35,12 @@ function Kerangka({ judul, subjudul, children, kaki }: { judul: string; subjudul
   );
 }
 
-export function MasukForm({ next }: { next?: string }) {
+export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
   const router = useRouter();
   const tujuan = tujuanAman(next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => (pesan ? pesan.slice(0, 300) : ""));
   const [sibuk, setSibuk] = useState(false);
   const tersedia = Boolean(supabasePublicConfig());
 
