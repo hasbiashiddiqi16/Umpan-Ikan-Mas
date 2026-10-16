@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fish, LoaderCircle, LogIn, Mail, UserRoundPlus } from "lucide-react";
@@ -9,6 +9,46 @@ import { supabasePublicConfig, SUPABASE_ENV_HINT } from "@/utils/supabase/env";
 import { pesanGalatAuth, tujuanAman } from "@/lib/auth-shared";
 
 const inputClass = "min-h-12 w-full rounded-xl border border-[#e4e9e2] bg-white px-3.5 text-sm text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+
+const GOOGLE_BELUM_AKTIF = "Masuk dengan Google belum aktif di server (provider Google di Supabase belum dilengkapi). Pakai email dan kata sandi dulu ya.";
+
+/**
+ * Menanyakan langsung ke Supabase apakah provider Google aktif, memakai
+ * endpoint pengaturan publik (cukup kunci publishable). Tanpa pemeriksaan
+ * ini, menekan tombol Google saat provider nonaktif meneruskan peramban
+ * ke halaman JSON galat mentah milik Supabase yang membingungkan.
+ * Mengembalikan null bila statusnya tidak bisa dipastikan (jaringan /
+ * format tak dikenal) — pemanggil lalu tetap mencoba jalur biasa.
+ */
+async function cekGoogleAktif(): Promise<boolean | null> {
+  const config = supabasePublicConfig();
+  if (!config) return null;
+  try {
+    const respons = await fetch(`${config.url}/auth/v1/settings`, {
+      headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
+    });
+    if (!respons.ok) return null;
+    const data = (await respons.json()) as { external?: Record<string, unknown> };
+    return typeof data.external?.google === "boolean" ? data.external.google : null;
+  } catch {
+    return null;
+  }
+}
+
+function useGoogleSiap(): boolean | null {
+  const [siap, setSiap] = useState<boolean | null>(null);
+  useEffect(() => {
+    let aktif = true;
+    void cekGoogleAktif().then((hasil) => { if (aktif) setSiap(hasil); });
+    return () => { aktif = false; };
+  }, []);
+  return siap;
+}
+
+function CatatanGoogle({ siap }: { siap: boolean | null }) {
+  if (siap !== false) return null;
+  return <p className="mt-2 text-center text-xs leading-5 text-[#8a6d2f]">Tombol Google di atas belum bisa dipakai: provider Google belum aktif di server. Masuk dengan email tetap bisa.</p>;
+}
 
 function GoogleIcon() {
   return (
@@ -38,6 +78,7 @@ function Kerangka({ judul, subjudul, children, kaki }: { judul: string; subjudul
 export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
   const router = useRouter();
   const tujuan = tujuanAman(next);
+  const googleSiap = useGoogleSiap();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(() => (pesan ? pesan.slice(0, 300) : ""));
@@ -47,6 +88,7 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
   async function denganGoogle() {
     setError("");
     if (!tersedia) { setError(SUPABASE_ENV_HINT); return; }
+    if (googleSiap === false) { setError(GOOGLE_BELUM_AKTIF); return; }
     setSibuk(true);
     const supabase = createClient();
     const { error: galat } = await supabase.auth.signInWithOAuth({
@@ -76,6 +118,7 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
       <button type="button" onClick={denganGoogle} disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#dfe5dc] bg-white px-4 text-sm font-bold text-[#334436] transition hover:bg-[#f6f8f4] disabled:opacity-60">
         <GoogleIcon /> Lanjutkan dengan Google
       </button>
+      <CatatanGoogle siap={googleSiap} />
       <div className="my-5 flex items-center gap-3 text-xs font-semibold text-[#8a938a]"><span className="h-px flex-1 bg-[#e6eae3]" />atau dengan email<span className="h-px flex-1 bg-[#e6eae3]" /></div>
       <form onSubmit={kirim} className="space-y-4">
         <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Email</span><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className={inputClass} /></label>
@@ -93,6 +136,7 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
 export function DaftarForm({ next }: { next?: string }) {
   const router = useRouter();
   const tujuan = tujuanAman(next);
+  const googleSiap = useGoogleSiap();
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,6 +148,7 @@ export function DaftarForm({ next }: { next?: string }) {
   async function denganGoogle() {
     setError("");
     if (!tersedia) { setError(SUPABASE_ENV_HINT); return; }
+    if (googleSiap === false) { setError(GOOGLE_BELUM_AKTIF); return; }
     setSibuk(true);
     const supabase = createClient();
     const { error: galat } = await supabase.auth.signInWithOAuth({
@@ -142,6 +187,7 @@ export function DaftarForm({ next }: { next?: string }) {
       <button type="button" onClick={denganGoogle} disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#dfe5dc] bg-white px-4 text-sm font-bold text-[#334436] transition hover:bg-[#f6f8f4] disabled:opacity-60">
         <GoogleIcon /> Daftar dengan Google
       </button>
+      <CatatanGoogle siap={googleSiap} />
       <div className="my-5 flex items-center gap-3 text-xs font-semibold text-[#8a938a]"><span className="h-px flex-1 bg-[#e6eae3]" />atau dengan email<span className="h-px flex-1 bg-[#e6eae3]" /></div>
       <form onSubmit={kirim} className="space-y-4">
         <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Nama tampil</span><input type="text" required autoComplete="name" maxLength={100} value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Mis. Budi Pemancing" className={inputClass} /></label>
