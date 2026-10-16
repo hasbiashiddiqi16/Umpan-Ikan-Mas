@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { recipes as seedRecipes, type Recipe } from "@/data/recipes";
 import { cmsRecipeToRecipe, mergeRecipesBySlug, normalizeCmsRecipeRecord, type CmsRecipeRecord } from "@/lib/cms";
@@ -26,8 +26,16 @@ export type PublicRecipeData = {
  *   dengan slug yang sama (data dashboard yang menang, sama seperti
  *   halaman detail dan sitemap).
  * - Resep katalog yang di dashboard masih draft/arsip disembunyikan.
- * - Bila basis data tak terjangkau, katalog bawaan tetap tampil apa
- *   adanya (perilaku ketahanan lama), bukan halaman kosong.
+ * - Katalog bawaan hanya dipakai bila basis data memang tidak
+ *   terkonfigurasi (pengembangan lokal) atau saat build. Bila basis
+ *   data terkonfigurasi tetapi gagal dibaca saat runtime, bacaannya
+ *   dicoba sampai tiga kali lalu DILEMPAR sebagai galat — bukan
+ *   dikembalikan sebagai katalog bawaan. Alasannya: halaman-halaman
+ *   pemakai daftar ini memakai ISR, jadi katalog bawaan hasil satu
+ *   kegagalan sesaat akan tersimpan sebagai hitungan basi sampai satu
+ *   jam (pernah terjadi: beranda menampilkan 3 resep lama padahal
+ *   dashboard sudah punya 7). Dengan melempar, ISR mempertahankan
+ *   versi baik terakhir dan kunjungan berikutnya mencoba lagi.
  *
  * Hasilnya di-cache per render (React `cache`) agar beberapa pulau
  * Suspense di satu halaman tidak mengulang query yang sama.
@@ -46,19 +54,39 @@ async function bacaDariBasisData(): Promise<PublicRecipeData> {
   };
 }
 
+/** Jeda antarpercobaan baca basis data (total tiga kali percobaan). */
+const JEDA_PERCOBAAN_MS = [150, 450];
+
 export const getPublicRecipeData = cache(async (): Promise<PublicRecipeData> => {
-  try {
-    return await bacaDariBasisData();
-  } catch {
-    // Kegagalan koneksi sesaat (pooler basis data penuh/koneksi putus)
-    // biasanya lolos pada percobaan kedua; tanpa coba ulang, halaman ISR
-    // akan menyimpan versi katalog bawaan sebagai hitungan yang basi.
+  // Tanpa basis data terkonfigurasi (pengembangan lokal), katalog
+  // bawaan adalah satu-satunya sumber dan memang yang diharapkan.
+  if (!isDatabaseConfigured()) {
+    return { recipes: [...seedRecipes], managedSlugs: [] };
+  }
+  let percobaan = 0;
+  for (;;) {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 150));
       return await bacaDariBasisData();
     } catch (error) {
-      console.error("Gagal membaca daftar resep publik dari basis data:", error);
-      return { recipes: [...seedRecipes], managedSlugs: [] };
+      if (percobaan >= JEDA_PERCOBAAN_MS.length) {
+        console.error("Gagal membaca daftar resep publik dari basis data:", error);
+        // Saat build (prerender) jangan gagalkan build hanya karena
+        // basis data tak terjangkau: pakai katalog bawaan, halaman akan
+        // menggambar ulang dengan data asli pada revalidasi pertama.
+        if (process.env.NEXT_PHASE === "phase-production-build") {
+          return { recipes: [...seedRecipes], managedSlugs: [] };
+        }
+        // Runtime: lempar agar render ini tidak disimpan ke cache ISR
+        // sebagai hitungan katalog bawaan yang basi. Versi baik
+        // terakhir tetap disajikan dan halaman pulih sendiri begitu
+        // basis data menjawab lagi.
+        throw new Error("Basis data resep sedang tidak terjangkau. Coba lagi sesaat lagi.");
+      }
+      // Kegagalan koneksi sesaat (pooler basis data penuh/koneksi
+      // putus) biasanya lolos pada percobaan berikutnya dengan
+      // koneksi baru dari pool.
+      await new Promise((resolve) => setTimeout(resolve, JEDA_PERCOBAAN_MS[percobaan]));
+      percobaan += 1;
     }
   }
 });

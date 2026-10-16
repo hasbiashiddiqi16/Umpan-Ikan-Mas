@@ -102,7 +102,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params;
   const recipe = await findRecipe(slug);
   if (!recipe) notFound();
-  const relatedRecipes = await getPublicRecipes();
+  // Bagian terkait tidak boleh menumbangkan halaman yang resep
+  // utamanya sudah ketemu: saat daftar publik gagal dibaca (basis data
+  // gangguan), tampilkan katalog bawaan sebagai cadangan bagian ini.
+  const relatedRecipes = await getPublicRecipes().catch(() => [...recipes]);
   // Hanya contoh ulasan berlabel yang dikirim ke halaman: bukan bukti komunitas.
   const sampleReviews = reviews.filter((review) => review.recipeSlug === recipe.slug && review.sample);
   const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
