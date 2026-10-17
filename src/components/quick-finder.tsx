@@ -38,7 +38,7 @@ export function QuickFinder() {
 
   return (
     <section id="finder" className="scroll-mt-24">
-      <div className="mb-4"><LocationConsentBanner /></div>
+      <LocationConsentBanner />
       <div className="rounded-[28px] border border-[#e9ece6] bg-white p-5 shadow-[0_18px_55px_rgba(40,57,42,.08)] sm:p-7 lg:p-8">
         <SectionHeader eyebrow="Mulai dari kondisi hari ini" title="Cari Umpan yang Cocok" subtitle="Ceritakan sedikit tentang spot mancingmu. Aktifkan lokasi agar provinsi terisi otomatis, atau pilih manual." />
         <form onSubmit={submitFinder} className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">

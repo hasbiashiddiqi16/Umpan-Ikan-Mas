@@ -110,7 +110,7 @@ async function ProvinceRecipesSection({ province, regionalRecipes }: { province:
   return (
     <>
       {structuredData && <JsonLd data={structuredData} />}
-      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} /></section>}
+      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
     </>
   );
 }

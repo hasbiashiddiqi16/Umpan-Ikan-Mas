@@ -460,6 +460,18 @@ LCP) ikut tertunda di balik pertukaran itu. Sekarang polanya:
   jadi hero tampil duluan dan tidak ada pergeseran tata letak berarti.
   `getRecipeRatings()` dibungkus `cache()` React agar pulau-pulau dalam
   satu halaman berbagi satu query.
+- **Angka rating tidak lagi berkedip dari klien.** Seksi server yang sudah
+  menghitung rating untuk pengurutan kini meneruskannya ke kartu resep
+  (`initialRating` → `useRecipeRating()`): HTML awal langsung memuat angka
+  yang benar, bukan "Belum ada rating" yang berganti setelah pengambilan
+  `/api/public/reviews/summary` di peramban. Pola yang sama berlaku untuk
+  rating di kepala halaman detail (`LiveRecipeRating`) dan kotak ringkasan
+  ulasan: agregat server (ISR) tampil sampai data klien selesai dimuat,
+  setelah itu data klien yang berwenang penuh.
+- **Banner izin lokasi tidak lagi menggeser konten.** Banner kini melayang
+  (`position: fixed`) di atas navigasi bawah, bukan menyisip di alur
+  halaman setelah hidrasi — pergeseran tata letak (CLS) dari kemunculannya
+  hilang, isi dan perilakunya sama.
 - **LCP dijaga strukturnya:** gambar hero beranda tetap satu-satunya yang
   di-`preload` (muncul sebagai `<link rel="preload" as="image">` di
   `<head>` dengan `fetchPriority` tinggi), dan kini hero benar-benar
@@ -472,7 +484,7 @@ LCP) ikut tertunda di balik pertukaran itu. Sekarang polanya:
 
 Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lokasi, form dibiarkan kosong dan pengguna mengisinya manual.
 
-- **Banner di beranda** muncul saat pengguna belum pernah memutuskan. Pilihan "Izinkan lokasi" menjalankan deteksi; "Nanti saja" menyimpan keputusan menolak sehingga banner tidak muncul lagi dan form tetap kosong.
+- **Banner di beranda** muncul melayang di bagian bawah layar (tidak menggeser konten) saat pengguna belum pernah memutuskan. Pilihan "Izinkan lokasi" menjalankan deteksi; "Nanti saja" menyimpan keputusan menolak sehingga banner tidak muncul lagi dan form tetap kosong.
 - **Tombol "Gunakan lokasi saya"** tersedia di setiap form berisi lokasi: Cari Umpan di beranda, AI Umpan, Sistem Pakar, filter katalog, dan form ulasan. Setelah izin diberikan, tombol berubah menjadi chip lokasi dengan aksi **Perbarui** dan **Lupakan**.
 - **Form menyesuaikan lokasi**: provinsi terisi otomatis. Nama kota ikut terisi (dan dipakai filter kota katalog) hanya bila lokasi dekat dengan titik referensi kota (radius 35 km di `src/data/province-geo.ts`) dan akurasi perangkat lebih baik dari radius tersebut. Pilihan manual selalu menang dan tidak ditimpa deteksi berikutnya.
 - **Deteksi berjalan sepenuhnya di perangkat.** Koordinat GPS diterjemahkan menjadi provinsi/kota memakai daftar titik referensi kota di `src/data/province-geo.ts` (perkiraan pusat kota/kabupaten, bukan batas administrasi resmi). Tidak ada permintaan jaringan atau pengiriman koordinat ke server, analitik, maupun CMS. Hasil deteksi disimpan di `localStorage` (`umpan-mas-location-consent`, `umpan-mas-location-place-v1`) dan dapat dihapus lewat tombol **Lupakan**.
