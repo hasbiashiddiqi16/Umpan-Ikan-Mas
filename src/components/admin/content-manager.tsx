@@ -177,8 +177,15 @@ function FishingTypePicker({ value, onChange }: { value: string; onChange: (valu
     if (berikutnya.has(type)) berikutnya.delete(type); else berikutnya.add(type);
     onChange(FISHING_TYPES.filter((item) => berikutnya.has(item)).join(", "));
   };
+  const semuaTerpilih = FISHING_TYPES.every((type) => terpilih.has(type));
+  const toggleSemua = () => onChange(semuaTerpilih ? "" : FISHING_TYPES.join(", "));
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Pilih jenis kolam">
+      <label className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-bold transition ${semuaTerpilih ? "border-[#8fae87] bg-[#eef5ea] text-[#33523a]" : "border-dashed border-[#c9b458] bg-white text-[#7a5f14] hover:bg-[#fdf6e0]"}`}>
+        <input type="checkbox" className="sr-only" checked={semuaTerpilih} onChange={toggleSemua} />
+        {semuaTerpilih && <Check size={13} aria-hidden="true" />}
+        Semua
+      </label>
       {FISHING_TYPES.map((type) => {
         const aktif = terpilih.has(type);
         return (
@@ -241,6 +248,9 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
     if (berikutnya.has(item)) berikutnya.delete(item); else berikutnya.add(item);
     onChange(semuaPilihan.filter((pilihan) => berikutnya.has(pilihan)).join(", "));
   };
+  // "Pilih semua" memilih seluruh opsi sekaligus; ditekan lagi mengosongkan.
+  const semuaTerpilih = options.length > 0 && options.every((item) => terpilih.includes(item));
+  const toggleSemua = () => onChange(semuaTerpilih ? "" : semuaPilihan.join(", "));
   return (
     <div ref={akarRef} className="relative">
       <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
@@ -253,6 +263,12 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
       {terbuka && (
         <div className="absolute inset-x-0 top-full z-30 mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_16px_40px_rgba(36,53,39,.16)]">
           {searchable && <input value={kata} onChange={(event) => setKata(event.target.value)} placeholder="Cari provinsi…" aria-label="Cari provinsi" className="mb-1.5 min-h-9 w-full rounded-lg border border-[#e8ece5] bg-[#fbfcfa] px-3 text-xs font-medium text-[#344638] outline-none placeholder:text-[#a1a89f] focus:border-[#748f70]" />}
+          {options.length > 1 && (
+            <button type="button" onClick={toggleSemua} aria-pressed={semuaTerpilih} className={`mb-1 flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-bold transition ${semuaTerpilih ? "bg-[#eef5ea] text-[#33523a]" : "text-[#33523a] hover:bg-[#f6f8f5]"}`}>
+              <span aria-hidden="true" className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${semuaTerpilih ? "border-[#345d3a] bg-[#345d3a] text-white" : "border-[#c3cec0] bg-white text-transparent"}`}><Check size={11} /></span>
+              {semuaTerpilih ? "Hapus semua pilihan" : "Pilih semua"}
+            </button>
+          )}
           <div className="grid max-h-52 gap-0.5 overflow-y-auto">
             {tampil.length ? tampil.map((item) => (
               <label key={item} className={`flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition ${terpilih.includes(item) ? "bg-[#eef5ea] text-[#33523a]" : "text-[#4c5a4d] hover:bg-[#f6f8f5]"}`}>

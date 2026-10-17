@@ -61,7 +61,8 @@ const validTypes = ["Harian", "Lomba", "Galatama", "Galat"];
 const validSeasons: string[] = [...SEASON_CONDITIONS];
 
 function stringArray(value: unknown, allowed?: string[]): string[] | null {
-  if (!Array.isArray(value) || value.length > 30 || value.some((item) => typeof item !== "string" || item.length > 120)) return null;
+  // Batas 40: daftar terpanjang yang sah adalah 38 provinsi (tombol "Semua").
+  if (!Array.isArray(value) || value.length > 40 || value.some((item) => typeof item !== "string" || item.length > 120)) return null;
   const values = [...new Set(value.map((item) => (item as string).trim()).filter(Boolean))];
   return allowed && values.some((item) => !allowed.includes(item)) ? null : values;
 }
