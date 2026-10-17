@@ -138,6 +138,10 @@ export default function HomePage() {
           <section>
             <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
             <div className="grid gap-4 lg:grid-cols-3">{fishingReports.slice(0, 3).map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} />)}</div>
+            <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div><p className="text-sm font-extrabold text-[#2c3f30]">Punya racikan yang sering bikin strike?</p><p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6d60]">Ceritakan bahan dan cara meraciknya — racikanmu langsung tayang dan bisa jadi andalan pemancing lain.</p></div>
+              <Link href="/bagikan" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]">Bagikan Racikan Andalanmu <ArrowRight size={15} /></Link>
+            </div>
           </section>
           <section className="relative isolate overflow-hidden rounded-[28px] bg-[#1e3d2b] px-6 py-9 text-white sm:px-10 sm:py-12 lg:px-14">
             <div className="absolute -right-16 -top-24 -z-10 h-72 w-72 rounded-full border-[42px] border-white/[.04]" /><div className="absolute -bottom-36 right-40 -z-10 h-72 w-72 rounded-full border-[32px] border-[#d5b66f]/[.09]" />

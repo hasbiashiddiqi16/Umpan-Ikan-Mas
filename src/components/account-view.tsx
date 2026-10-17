@@ -26,6 +26,13 @@ function formatTanggal(value: string) {
 export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; email: string; tabAwal?: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(tabAwal === "ulasan" || tabAwal === "favorit" ? tabAwal : "resep");
+  // Tautan dari menu profil (mis. /profil?tab=favorit) tetap berlaku walau
+  // pengguna sudah berada di halaman ini: samakan tab saat tautan berubah.
+  const [tabAwalSebelumnya, setTabAwalSebelumnya] = useState(tabAwal);
+  if (tabAwal !== tabAwalSebelumnya) {
+    setTabAwalSebelumnya(tabAwal);
+    setTab(tabAwal === "ulasan" || tabAwal === "favorit" ? tabAwal : "resep");
+  }
   const [nama, setNama] = useState(namaAwal);
   const [namaDraf, setNamaDraf] = useState(namaAwal);
   const [sibukNama, setSibukNama] = useState(false);

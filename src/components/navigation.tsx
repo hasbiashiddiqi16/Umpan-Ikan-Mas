@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bot, Heart, Home, Map, Search, UserRound, CloudSun } from "lucide-react";
+import { BookOpen, Bot, Home, Map, Search, UserRound, CloudSun } from "lucide-react";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { AccountNav } from "@/components/account-nav";
 
@@ -42,10 +42,8 @@ export function Navbar() {
           })}
         </nav>
         <div className="flex items-center gap-1.5">
-          <AccountNav />
           <Link href="/katalog" aria-label="Cari resep" className="grid h-10 w-10 place-items-center rounded-full text-[#4b5b4e] transition hover:bg-[#edf1eb]"><Search size={19} /></Link>
-          <Link href="/profil#favorit" aria-label="Resep favorit" className="hidden h-10 w-10 place-items-center rounded-full text-[#4b5b4e] transition hover:bg-[#edf1eb] sm:grid"><Heart size={19} /></Link>
-          <Link href="/profil" aria-label="Profil" className="grid h-10 w-10 place-items-center rounded-full bg-[#e8eee5] text-[#36533b] transition hover:bg-[#dfe9dc]"><UserRound size={18} /></Link>
+          <AccountNav />
         </div>
       </div>
     </header>
