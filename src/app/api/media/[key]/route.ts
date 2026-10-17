@@ -25,9 +25,11 @@ export async function GET(request: Request, context: RouteContext) {
         headers: {
           "Content-Type": file.mimeType,
           "Content-Length": String(file.bytes.length),
-          // Umur pendek agar logo/poster baru cepat terlihat setelah diganti,
-          // tetapi tetap tidak membebani database pada tiap kunjungan.
-          "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
+          // Foto berversi (recipe-<slug>-v...) isinya tidak pernah berubah,
+          // jadi boleh disimpan setahun penuh. Aset berkunci tetap (logo,
+          // hero, poster) disimpan sehari + stale-while-revalidate; pratinjau
+          // dasbor tetap segar karena memakai ?v=<updatedAt>.
+          "Cache-Control": isRecipePhotoKey(key) ? "public, max-age=31536000, immutable" : "public, max-age=86400, stale-while-revalidate=604800",
         },
       });
     }
@@ -51,7 +53,7 @@ export async function GET(request: Request, context: RouteContext) {
       headers: {
         "Content-Type": bawaan.endsWith(".png") ? "image/png" : "image/jpeg",
         "Content-Length": String(bytes.length),
-        "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
       },
     });
   } catch {

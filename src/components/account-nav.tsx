@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, Heart, LogIn, LogOut, MessageSquareText, Plus, UserRound, UserRoundPlus } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
 import { supabasePublicConfig } from "@/utils/supabase/env";
 import { syncFavoritesOnce } from "@/lib/favorites-client";
 
@@ -35,8 +34,8 @@ export function AccountNav() {
 
   useEffect(() => {
     if (!supabasePublicConfig()) { const t = window.setTimeout(() => setSiap(true), 0); return () => window.clearTimeout(t); }
-    const supabase = createClient();
     let aktif = true;
+    let berhenti: (() => void) | undefined;
     const terapkan = (user: { email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
       if (!aktif) return;
       if (!user) { setSesi(null); setSiap(true); return; }
@@ -46,9 +45,16 @@ export function AccountNav() {
       setSiap(true);
       void syncFavoritesOnce();
     };
-    void supabase.auth.getSession().then(({ data }) => terapkan(data.session?.user ?? null)).catch(() => { if (aktif) setSiap(true); });
-    const { data: langganan } = supabase.auth.onAuthStateChange((_event, session) => terapkan(session?.user ?? null));
-    return () => { aktif = false; langganan.subscription.unsubscribe(); };
+    // Klien Supabase dimuat terpisah (dynamic import) supaya tidak membebani
+    // bundel awal setiap halaman hanya untuk memeriksa sesi di header.
+    void import("@/utils/supabase/client").then(({ createClient }) => {
+      if (!aktif) return;
+      const supabase = createClient();
+      void supabase.auth.getSession().then(({ data }) => terapkan(data.session?.user ?? null)).catch(() => { if (aktif) setSiap(true); });
+      const { data: langganan } = supabase.auth.onAuthStateChange((_event, session) => terapkan(session?.user ?? null));
+      berhenti = () => langganan.subscription.unsubscribe();
+    }).catch(() => { if (aktif) setSiap(true); });
+    return () => { aktif = false; berhenti?.(); };
   }, []);
 
   // Menu menutup saat berpindah halaman, diklik di luar, atau tombol Escape.
@@ -69,7 +75,7 @@ export function AccountNav() {
   async function keluar() {
     setTerbuka(false);
     try {
-      if (supabasePublicConfig()) { const supabase = createClient(); await supabase.auth.signOut(); }
+      if (supabasePublicConfig()) { const { createClient } = await import("@/utils/supabase/client"); await createClient().auth.signOut(); }
     } catch { /* tetap kembali ke beranda */ }
     try { sessionStorage.removeItem("umpan-mas-favorites-synced"); } catch { /* abaikan */ }
     router.replace("/");

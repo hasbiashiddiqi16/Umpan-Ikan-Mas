@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import {
@@ -223,6 +223,10 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
 
   const posterMode = settings.mode === "poster";
   const deskripsi = `${settings.judul} ${settings.ringkasan} ${settings.statistik.map((stat) => `${stat.value} ${stat.label}`).join(", ")}.`;
+  // Poster diarahkan per lebar layar (<picture>): peramban hanya mengunduh
+  // varian yang cocok, bukan poster ponsel dan desktop sekaligus.
+  const { props: posterMobile } = getImageProps({ src: settings.media.mobile.url, width: 860, height: 1280, alt: "", sizes: "(max-width: 640px) 92vw, 430px" });
+  const { props: posterDesktop } = getImageProps({ src: settings.media.desktop.url, width: 1640, height: 1040, alt: "", sizes: "(max-width: 900px) 92vw, 820px" });
 
   return (
     <div
@@ -248,23 +252,18 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
           type="button"
           onClick={close}
           aria-label="Tutup sambutan"
-          className="absolute right-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
+          className="absolute right-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
         >
           <X size={18} />
         </button>
 
         {/* Poster ponsel / layar lebar: gambar sudah memuat seluruh informasi. */}
         {posterMode && (
-          <>
-            <div className="sm:hidden">
-              <Image src={settings.media.mobile.url} width={860} height={1280} alt="" loading="eager" sizes="(max-width: 640px) 92vw, 430px"
-                style={{ maxHeight }} className="block h-auto w-full" />
-            </div>
-            <div className="hidden sm:block">
-              <Image src={settings.media.desktop.url} width={1640} height={1040} alt="" loading="eager" sizes="(max-width: 900px) 92vw, 820px"
-                style={{ maxHeight }} className="block h-auto w-full" />
-            </div>
-          </>
+          <picture>
+            <source media="(min-width: 640px)" srcSet={posterDesktop.srcSet} sizes={posterDesktop.sizes} width={1640} height={1040} />
+            {/* <img> dari getImageProps agar <picture> memilih satu varian saja. */}
+            <img {...posterMobile} alt="" style={{ maxHeight }} className="block aspect-[860/1280] h-auto w-full sm:aspect-[1640/1040]" />
+          </picture>
         )}
 
         {/* Mode teks: satu susunan untuk semua layar, dipusatkan seperti poster. */}
@@ -273,7 +272,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
             className="relative w-full"
             style={{ aspectRatio: POPUP_LATAR_RATIO, maxWidth: MAX_WIDTH.mobile, maxHeight, margin: "0 auto", containerType: "inline-size" }}
           >
-            <Image src={settings.media.latar.url} alt="" fill loading="eager" sizes="430px" className="object-cover object-center" />
+            <Image src={settings.media.latar.url} alt="" fill sizes="430px" className="object-cover object-center" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,28,19,.72)_0%,rgba(11,28,19,.62)_42%,rgba(11,28,19,.88)_100%)]" />
             <PopupText settings={settings} compact={false} />
           </div>
