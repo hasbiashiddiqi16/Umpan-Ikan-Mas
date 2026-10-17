@@ -10,7 +10,7 @@ import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 const navigation = [
   { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard },
   { label: "Konten resep", href: "/dashboard/konten", icon: FilePenLine },
-  { label: "Ulasan", href: "/dashboard/ulasan", icon: MessageSquareText },
+  { label: "Moderasi Ulasan", href: "/dashboard/ulasan", icon: MessageSquareText },
   { label: "Pengguna", href: "/dashboard/pengguna", icon: Users },
   { label: "Tampilan", href: "/dashboard/tampilan", icon: Palette },
   { label: "Analitik", href: "/dashboard/analitik", icon: ChartNoAxesCombined },
