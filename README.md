@@ -142,7 +142,7 @@ Semua dropdown (<select>) di halaman publik memakai kelas bersama `select-field`
 
 ## Popup sambutan pengunjung baru
 
-Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang dirender situs sebagai teks: ucapan selamat datang, ringkasan isi website, angka statistik, dan sorotan fitur. Angka statistiknya **dihitung dari data asli** oleh `src/lib/site-stats.ts` (jumlah resep terbit, ulasan komunitas yang disetujui — bukan contoh — dan 38 provinsi) lalu dikirim lewat `GET /api/appearance` sebagai `statistikSitus`; selama angka server tersedia popup selalu memakai mode teks dan angka itu, bukan angka tersimpan. Poster bergambar lama hanya menjadi cadangan bila statistik server tidak terkirim.
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
 
 Popup ini murni informasi awal, jadi:
 
@@ -171,7 +171,7 @@ Popup ini murni informasi awal, jadi:
 
 Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Di dashboard, tombol **Tampilkan lagi** pada kartu popup menghapus penandanya di semua lapisan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
 
-**Mengubah isi popup.** Judul, ringkasan, dan sorotan fitur diubah dari pengaturan tampilan di dashboard dan langsung dipakai popup mode teks. Angka statistik tidak diatur manual — selalu dari data asli situs (lihat `src/lib/site-stats.ts`), supaya tidak ada lagi klaim basi seperti “200 racikan, 5.000 ulasan” yang dulu menyatu di gambar poster. Berkas poster lama tetap ada hanya sebagai cadangan tampilan.
+**Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
 
 ## Ulasan komunitas: tersimpan di server, akun opsional
 

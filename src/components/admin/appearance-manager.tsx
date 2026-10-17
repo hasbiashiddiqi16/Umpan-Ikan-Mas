@@ -460,9 +460,25 @@ export function AppearanceManager() {
                   <span className={hintClass}>{form.ringkasan.length}/200 karakter</span>
                 </label>
 
-                <div className="rounded-2xl border border-[#e9e7dc] bg-[#fbfaf5] p-4">
-                  <p className="text-xs font-bold text-[#616c60]">Kotak statistik — otomatis dari data asli</p>
-                  <p className="mt-1.5 text-[11px] leading-5 text-[#7a8278]">Angka yang tampil di popup (jumlah racikan terbit, ulasan komunitas yang disetujui, dan 38 provinsi) dihitung server dari data situs setiap kali popup dimuat, jadi tidak perlu — dan tidak bisa — diisi manual di sini. Angka tersimpan lama hanya menjadi cadangan bila statistik server sedang tidak tersedia; mode poster pun hanya tampil dalam keadaan itu.</p>
+                <div className="grid gap-3">
+                  <p className="text-xs font-bold text-[#616c60] (4.71:1 terburuk)">Kotak statistik <span className={hintClass}>({form.statistik.length} dari maksimal 3)</span></p>
+                  {form.statistik.map((stat, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[110px_1fr_auto]">
+                      <input className={fieldClass} value={stat.value} maxLength={8} placeholder="200" aria-label={`Angka statistik ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, statistik: form.statistik.map((item, i) => i === index ? { ...item, value: event.target.value } : item) })} />
+                      <input className={fieldClass} value={stat.label} maxLength={22} placeholder="racikan umpan" aria-label={`Keterangan statistik ${index + 1}`}
+                        onChange={(event) => setForm({ ...form, statistik: form.statistik.map((item, i) => i === index ? { ...item, label: event.target.value } : item) })} />
+                      <button type="button" aria-label={`Hapus statistik ${index + 1}`} disabled={form.statistik.length <= 2}
+                        onClick={() => setForm({ ...form, statistik: form.statistik.filter((_, i) => i !== index) })}
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-[#e6eae3] text-[#905f50] (4.57:1 terburuk) transition hover:bg-[#fbefec] disabled:opacity-40">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" disabled={form.statistik.length >= 3} onClick={() => setForm({ ...form, statistik: [...form.statistik, { value: "", label: "" }] })}
+                    className="min-h-10 w-fit rounded-xl border border-dashed border-[#cfdac9] px-3 text-[11px] font-bold text-[#4f6b50] transition hover:bg-[#f4f7f2] disabled:opacity-50">
+                    + Tambah statistik
+                  </button>
                 </div>
 
                 <div className="grid gap-3">
