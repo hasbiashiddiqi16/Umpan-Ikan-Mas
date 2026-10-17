@@ -14,7 +14,7 @@ import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import type { RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
-import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
 import { BLEND_LIMITS_SUMMARY, BLEND_ROLE_RULES, BLEND_RULES_SUMMARY, MAX_BLEND_INGREDIENTS, MIN_BLEND_INGREDIENTS, MIN_INGREDIENT_PERCENT, namaBahan, ruleRangeLabel, type BlendSuggestion, type RoleShareStatus } from "@/lib/blend-rules";
 import { buildExpertBlend, getExpertKnowledgeStats, getKnowledgeEvidenceDescription } from "@/lib/expert-system";
 import type { UserPreferences } from "@/lib/recommendation";
@@ -116,7 +116,7 @@ export function ExpertSystem({ initialRecipes, initialManagedSlugs }: { initialR
   const serverOnlyReviews = useMemo(() => approvedReviews.filter((remote) => !localReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, localReviews]);
   // Hanya ulasan pengunjung (lokal + hasil moderasi) yang dipakai sebagai bukti;
   // ulasan contoh tidak ikut analisis, hanya tampil sebagai contoh berlabel.
-  const allReviews = useMemo(() => [...localReviews, ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
+  const allReviews = useMemo(() => [...localReviews.map(sebagaiUlasanPublik), ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
   const result = useMemo(() => buildExpertBlend(selectedIds, preferences, allReviews, allRecipes), [selectedIds, preferences, allReviews, allRecipes]);
   // Wilayah harga mengikuti provinsi pengunjung; tanpa provinsi dipakai harga dasar nasional.
   const wilayah = useMemo(() => wilayahUntukProvinsi(preferences.province), [preferences.province]);

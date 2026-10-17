@@ -142,7 +142,7 @@ Semua dropdown (<select>) di halaman publik memakai kelas bersama `select-field`
 
 ## Popup sambutan pengunjung baru
 
-Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang **seluruh isinya berupa gambar**: ucapan selamat datang, ringkasan isi website, angka statistik, sorotan fitur, dan catatan "tampil sekali" semuanya sudah menyatu di dalam poster.
+Kunjungan pertama menampilkan popup sambutan (`src/components/promo-modal.tsx`) yang dirender situs sebagai teks: ucapan selamat datang, ringkasan isi website, angka statistik, dan sorotan fitur. Angka statistiknya **dihitung dari data asli** oleh `src/lib/site-stats.ts` (jumlah resep terbit, ulasan komunitas yang disetujui — bukan contoh — dan 38 provinsi) lalu dikirim lewat `GET /api/appearance` sebagai `statistikSitus`; selama angka server tersedia popup selalu memakai mode teks dan angka itu, bukan angka tersimpan. Poster bergambar lama hanya menjadi cadangan bila statistik server tidak terkirim.
 
 Popup ini murni informasi awal, jadi:
 
@@ -171,7 +171,7 @@ Popup ini murni informasi awal, jadi:
 
 Tambahkan `?sambutan=1` pada alamat yang dibuka (mis. `/?sambutan=1` atau `/katalog?sambutan=1`) untuk memaksa popup tampil walau penanda sudah tersimpan. Di dashboard, tombol **Tampilkan lagi** pada kartu popup menghapus penandanya di semua lapisan. Cara lain: hapus kunci `umpan-mas-promo-welcome-seen-v1` dari penyimpanan peramban lalu muat ulang.
 
-**Mengubah isi popup.** Teksnya dibakar ke gambar, jadi ubah salinan di `scripts/build-promo-poster.mjs` lalu jalankan ulang skrip (butuh `npm install --no-save @napi-rs/canvas`). Angka statistik di poster juga statis — perbarui di skrip saat katalog bertambah. Skrip otomatis memeriksa setiap baris muat di kolomnya dan kontras teks di atas latar poster minimal 4,5:1.
+**Mengubah isi popup.** Judul, ringkasan, dan sorotan fitur diubah dari pengaturan tampilan di dashboard dan langsung dipakai popup mode teks. Angka statistik tidak diatur manual — selalu dari data asli situs (lihat `src/lib/site-stats.ts`), supaya tidak ada lagi klaim basi seperti “200 racikan, 5.000 ulasan” yang dulu menyatu di gambar poster. Berkas poster lama tetap ada hanya sebagai cadangan tampilan.
 
 ## Ulasan komunitas: tersimpan di server, akun opsional
 
@@ -184,6 +184,7 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Batasan tambahan.** Batas bawaan 8 ulasan per perangkat per hari dan 24 per IP per hari; IP dikenali dari `x-real-ip`/`x-forwarded-for` (entri terakhir, yaitu proxy terdekat) dan hanya disimpan sebagai sidik jari HMAC. Tidak ada IP, token, atau nama mentah yang disimpan sebagai data pelacakan.
 - **Honeypot & Cloudflare Turnstile.** Formulir ulasan memuat kolom tersembunyi `website`; kiriman yang mengisinya dijawab "sukses" palsu tanpa disimpan. Turnstile aktif otomatis **hanya bila kedua kunci disetel** (`NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`); kalau hanya salah satu terisi, penyaring itu dimatikan supaya formulir tidak pernah macet. Kegagalan verifikasi dijawab `400` dengan kode `turnstile`.
 - **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
+- **Tombol Laporkan untuk pengunjung.** Ulasan yang sudah tampil punya tombol **Laporkan** (alasan: spam, kasar, tidak relevan, lainnya) lewat `POST /api/public/reviews/report` ke tabel `cms_review_reports` (migrasi `20261017170000_add_review_reports`): satu laporan per perangkat per ulasan, maks. 10 laporan per perangkat per hari. Laporan terbuka tampil bagi admin sebagai penghitung `laporanTerbuka` dan tab **Dilaporkan** di Studio → Moderasi Ulasan; admin bisa **Abaikan laporan** (status `diabaikan`) atau memutuskan ulasannya (laporan otomatis `selesai`). Tiga pelapor berbeda menahan ulasan itu otomatis (`pending`, alasan “Dilaporkan N pengunjung”) sampai admin memutuskan.
 - **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
 - Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
 - **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Data contoh di tab komunitas katalog juga memakai format yang sama supaya jelas cara membacanya.
@@ -504,6 +505,10 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.
 - UMPAN MAS adalah platform komunitas daring, bukan toko dengan lokasi fisik yang telah diverifikasi. Karena itu, jangan menambahkan alamat, nomor telepon, jam buka, atau markup `LocalBusiness` fiktif. Jika ada lokasi usaha yang benar-benar melayani pengunjung, lengkapi NAP (nama, alamat, telepon) yang konsisten dan profil Google Business Profile sebelum mengaktifkan data bisnis lokal.
 - Gambar memakai `next/image` dengan preload selektif untuk gambar LCP, format AVIF/WebP, ukuran responsif, cache gambar statis, dan request analitik yang ditunda agar tidak mengganggu render awal. Setelah deploy, daftarkan domain produksi di Google Search Console dan kirim URL sitemap.
+
+## Pemeriksaan otomatis (CI)
+
+Setiap pull request menjalankan GitHub Actions (`.github/workflows/ci.yml`): `npm ci`, `npm run typecheck`, `npm run lint`, dan `npm run build` di Node 22. PR yang gagal di salah satu langkah tidak seharusnya digabung.
 
 ## Menjalankan secara lokal
 

@@ -124,12 +124,13 @@ export type PopupSettings = {
 
 export const DEFAULT_POPUP: PopupSettings = {
   enabled: true,
-  mode: "poster",
+  mode: "teks",
   judul: "Selamat datang, pemancing!",
   ringkasan: "Katalog umpan ikan mas lengkap dengan cuaca, kondisi air, dan pengalaman komunitas.",
+  // Cadangan jujur bila statistik server tidak tersedia; angka asli dari
+  // src/lib/site-stats.ts selalu didahulukan oleh popup.
   statistik: [
-    { value: "200", label: "racikan umpan" },
-    { value: "5.000", label: "ulasan komunitas" },
+    { value: "3", label: "racikan umpan" },
     { value: "38", label: "provinsi" },
   ],
   fitur: [

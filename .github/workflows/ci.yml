@@ -1,0 +1,37 @@
+name: CI
+
+# Pemeriksaan otomatis setiap pull request dan dorongan ke main:
+# tipe, lint, dan build harus lulus sebelum kode digabung.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  periksa:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+      - name: Siapkan Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Pasang dependensi
+        run: npm ci
+      - name: Periksa tipe
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build

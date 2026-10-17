@@ -5,7 +5,7 @@ import type { RecipeReview } from "@/data/reviews";
 export const COMMUNITY_REVIEWS_KEY = "umpan-mas-community-reviews-v1";
 export const COMMUNITY_REVIEWS_EVENT = "umpan:community-reviews-change";
 
-export type MemberReview = RecipeReview & {
+export type MemberReview = Omit<RecipeReview, "id"> & {
   id: string;
   createdAt: string;
   /**
@@ -56,6 +56,15 @@ export function readCommunityReviews(): MemberReview[] {
 }
 
 export type NewMemberReview = Omit<MemberReview, "id" | "createdAt">;
+
+/**
+ * Bentuk ulasan lokal untuk tampilan publik: id lokal (UUID) dilepas supaya
+ * tidak tertukar dengan id baris server (angka) — penautan ke server berjalan
+ * lewat `serverId`, dan kunci daftar tidak memakai id.
+ */
+export function sebagaiUlasanPublik(review: MemberReview): RecipeReview {
+  return { ...review, id: undefined };
+}
 
 function writeReviews(reviews: MemberReview[]): MemberReview[] {
   try {
