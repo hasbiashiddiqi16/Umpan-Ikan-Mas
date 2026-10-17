@@ -15,7 +15,6 @@ const desktopLinks = [
   { label: "Provinsi", href: "/provinsi" },
   { label: "AI Umpan", href: "/ai-umpan" },
   { label: "Sistem Pakar", href: "/sistem-pakar" },
-  { label: "Komunitas", href: "/komunitas" },
 ];
 
 const mobileLinks = [
