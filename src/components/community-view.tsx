@@ -9,7 +9,7 @@ import { CommunityCard } from "@/components/cards";
 import { Badge } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
 
-const tabs = ["Semua", "Hasil Mancing", "Racikan", "Review"];
+const tabs = ["Semua", "Racikan", "Review"];
 const reviewsPerPage = 24;
 
 export function CommunityView({ embedded = false }: { embedded?: boolean }) {
@@ -42,7 +42,6 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   const sampleReviews = useMemo(() => reviews.filter((review) => review.sample), []);
   const sampleShowcase = useMemo(() => sampleReviews.slice(0, 3), [sampleReviews]);
   const reportResults = useMemo(() => {
-    if (activeTab === "Hasil Mancing") return fishingReports.filter((report) => report.catchCount > 0);
     if (activeTab === "Racikan") return fishingReports.filter((report) => Boolean(report.recipeSlug));
     return fishingReports;
   }, [activeTab]);
