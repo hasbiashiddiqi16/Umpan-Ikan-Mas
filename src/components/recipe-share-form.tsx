@@ -17,10 +17,20 @@ type Bahan = { name: string; brand: string; amount: string; optional: boolean };
 
 function Pilihan({ judul, opsi, dipilih, ubah }: { judul: string; opsi: readonly string[]; dipilih: string[]; ubah: (v: string[]) => void }) {
   const toggle = (nilai: string) => ubah(dipilih.includes(nilai) ? dipilih.filter((i) => i !== nilai) : [...dipilih, nilai]);
+  // Tombol "Semua": memilih seluruh pilihan sekaligus; ditekan lagi untuk
+  // mengosongkan. Hanya tampil bila pilihannya lebih dari satu.
+  const semuaTerpilih = opsi.length > 0 && opsi.every((item) => dipilih.includes(item));
+  const toggleSemua = () => ubah(semuaTerpilih ? [] : [...opsi]);
   return (
     <fieldset>
       <legend className={labelClass}>{judul}</legend>
       <div className="flex flex-wrap gap-2">
+        {opsi.length > 1 && (
+          <button type="button" onClick={toggleSemua} aria-pressed={semuaTerpilih}
+            className={`min-h-10 rounded-full px-3.5 text-[13px] font-bold ring-1 transition ${semuaTerpilih ? "bg-[#294b34] text-white ring-[#294b34]" : "bg-white text-[#7a5f14] ring-dashed ring-[#c9b458] hover:bg-[#fdf6e0]"}`}>
+            Semua
+          </button>
+        )}
         {opsi.map((opsiItem) => {
           const aktif = dipilih.includes(opsiItem);
           return (

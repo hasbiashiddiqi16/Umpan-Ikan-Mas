@@ -136,7 +136,7 @@ export default function HomePage() {
             <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#656d64] (4.59:1 terburuk)">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
           </section>
           <section>
-            <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/katalog?tab=komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
             <div className="grid gap-4 lg:grid-cols-3">{fishingReports.slice(0, 3).map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} />)}</div>
             <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div><p className="text-sm font-extrabold text-[#2c3f30]">Punya racikan yang sering bikin strike?</p><p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6d60]">Ceritakan bahan dan cara meraciknya — racikanmu langsung tayang dan bisa jadi andalan pemancing lain.</p></div>

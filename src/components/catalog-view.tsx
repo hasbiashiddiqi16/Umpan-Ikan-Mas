@@ -8,6 +8,7 @@ import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { SearchInput, EmptyState } from "@/components/shared";
 import { RecipeCard } from "@/components/recipe-card";
+import { CommunityView } from "@/components/community-view";
 import { FilterBar, defaultCatalogFilters, type CatalogFilters } from "@/components/filter-bar";
 import { UseMyLocationButton } from "@/components/location-controls";
 import { isCatalogCity, provinceForCatalogCity } from "@/data/geo-cities";
@@ -52,6 +53,7 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
   const { consent: locationConsent, place: locationPlace, markTouched } = useLocationAutofill(applyLocationToFilters);
   const locationFilterActive = Boolean(locationConsent === "granted" && locationPlace && filters.province === locationPlace.province);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [tabUtama, setTabUtama] = useState<"resep" | "komunitas">("resep");
   // Data awal dari server (sudah gabungan katalog + dashboard terbit) agar
   // hitungan katalog benar sejak tampil pertama; pengambilan di bawah ini
   // tetap menyegarkannya selama halaman dibuka.
@@ -73,7 +75,11 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
   useEffect(() => {
     const syncFavorites = () => setFavoriteSlugs(readFavorites());
     syncFavorites();
-    const applyInitialFilter = () => setFavoritesOnly(new URLSearchParams(window.location.search).get("favorites") === "1");
+    const applyInitialFilter = () => {
+      const params = new URLSearchParams(window.location.search);
+      setFavoritesOnly(params.get("favorites") === "1");
+      if (params.get("tab") === "komunitas") setTabUtama("komunitas");
+    };
     window.setTimeout(applyInitialFilter, 0);
     const updateFavorites = (event: Event) => {
       const detail = (event as CustomEvent<string[]>).detail;
@@ -128,6 +134,14 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
     });
   }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs, ratings, rankerRating]);
 
+  function pilihTabUtama(tab: "resep" | "komunitas") {
+    setTabUtama(tab);
+    const url = new URL(window.location.href);
+    if (tab === "komunitas") url.searchParams.set("tab", "komunitas");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url);
+  }
+
   function selectCategory(category: string) {
     setFilters((current) => ({ ...current, category }));
   }
@@ -141,6 +155,15 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
           <Link href="/ai-umpan" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#e8eee5] px-5 text-sm font-bold text-[#35553a] transition hover:bg-[#dce8d9]">Bingung pilih? Tanya AI <ArrowRight size={15} /></Link>
         </div>
       </div>
+      <div className="mb-6 flex gap-2" role="tablist" aria-label="Isi katalog">
+        {([["resep", "Resep"], ["komunitas", "Cerita & Ulasan Komunitas"]] as const).map(([nilai, label]) => (
+          <button key={nilai} type="button" role="tab" aria-selected={tabUtama === nilai} onClick={() => pilihTabUtama(nilai)} className={`min-h-11 rounded-full px-5 text-sm font-bold transition ${tabUtama === nilai ? "bg-[#294b34] text-white shadow-sm" : "bg-white text-[#616c61] ring-1 ring-[#e2e8e1] hover:bg-[#eef3eb]"}`}>{label}</button>
+        ))}
+      </div>
+      {tabUtama === "komunitas" ? (
+        <CommunityView embedded />
+      ) : (
+        <>
       <div className="space-y-4 rounded-[25px] border border-[#e7ebe5] bg-white p-4 shadow-[0_8px_28px_rgba(39,56,41,.04)] sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row"><SearchInput value={query} onChange={setQuery} className="flex-1" /><button type="button" onClick={() => setFavoritesOnly((value) => !value)} aria-pressed={favoritesOnly} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${favoritesOnly ? "border-[#e8cfbf] bg-[#fcf2ec] text-[#9c573c] (4.69:1 terburuk)" : "border-[#e5e9e2] bg-white text-[#59685a] hover:bg-[#f7f9f5]"}`}><Heart size={16} fill={favoritesOnly ? "currentColor" : "none"} />{favoritesOnly ? "Menampilkan favorit" : "Lihat favorit"}</button></div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1" aria-label="Jenis pemancingan">{categories.map((category) => <button type="button" key={category} onClick={() => selectCategory(category)} aria-pressed={filters.category === category} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${filters.category === category ? "bg-[#294b34] text-white shadow-sm" : "bg-[#f3f5f1] text-[#616c61] (4.71:1 terburuk) hover:bg-[#e8eee5]"}`}>{category}</button>)}</div>
@@ -181,6 +204,8 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
       <div className="mb-5 mt-7 flex items-center justify-between gap-4"><div><p className="text-sm font-extrabold text-[#344538]">{filteredRecipes.length} racikan ditemukan</p><p className="mt-1 text-xs text-[#666d65] (4.57:1 terburuk)">{filters.sort === "Rating Tertinggi" ? "Diurutkan dari skor rating ulasan pengunjung (rata-rata Bayesian)" : "Disusun berdasarkan kecocokan dan masukan komunitas"}</p></div><span className="hidden items-center gap-1.5 text-xs text-[#91998f] sm:inline-flex"><SlidersHorizontal size={13} /> Hasil diperbarui langsung</span></div>
       {filters.sort === "Rating Tertinggi" && <p className="mb-5 -mt-2 rounded-xl bg-[#f6f8f4] px-3.5 py-2.5 text-[11px] leading-5 text-[#656d64] (4.59:1 terburuk)">{BAYESIAN_HINT}</p>}
       {filteredRecipes.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredRecipes.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} initialRating={ratings[recipe.slug]} matchScore={filterAktif ? calculateMatchScore(recipe, { ...defaultPreferences, province: filters.province === "Semua provinsi" ? defaultPreferences.province : filters.province, weather: filters.weather === "Semua cuaca" ? defaultPreferences.weather : filters.weather, water: filters.water === "Semua kondisi air" ? defaultPreferences.water : filters.water, waterBody: filters.waterBody === "Semua tipe air" ? undefined : filters.waterBody, fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType, season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season }) : undefined} />)}</div> : <EmptyState title={query ? "Umpan tidak ditemukan." : favoritesOnly ? "Belum ada resep favorit." : "Belum ada resep yang sesuai."} description={favoritesOnly ? "Simpan resep dengan mengetuk ikon hati. Favorit tersimpan di perangkat ini." : query ? "Coba kata kunci lain seperti ‘kroto’, ‘pelet’, atau ‘umpan putih’." : "Coba ubah filter provinsi, kondisi air, atau budget untuk melihat racikan lainnya."} />}
+        </>
+      )}
     </div>
   );
 }

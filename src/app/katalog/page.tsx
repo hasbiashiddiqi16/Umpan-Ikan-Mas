@@ -7,7 +7,7 @@ import { getPublicRecipeData } from "@/lib/public-recipes";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Katalog Resep Umpan Ikan Mas",
-  description: "Jelajahi resep umpan ikan mas dan saring berdasarkan bahan, cuaca, kondisi air, budget, jenis kolam, serta provinsi.",
+  description: "Jelajahi resep umpan ikan mas, saring berdasarkan bahan, cuaca, kondisi air, budget, jenis kolam, dan provinsi — plus baca cerita dan ulasan komunitas pemancing.",
   path: "/katalog",
 });
 

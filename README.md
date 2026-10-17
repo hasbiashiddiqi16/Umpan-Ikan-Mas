@@ -80,7 +80,7 @@ Pengunjung bisa **daftar dan masuk** untuk membagikan resep sendiri. Akun memaka
 
 Yang didapat pengguna setelah masuk:
 
-- **Bagikan resep — langsung tayang.** Formulir `/bagikan` memakai validasi yang sama persis dengan dashboard admin (`validateCmsRecipeInput`). Resep terkirim berstatus `published` dengan penulis nama akun dan `owner_id` id pengguna; slug dibuat unik otomatis. Batas wajar 10 resep per akun per hari mencegah spam. Hanya pemilik (atau admin) yang boleh menyunting/menghapusnya; admin tetap bisa mengarsipkan resep bermasalah dari dashboard. Foto diunggah lewat `/api/user/recipes/[id]/photo` dengan pemeriksaan yang sama seperti dashboard (maks 3 MB, tipe berkas diperiksa dari isi berkasnya).
+- **Bagikan resep — langsung tayang.** Setiap kelompok pilihan majemuk pada formulir (jenis kolam, cuaca, kondisi air, tipe air, musim, provinsi) punya tombol **Semua** untuk memilih/mengosongkan sekaligus — pola yang sama juga ada di formulir dashboard admin (`MultiSelectDropdown` dan pemilih jenis kolam); batas daftar pada `validateCmsRecipeInput` dinaikkan menjadi 40 agar "Semua provinsi" (38) sah. Formulir `/bagikan` memakai validasi yang sama persis dengan dashboard admin (`validateCmsRecipeInput`). Resep terkirim berstatus `published` dengan penulis nama akun dan `owner_id` id pengguna; slug dibuat unik otomatis. Batas wajar 10 resep per akun per hari mencegah spam. Hanya pemilik (atau admin) yang boleh menyunting/menghapusnya; admin tetap bisa mengarsipkan resep bermasalah dari dashboard. Foto diunggah lewat `/api/user/recipes/[id]/photo` dengan pemeriksaan yang sama seperti dashboard (maks 3 MB, tipe berkas diperiksa dari isi berkasnya).
 - **Satu ikon profil di header.** Demi tampilan yang minimalis, header publik hanya menyisakan ikon cari dan ikon profil. Ikon profil membuka menu berisi Masuk, Daftar, Bagikan Resep, dan Favorit Saya untuk pengunjung; setelah masuk, menu yang sama berisi Akun Saya (satu halaman `/profil`), Bagikan Resep, Resep Saya, Ulasan Saya, Favorit, dan Keluar. Tidak ada lagi tombol Masuk/Daftar maupun ikon hati/profil terpisah di header.
 - **Akun Saya (`/profil`).** Tiga tab: **Resep Saya** (sunting/hapus + status tayang), **Ulasan Saya** (semua ulasan yang dikirim saat masuk beserta status moderasinya), dan **Favorit** tersinkron. Nama tampil bisa diganti dari halaman ini.
 - **Favorit tersinkron antarperangkat.** Favorit pengunjung anonim tetap lokal (localStorage `umpan-mas-favorites`). Saat masuk, daftar lokal dan daftar akun **digabung** (tidak ada yang terhapus) lalu disimpan ke tabel `user_favorites`; perubahan berikutnya ikut terkirim, jadi membuka situs di perangkat lain menampilkan favorit yang sama.
@@ -186,8 +186,10 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
 - **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
 - Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
-- **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Data contoh di `/komunitas` juga memakai format yang sama supaya jelas cara membacanya.
+- **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Data contoh di tab komunitas katalog juga memakai format yang sama supaya jelas cara membacanya.
 - **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
+
+**Komunitas kini menjadi tab di katalog.** Halaman mandiri `/komunitas` dilebur menjadi tab **Cerita & Ulasan Komunitas** di `/katalog` (`CommunityView` dirender tanpa hero saat menyemat di tab), dan `/komunitas` menjawab pengalihan permanen 308 ke `/katalog?tab=komunitas` — tautan lama dan hasil pencarian tidak mati, sitemap tidak lagi memuat `/komunitas`, dan menu desktop tidak lagi memisahkan Komunitas dari Katalog. Isi dan perilakunya (cerita hasil mancing, ulasan disetujui, contoh berlabel) tidak berubah.
 
 ## Kejujuran data ulasan dan laporan
 
@@ -382,7 +384,7 @@ emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
   digelapkan ke 4,3:1 agar memenuhi kontras grafis 3:1 (WCAG 1.4.11).
 - Terverifikasi: tidak ada karakter emoji tersisa di `src/`, dan halaman
   publik yang tersaji (/, /katalog, /cuaca, /sistem-pakar, /ai-umpan,
-  /resep/…, /komunitas) mengandung 0 emoji dengan ikon SVG + `aria-label`
+  /resep/…) mengandung 0 emoji dengan ikon SVG + `aria-label`
   di seluruh halamannya.
 
 ## Ukuran gambar: `sizes` per konteks, satu `priority`, format AVIF/WebP
@@ -449,7 +451,7 @@ LCP) ikut tertunda di balik pertukaran itu. Sekarang polanya:
 - **`loading.tsx` dihapus dari rute publik.** Tanpa batas loading, Next
   menunggu render selesai saat prerender sehingga HTML awal yang diterima
   pengunjung sudah memuat judul, hero, dan konten lengkap (terverifikasi:
-  tidak ada batas tertunda di HTML `/`, `/katalog`, `/komunitas`,
+  tidak ada batas tertunda di HTML `/`, `/katalog`,
   `/resep/...`). Hanya `/dashboard` (dinamis, di balik login) yang
   mempertahankan `loading.tsx` sendiri untuk umpan balik navigasi admin.
 - **Yang menunggu data dibungkus `Suspense`, bukan menahan halaman.**
