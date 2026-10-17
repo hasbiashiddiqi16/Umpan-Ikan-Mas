@@ -16,6 +16,7 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   const [activeTab, setActiveTab] = useState("Semua");
   const [memberReviews, setMemberReviews] = useState<ReturnType<typeof readCommunityReviews>>([]);
   const [approvedReviews, setApprovedReviews] = useState<typeof reviews>([]);
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [reviewLimit, setReviewLimit] = useState(reviewsPerPage);
   useEffect(() => {
     const sync = () => setMemberReviews(readCommunityReviews());
@@ -24,7 +25,8 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
     void fetch("/api/public/reviews", { cache: "no-store", signal: controller.signal })
       .then(async (response) => response.ok ? response.json() as Promise<{ reviews?: typeof reviews }> : { reviews: [] })
       .then((body) => setApprovedReviews(body.reviews ?? []))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setReviewsLoaded(true));
     window.addEventListener(COMMUNITY_REVIEWS_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -52,7 +54,7 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
       {activeTab === "Review" ? <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-extrabold text-[#394a3b]">Ulasan komunitas</p><p className="text-xs text-[#666d66] (4.57:1 terburuk)">{allReviews.length ? `Menampilkan ${visibleReviews.length} dari ${allReviews.length} ulasan pengunjung` : "Belum ada ulasan pengunjung"}</p></div>
         {allReviews.length ? <div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visibleReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.recipeSlug}-${review.date}-${index}`} review={review} />)}</div>{visibleReviews.length < allReviews.length && <button type="button" onClick={() => setReviewLimit((current) => current + reviewsPerPage)} className="mx-auto mt-6 flex min-h-11 items-center justify-center rounded-xl border border-[#dce5da] bg-white px-5 text-sm font-bold text-[#31593a] transition hover:bg-[#f2f6f0]">Tampilkan ulasan lainnya</button>}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm leading-6 text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung. Buka halaman resep mana pun untuk membagikan pengalamanmu lebih dulu.</div>}
-        {sampleShowcase.length > 0 && <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div><p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{sampleReviews.length} contoh dibuat tim redaksi sebagai gambaran format ulasan; {sampleShowcase.length} di antaranya ditampilkan di sini. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan.</p><div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{sampleShowcase.map((review, index) => <ReviewCard key={`contoh-${review.recipeSlug}-${index}`} review={review} />)}</div></div>}
+        {reviewsLoaded && allReviews.length === 0 && sampleShowcase.length > 0 && <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div><p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{sampleReviews.length} contoh dibuat tim redaksi sebagai gambaran format ulasan; {sampleShowcase.length} di antaranya ditampilkan di sini. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan. Begitu ada ulasan pengunjung, contoh ini tidak lagi ditampilkan.</p><div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{sampleShowcase.map((review, index) => <ReviewCard key={`contoh-${review.recipeSlug}-${index}`} review={review} />)}</div></div>}
       </div> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{reportResults.map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} showPhoto />)}</div>}
       <div className="mt-8 rounded-2xl border border-[#e5eae2] bg-[#f6f8f4] p-5 text-sm leading-6 text-[#636d62] (4.63:1 terburuk)">Semua kartu bertanda &ldquo;Data contoh&rdquo; dibuat tim redaksi sebagai gambaran format cerita — bukan kiriman pembaca. Hanya ulasan pengunjung yang dihitung sebagai rating komunitas. Keadaan cuaca, air, waktu, dan teknik pemancing tetap berpengaruh pada hasil sebenarnya.</div>
     </div>
