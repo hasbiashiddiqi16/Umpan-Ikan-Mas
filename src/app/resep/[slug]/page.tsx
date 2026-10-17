@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, CloudRain, Droplets, Fish, Gauge, MapPin, PenLine, Sparkles, Wallet, Waves } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CloudRain, Droplets, Fish, Gauge, MapPin, PenLine, Sparkles, Wallet, Waves } from "lucide-react";
 import { PageShell } from "@/components/navigation";
 import { Footer, SectionHeader } from "@/components/shared";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -202,6 +202,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <div className="min-w-0 rounded-[22px] border border-[#e7eae4] bg-white p-5"><h2 className="text-sm font-extrabold text-[#304033]">Saran kecil sebelum mancing</h2><ul className="mt-4 space-y-3 text-sm leading-5 text-[#636d63] (4.62:1 terburuk)"><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Siapkan air tambahan untuk mengatur tekstur.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Gunakan essen sedikit dulu, lalu sesuaikan.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Catat cuaca dan kondisi kolam saat mencoba.</li></ul></div>
           </aside>
         </div>
+        <section className="mt-12 flex flex-col gap-4 rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div><h2 className="text-lg font-extrabold text-[#2c3f30]">Punya versi racikanmu sendiri?</h2><p className="mt-1.5 max-w-xl text-sm leading-6 text-[#5f6d60]">Setiap pemancing punya racikan rahasia. Bagikan versimu — langsung tayang atas namamu dan membantu pemancing lain menemukan umpan terbaiknya.</p></div>
+          <Link href="/bagikan" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]">Bagikan Racikan Versimu <ArrowRight size={15} /></Link>
+        </section>
         <section className="mt-16"><SectionHeader eyebrow="Mungkin juga cocok" title="Racikan lainnya" action={<Link href="/katalog" className="text-sm font-bold text-[#365b3b]">Lihat katalog <ArrowLeft className="ml-1 inline rotate-180" size={14} /></Link>} /><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{relatedRecipes.filter((item) => item.slug !== recipe.slug).slice(0, 3).map((item, index) => <RecipeCard key={item.slug} recipe={item} initialRating={serverRatings?.[item.slug]} />)}</div></section>
       </main>
       <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-[#e5e9e2] bg-white/95 p-3 backdrop-blur-lg sm:px-6 lg:hidden"><Link href="#bahan" className="mx-auto flex min-h-12 max-w-xl items-center justify-center rounded-xl bg-[#294b34] text-sm font-bold text-white shadow-lg"><Fish size={16} aria-hidden="true" /> Gunakan Resep Ini</Link></div>
