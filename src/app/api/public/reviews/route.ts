@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { WATER_BODIES, normalizeFishingType } from "@/data/recipes";
@@ -8,6 +8,7 @@ import { ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/li
 import { isFutureReviewDate } from "@/lib/review-dates";
 import { checkReviewLimits, hashReviewValue, isReviewHoneypotFilled, isTurnstileConfigured, readReviewDevice, reviewClientIp, reviewPayloadHash, verifyTurnstileToken } from "@/lib/review-guard";
 import { getCurrentUser } from "@/lib/auth-user";
+import { nilaiRisikoUlasan } from "@/lib/review-risk";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Jumlah joran harus antara 1 dan 10." }, { status: 400 });
     }
     const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
-    const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
+    const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id, ownerId: cmsRecipes.ownerId }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
     if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
     // Bila pengirim sedang masuk, ulasan terhubung ke akunnya dan nama yang
     // tampil adalah nama akun. Ulasan anonim tetap berjalan seperti sebelumnya.
@@ -108,17 +109,27 @@ export async function POST(request: Request) {
       // Kiriman ulang yang identik (mis. percobaan ulang jaringan) dijawab dengan
       // ulasan yang sudah ada supaya tidak menggandakan baris di basis data.
       if (hit.code === "duplicate" && hit.existingId) {
-        return Response.json({ ok: true, id: hit.existingId, status: "pending", duplicate: true });
+        const [existing] = await db.select({ status: cmsReviews.status }).from(cmsReviews).where(eq(cmsReviews.id, hit.existingId)).limit(1);
+        return Response.json({ ok: true, id: hit.existingId, status: existing?.status ?? "pending", duplicate: true });
       }
       const headers: Record<string, string> = { "Cache-Control": "no-store" };
       if (hit.retryAfterSeconds) headers["Retry-After"] = String(hit.retryAfterSeconds);
       return Response.json({ error: hit.error, code: hit.code }, { status: hit.status, headers });
     }
+    // Moderasi berbasis risiko: kiriman bersih langsung tampil, yang
+    // mencurigakan ditahan sebagai pending untuk ditinjau admin. Pengirim
+    // tetap melihat salinan tertahannya sendiri berlabel menunggu.
+    const alasanTahan: string[] = [...nilaiRisikoUlasan({ nama: pengirim, komentar: comment }).alasan];
+    if (account && cmsRecipe?.ownerId && cmsRecipe.ownerId === account.id) alasanTahan.push("Ulasan dari pemilik resep");
+    const [ledakan] = await db.select({ total: count() }).from(cmsReviews).where(and(eq(cmsReviews.device, device.id), gte(cmsReviews.createdAt, new Date(Date.now() - 60 * 60 * 1000)), ne(cmsReviews.status, "rejected")));
+    if (Number(ledakan?.total ?? 0) >= 3) alasanTahan.push("Banyak ulasan dari perangkat ini dalam satu jam terakhir");
+    const status = alasanTahan.length ? "pending" : "approved";
+    const holdReason = alasanTahan.length ? alasanTahan.join("; ").slice(0, 255) : null;
     const [created] = await db
       .insert(cmsReviews)
-      .values({ recipeSlug, name: pengirim, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, sessionMinutes, rodCount, comment, status: "pending", device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash, userId: account?.id ?? null })
+      .values({ recipeSlug, name: pengirim, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, sessionMinutes, rodCount, comment, status, holdReason, device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash, userId: account?.id ?? null })
       .returning({ id: cmsReviews.id });
-    return Response.json({ ok: true, id: created.id, status: "pending" }, { status: 201 });
+    return Response.json({ ok: true, id: created.id, status }, { status: 201 });
   } catch (error) {
     return databaseErrorResponse(error, "Ulasan terkirim secara lokal, tetapi server sedang tidak tersedia.");
   }

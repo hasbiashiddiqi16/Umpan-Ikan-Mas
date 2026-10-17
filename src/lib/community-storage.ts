@@ -38,6 +38,7 @@ function isMemberReview(value: unknown): value is MemberReview {
     (item.rodCount === undefined || (typeof item.rodCount === "number" && item.rodCount >= ROD_MIN && item.rodCount <= ROD_MAX)) &&
     (item.serverId === undefined || (typeof item.serverId === "number" && Number.isSafeInteger(item.serverId) && item.serverId > 0)) &&
     (item.synced === undefined || typeof item.synced === "boolean") &&
+    (item.status === undefined || item.status === "pending" || item.status === "approved") &&
     typeof item.date === "string" &&
     typeof item.comment === "string" &&
     typeof item.createdAt === "string";

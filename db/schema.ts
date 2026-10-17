@@ -69,6 +69,8 @@ export const cmsReviews = pgTable("cms_reviews", {
   rodCount: integer("rod_count"),
   comment: text("comment").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
+  /** Alasan ulasan ditahan untuk ditinjau admin (moderasi berbasis risiko). */
+  holdReason: varchar("hold_reason", { length: 255 }),
   /**
    * Id perangkat anonim (32 heksadesimal acak) dari token bertanda tangan yang
    * dikirim peramban lewat header `x-review-device`. Bukan identitas orang —

@@ -10,6 +10,12 @@ export type RecipeReview = {
    * tampil dengan label "Data contoh".
    */
   sample?: boolean;
+  /**
+   * Status moderasi untuk salinan lokal milik pengirim. Hanya "pending"
+   * yang ditampilkan berlabel "Menunggu pemeriksaan"; ulasan dari server
+   * selalu yang sudah tampil publik.
+   */
+  status?: "pending" | "approved";
   name: string;
   location: string;
   recipeSlug: string;

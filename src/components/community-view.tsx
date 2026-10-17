@@ -55,9 +55,12 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
       window.removeEventListener("storage", sync);
     };
   }, []);
-  const serverOnlyReviews = useMemo(() => approvedReviews.filter((remote) => !memberReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, memberReviews]);
+  // Salinan lokal yang sudah punya versi server digantikan versi server
+  // (sumber kebenaran status); yang belum ada di server berarti kiriman
+  // pengirim sendiri yang masih ditahan, tampil berlabel menunggu.
+  const memberOnlyReviews = useMemo(() => memberReviews.filter((local) => !approvedReviews.some((remote) => remote.name === local.name && remote.comment === local.comment)), [approvedReviews, memberReviews]);
   // Angka dan daftar ulasan hanya dari kiriman pengunjung; contoh dipisah dan diberi label.
-  const allReviews = useMemo(() => [...memberReviews, ...serverOnlyReviews], [memberReviews, serverOnlyReviews]);
+  const allReviews = useMemo(() => [...memberOnlyReviews, ...approvedReviews], [memberOnlyReviews, approvedReviews]);
   const visibleReviews = useMemo(() => allReviews.slice(0, reviewLimit), [allReviews, reviewLimit]);
   const sampleReviews = useMemo(() => reviews.filter((review) => review.sample), []);
   const sampleShowcase = useMemo(() => sampleReviews.slice(0, 3), [sampleReviews]);
