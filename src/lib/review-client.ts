@@ -91,6 +91,8 @@ export type ReviewPostResult = {
   id?: number;
   /** Server sudah punya kiriman yang sama (percobaan ulang), tidak digandakan. */
   duplicate?: boolean;
+  /** Status moderasi dari server: "approved" langsung tampil, "pending" ditahan untuk ditinjau. */
+  status?: string;
   /** Pesan dari server untuk ditampilkan apa adanya. */
   error?: string;
   code?: "review-cooldown" | "device-limit" | "ip-limit" | "turnstile" | "device" | string;
@@ -126,7 +128,7 @@ export async function postReviewToServer(payload: Record<string, unknown>): Prom
       ({ response, body } = await attempt(token));
     }
     if (response.ok) {
-      return { ok: true, id: typeof body.id === "number" ? body.id : undefined, duplicate: body.duplicate === true };
+      return { ok: true, id: typeof body.id === "number" ? body.id : undefined, duplicate: body.duplicate === true, status: typeof body.status === "string" ? body.status : undefined };
     }
     return {
       ok: false,

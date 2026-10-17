@@ -112,7 +112,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
     }
     if (result.ok) {
       try {
-        onSubmitted(saveCommunityReview({ ...newReview, synced: true, ...(result.id ? { serverId: result.id } : {}) }));
+        onSubmitted(saveCommunityReview({ ...newReview, synced: true, status: result.status === "approved" ? "approved" : "pending", ...(result.id ? { serverId: result.id } : {}) }));
       } catch {
         // Salinan lokal tidak wajib ada; ulasan sudah tersimpan di server.
       }
@@ -120,7 +120,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       setRating(0);
       setHoneypot("");
       setTurnstileToken("");
-      setNotice(result.duplicate ? "Ulasan ini sudah pernah terkirim, jadi tidak digandakan. Terima kasih!" : "Ulasan tersimpan di server dan menunggu persetujuan editor. Terima kasih sudah berbagi!");
+      setNotice(result.duplicate ? "Ulasan ini sudah pernah terkirim, jadi tidak digandakan. Terima kasih!" : result.status === "approved" ? "Ulasanmu sudah tampil untuk semua pengunjung. Terima kasih sudah berbagi!" : "Ulasanmu sedang diperiksa sebentar sebelum tampil publik. Kamu tetap bisa melihatnya di perangkat ini dengan label Menunggu pemeriksaan.");
       return;
     }
     if (result.offline) {
@@ -299,8 +299,10 @@ function useCommunityReviews(slug: string) {
  * Ulasan contoh tidak pernah ikut dihitung.
  */
 function summarizeReviews(memberReviews: MemberReview[], remoteReviews: RecipeReview[]) {
-  const count = memberReviews.length + remoteReviews.length;
-  const total = memberReviews.reduce((sum, review) => sum + review.rating, 0) + remoteReviews.reduce((sum, review) => sum + review.rating, 0);
+  // Ulasan lokal yang masih ditahan tidak ikut dihitung, sama seperti di server.
+  const lokalTampil = memberReviews.filter((review) => review.status !== "pending");
+  const count = lokalTampil.length + remoteReviews.length;
+  const total = lokalTampil.reduce((sum, review) => sum + review.rating, 0) + remoteReviews.reduce((sum, review) => sum + review.rating, 0);
   return { count, average: count ? Math.round((total / count) * 10) / 10 : 0 };
 }
 
@@ -343,7 +345,7 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Rating baru muncul setelah ada ulasan yang disetujui editor." />
+        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Ulasan tampil begitu lolos pemeriksaan otomatis; yang mencurigakan ditinjau editor lebih dulu." />
         <div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3">
           {agregatTampil.count ? (
             <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{agregatTampil.average.toFixed(1)}</span><div><Rating value={agregatTampil.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</p></div></div>
@@ -354,7 +356,7 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
       </div>
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</span></div>
-      <p className="text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung.</p>
+      <p className="text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah tampil publik; ulasan yang sedang diperiksa dan contoh berlabel tidak ikut dihitung.</p>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
       {examples.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">
