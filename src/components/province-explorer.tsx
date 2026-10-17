@@ -9,7 +9,7 @@ import { filterRecipesByBudget } from "@/lib/recommendation";
 
 const selectClass = `${SELECT_FIELD_CLASS} min-h-12 min-w-0 rounded-xl border border-[#e3e8e1] bg-white pl-3.5 text-sm font-medium text-[#3b493e] outline-none focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10 sm:min-h-11`;
 
-export function ProvinceExplorer({ province, recipes }: { province: string; recipes: Recipe[] }) {
+export function ProvinceExplorer({ province, recipes, ratings }: { province: string; recipes: Recipe[]; ratings?: Record<string, { count: number; average: number }> }) {
   const [weather, setWeather] = useState("Semua cuaca");
   const [water, setWater] = useState("Semua kondisi air");
   const [fishingType, setFishingType] = useState("Semua kolam");
@@ -34,7 +34,7 @@ export function ProvinceExplorer({ province, recipes }: { province: string; reci
         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[.09em] text-[#656c62] (4.65:1 terburuk)">Budget<SelectBox><select className={selectClass} value={budget} onChange={(event) => setBudget(event.target.value)}>{["Semua budget", "< Rp15.000", "Rp15.000–30.000", "Rp30.000–50.000", "> Rp50.000"].map((item) => <option key={item}>{item}</option>)}</select></SelectBox></label>
       </div>
       <p className="mb-4 text-sm font-bold text-[#526253]">{results.length} racikan ditemukan</p>
-      {results.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{results.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} />)}</div> : <EmptyState title="Belum ada racikan yang sesuai." description="Coba longgarkan pilihan cuaca, kondisi air, atau budget." />}
+      {results.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{results.map((recipe, index) => <RecipeCard key={recipe.slug} recipe={recipe} initialRating={ratings?.[recipe.slug]} />)}</div> : <EmptyState title="Belum ada racikan yang sesuai." description="Coba longgarkan pilihan cuaca, kondisi air, atau budget." />}
     </section>
   );
 }

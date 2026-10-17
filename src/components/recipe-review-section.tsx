@@ -244,6 +244,8 @@ async function fetchModerationStatus(reviews: MemberReview[], signal?: AbortSign
 function useCommunityReviews(slug: string) {
   const [memberReviews, setMemberReviews] = useState<MemberReview[]>([]);
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
+  /** Berubah true setelah pengambilan ulasan server pertama selesai. */
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
 
   /** Membaca ulang salinan lokal; dipakai setelah kiriman baru tersimpan. */
   const refresh = useCallback(() => {
@@ -269,6 +271,7 @@ function useCommunityReviews(slug: string) {
       ]);
       if (!active) return;
       setApprovedReviews(approved);
+      setReviewsLoaded(true);
       if (!statuses) return;
       const hapus = lokal.filter((review, index) => {
         const status = statuses[index];
@@ -288,7 +291,7 @@ function useCommunityReviews(slug: string) {
     };
   }, [slug]);
 
-  return { memberReviews, approvedReviews, refresh };
+  return { memberReviews, approvedReviews, reviewsLoaded, refresh };
 }
 
 /**
@@ -301,23 +304,27 @@ function summarizeReviews(memberReviews: MemberReview[], remoteReviews: RecipeRe
   return { count, average: count ? Math.round((total / count) * 10) / 10 : 0 };
 }
 
-export function LiveRecipeRating({ recipe }: { recipe: Recipe }) {
+export function LiveRecipeRating({ recipe, initialRating }: { recipe: Recipe; initialRating?: { count: number; average: number } }) {
   useReviewOutboxRetry();
-  const { memberReviews, approvedReviews } = useCommunityReviews(recipe.slug);
+  const { memberReviews, approvedReviews, reviewsLoaded } = useCommunityReviews(recipe.slug);
   const remote = approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment));
   const aggregate = summarizeReviews(memberReviews, remote);
+  // Sebelum data klien selesai dimuat, tampilkan agregat server (ISR) agar
+  // kepala halaman tidak berkedip "Belum ada ulasan" padahal ulasan yang
+  // disetujui sudah ada. Setelah termuat, agregat klien yang berwenang.
+  const tampil = !reviewsLoaded && aggregate.count === 0 && initialRating?.count ? initialRating : aggregate;
   return (
     <span className="inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2">
-      {aggregate.count ? <Rating value={aggregate.average} count={aggregate.count} /> : <RecipeRating />}
-      <span className="text-xs text-[#666d66] (4.57:1 terburuk)" title={describeRating({ count: aggregate.count, average: aggregate.average })}>
-        {aggregate.count ? `${new Intl.NumberFormat("id-ID").format(aggregate.count)} pemancing mencoba` : "Belum ada ulasan"}
+      {tampil.count ? <Rating value={tampil.average} count={tampil.count} /> : <RecipeRating />}
+      <span className="text-xs text-[#666d66] (4.57:1 terburuk)" title={describeRating({ count: tampil.count, average: tampil.average })}>
+        {tampil.count ? `${new Intl.NumberFormat("id-ID").format(tampil.count)} pemancing mencoba` : "Belum ada ulasan"}
       </span>
     </span>
   );
 }
 
-export function RecipeReviewSection({ recipe, sampleReviews = [] }: { recipe: Recipe; sampleReviews?: RecipeReview[] }) {
-  const { memberReviews, approvedReviews, refresh } = useCommunityReviews(recipe.slug);
+export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating }: { recipe: Recipe; sampleReviews?: RecipeReview[]; initialRating?: { count: number; average: number } }) {
+  const { memberReviews, approvedReviews, reviewsLoaded, refresh } = useCommunityReviews(recipe.slug);
 
   // Ulasan asli (kiriman pengunjung + hasil moderasi) dan ulasan contoh dipisah:
   // contoh tidak pernah bercampur dengan kiriman pengunjung dan tidak dihitung.
@@ -327,6 +334,10 @@ export function RecipeReviewSection({ recipe, sampleReviews = [] }: { recipe: Re
   );
   const visitorReviews = useMemo(() => [...memberReviews, ...remoteReviews], [memberReviews, remoteReviews]);
   const aggregate = useMemo(() => summarizeReviews(memberReviews, remoteReviews), [memberReviews, remoteReviews]);
+  // Kotak ringkasan memakai agregat server selama data klien belum termuat,
+  // supaya tidak berkedip "Belum ada ulasan" sesaat di halaman yang sudah
+  // punya ulasan disetujui. Daftar ulasannya sendiri tetap dari klien.
+  const agregatTampil = !reviewsLoaded && aggregate.count === 0 && initialRating?.count ? initialRating : aggregate;
   const examples = useMemo(() => sampleReviews.filter((review) => review.sample !== false), [sampleReviews]);
 
   return (
@@ -334,15 +345,15 @@ export function RecipeReviewSection({ recipe, sampleReviews = [] }: { recipe: Re
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Rating baru muncul setelah ada ulasan yang disetujui editor." />
         <div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3">
-          {aggregate.count ? (
-            <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{aggregate.average.toFixed(1)}</span><div><Rating value={aggregate.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan</p></div></div>
+          {agregatTampil.count ? (
+            <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{agregatTampil.average.toFixed(1)}</span><div><Rating value={agregatTampil.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</p></div></div>
           ) : (
             <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#c6cdc3]">–</span><div><RecipeRating /><p className="mt-1 text-[10px] text-[#929a90]">Belum ada ulasan</p></div></div>
           )}
         </div>
       </div>
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(aggregate.count)} ulasan</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</span></div>
       <p className="text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung.</p>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
       {examples.length > 0 && (

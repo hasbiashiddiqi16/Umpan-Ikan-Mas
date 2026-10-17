@@ -19,6 +19,7 @@ import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
 import { getPublicRecipes } from "@/lib/public-recipes";
+import { getRecipeRatings } from "@/lib/review-summary";
 import { bacaDenganCobaUlang } from "@/lib/db-retry";
 import { formatCount } from "@/lib/utils";
 import { JsonLd } from "@/components/json-ld";
@@ -106,6 +107,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   // utamanya sudah ketemu: saat daftar publik gagal dibaca (basis data
   // gangguan), tampilkan katalog bawaan sebagai cadangan bagian ini.
   const relatedRecipes = await getPublicRecipes().catch(() => [...recipes]);
+  // Rating awal dari server agar kepala halaman langsung menampilkan angka
+  // ulasan yang benar (bukan "Belum ada ulasan" sesaat). Kegagalan membaca
+  // ringkasan tidak menggagalkan halaman: klien akan memuatnya sendiri.
+  const serverRatings = await getRecipeRatings().catch(() => undefined);
   // Hanya contoh ulasan berlabel yang dikirim ke halaman: bukan bukti komunitas.
   const sampleReviews = reviews.filter((review) => review.recipeSlug === recipe.slug && review.sample);
   const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
@@ -177,7 +182,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
               <div className="flex flex-wrap items-center gap-2"><span title="Resep dari katalog UMPAN MAS yang dikurasi redaksi — bukan kiriman pengunjung" className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#846621] (4.62:1 terburuk)">Racikan katalog</span><MatchOrPopularChip recipe={recipe} /></div>
               <h1 className="mt-4 break-words text-3xl font-black tracking-[-.04em] text-[#213426] sm:text-4xl lg:text-[2.75rem]">{recipe.name}</h1>
               <p className="mt-3 max-w-xl break-words text-sm leading-6 text-[#636d63] (4.62:1 terburuk)">{recipe.summary}</p>
-              <div className="mt-4 min-w-0"><LiveRecipeRating recipe={recipe} /></div>
+              <div className="mt-4 min-w-0"><LiveRecipeRating recipe={recipe} initialRating={serverRatings?.[recipe.slug]} /></div>
               <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{information.map(({ label, value, icon: Icon }) => <div key={label} className="min-w-0 rounded-xl border border-[#edf0eb] bg-[#fafbf8] p-3"><Icon size={16} className="text-[#5c705c] (4.59:1 terburuk)" /><p className="mt-2 text-[10px] font-bold uppercase tracking-[.1em] text-[#969d94]">{label}</p><p className="mt-1 break-words text-xs font-bold leading-5 text-[#405142]">{value}</p></div>)}</div>
               <div className="mt-6 flex flex-wrap gap-2"><Link href="#bahan" className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#1f3c29]"><Fish size={16} aria-hidden="true" /> Gunakan Resep Ini</Link><FavoriteButton recipeSlug={recipe.slug} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-xl border border-[#e2e8df] bg-white px-4 text-sm font-bold text-[#526352] transition hover:bg-[#f5f8f2]" /><Link href="#ulasan" className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-xl border border-[#e2e8df] bg-white px-4 text-sm font-bold text-[#526352] transition hover:bg-[#f5f8f2]"><PenLine size={15} aria-hidden="true" /> Tulis ulasan</Link></div>
               <p className="mt-4 flex min-w-0 items-start gap-2 text-xs leading-5 text-[#91988f]"><MapPin size={14} className="mt-0.5 shrink-0" />Cocok dicoba di beberapa daerah. Karakter air dan respons ikan dapat berbeda di tiap kolam.</p>
@@ -190,14 +195,14 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <section id="bahan" className="scroll-mt-24"><SectionHeader eyebrow="Siapkan sebelum berangkat" title="Bahan yang dibutuhkan" subtitle="Takaran untuk satu sesi. Sesuaikan kelembapan adonan sedikit demi sedikit." /><IngredientTable ingredients={recipe.ingredients} /></section>
             <section><SectionHeader eyebrow="Ikuti langkahnya" title="Cara meracik" subtitle="Persiapan sekitar 25 menit, termasuk waktu mengukus bila dibutuhkan." /><PreparationSteps steps={recipe.steps} /></section>
             <section><SectionHeader eyebrow="Catatan kondisi" title="Cocok untuk kondisi apa?" subtitle="Gunakan ini sebagai titik awal dan sesuaikan dengan karakter kolammu." /><ConditionTags suitable={recipe.suitable} notSuitable={recipe.notSuitable} /></section>
-            <RecipeReviewSection recipe={recipe} sampleReviews={sampleReviews} />
+            <RecipeReviewSection recipe={recipe} sampleReviews={sampleReviews} initialRating={serverRatings?.[recipe.slug]} />
           </div>
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
             <div className="min-w-0 rounded-[22px] border border-[#e1e8dd] bg-[#f4f8f1] p-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e6efe1] text-[#49694b]"><Sparkles size={19} /></span><h2 className="mt-4 text-lg font-extrabold text-[#304333]">Kenapa direkomendasikan?</h2><p className="mt-2 text-sm leading-6 text-[#616e62] (4.60:1 terburuk)">Skor kecocokan hanya menghitung kondisi yang kamu isi sendiri: air, cuaca, jenis pemancingan, provinsi, dan musim. Tanpa isian, tidak ada persentase yang ditampilkan. Ini panduan awal, bukan jaminan hasil.</p><div className="mt-4"><MatchOrPopularBox recipe={recipe} /></div></div>
             <div className="min-w-0 rounded-[22px] border border-[#e7eae4] bg-white p-5"><h2 className="text-sm font-extrabold text-[#304033]">Saran kecil sebelum mancing</h2><ul className="mt-4 space-y-3 text-sm leading-5 text-[#636d63] (4.62:1 terburuk)"><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Siapkan air tambahan untuk mengatur tekstur.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Gunakan essen sedikit dulu, lalu sesuaikan.</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#597059] (4.64:1 terburuk)" />Catat cuaca dan kondisi kolam saat mencoba.</li></ul></div>
           </aside>
         </div>
-        <section className="mt-16"><SectionHeader eyebrow="Mungkin juga cocok" title="Racikan lainnya" action={<Link href="/katalog" className="text-sm font-bold text-[#365b3b]">Lihat katalog <ArrowLeft className="ml-1 inline rotate-180" size={14} /></Link>} /><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{relatedRecipes.filter((item) => item.slug !== recipe.slug).slice(0, 3).map((item, index) => <RecipeCard key={item.slug} recipe={item} />)}</div></section>
+        <section className="mt-16"><SectionHeader eyebrow="Mungkin juga cocok" title="Racikan lainnya" action={<Link href="/katalog" className="text-sm font-bold text-[#365b3b]">Lihat katalog <ArrowLeft className="ml-1 inline rotate-180" size={14} /></Link>} /><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{relatedRecipes.filter((item) => item.slug !== recipe.slug).slice(0, 3).map((item, index) => <RecipeCard key={item.slug} recipe={item} initialRating={serverRatings?.[item.slug]} />)}</div></section>
       </main>
       <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-[#e5e9e2] bg-white/95 p-3 backdrop-blur-lg sm:px-6 lg:hidden"><Link href="#bahan" className="mx-auto flex min-h-12 max-w-xl items-center justify-center rounded-xl bg-[#294b34] text-sm font-bold text-white shadow-lg"><Fish size={16} aria-hidden="true" /> Gunakan Resep Ini</Link></div>
       <Footer />

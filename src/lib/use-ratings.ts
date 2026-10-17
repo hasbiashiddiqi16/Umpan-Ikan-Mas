@@ -13,6 +13,8 @@ import type { RecipeRatingMap } from "@/lib/review-summary";
  * "Belum ada rating" untuk kasus itu.
  */
 export type RatingSummaryState = {
+  /** Sudah benar-benar selesai memuat dari server (bukan nilai awal kosong). */
+  loaded: boolean;
   ratings: RecipeRatingMap;
   /** Rata-rata seluruh ulasan (nilai `C` pada rumus Bayesian); 0 bila belum ada ulasan. */
   globalAverage: number;
@@ -20,7 +22,7 @@ export type RatingSummaryState = {
   minReviews: number;
 };
 
-const RINGKASAN_KOSONG: RatingSummaryState = { ratings: {}, globalAverage: 0, minReviews: BAYESIAN_MIN_REVIEWS };
+const RINGKASAN_KOSONG: RatingSummaryState = { loaded: false, ratings: {}, globalAverage: 0, minReviews: BAYESIAN_MIN_REVIEWS };
 
 let cache: RatingSummaryState | null = null;
 let pending: Promise<RatingSummaryState> | null = null;
@@ -36,7 +38,7 @@ async function loadRatings(): Promise<RatingSummaryState> {
         // peta rating yang sama supaya rumusnya tetap satu.
         const terhitung = globalReviewAverage(ratings) ?? 0;
         const nilai = typeof body.global?.average === "number" && body.global.average > 0 ? body.global.average : terhitung;
-        cache = { ratings, globalAverage: nilai, minReviews: body.minReviews ?? BAYESIAN_MIN_REVIEWS };
+        cache = { loaded: true, ratings, globalAverage: nilai, minReviews: body.minReviews ?? BAYESIAN_MIN_REVIEWS };
         return cache;
       })
       .catch(() => RINGKASAN_KOSONG)
@@ -65,6 +67,22 @@ export function useRatingSummary(): RatingSummaryState {
 
 export function useRecipeRatings(): RecipeRatingMap {
   return useRatingSummary().ratings;
+}
+
+/**
+ * Rating satu resep, siap tampil sejak lukisan pertama.
+ *
+ * `initialRating` adalah nilai yang sudah dihitung server saat merender
+ * halaman (ISR), jadi kartu tidak lagi berkedip menampilkan
+ * "Belum ada rating" padahal ulasan sebenarnya ada. Begitu ringkasan
+ * klien selesai dimuat, nilai klien yang berwenang — termasuk bila
+ * hasilnya kosong (ulasan terhapus), nilai server tidak dipakai lagi.
+ * Bila pengambilan klien gagal, nilai server tetap dipakai.
+ */
+export function useRecipeRating(slug: string, initialRating?: { count: number; average: number }): { count: number; average: number } | undefined {
+  const { ratings, loaded } = useRatingSummary();
+  if (loaded) return ratings[slug];
+  return ratings[slug] ?? initialRating;
 }
 
 /** Menghapus simpanan sementara — dipakai pengujian. */

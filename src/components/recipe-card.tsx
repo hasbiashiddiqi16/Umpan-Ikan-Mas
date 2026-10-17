@@ -8,17 +8,17 @@ import type { Recipe } from "@/data/recipes";
 import { Badge, FishingTypeIcon, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
 import { MatchOrPopularBadge } from "@/components/match-or-popular";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
-import { useRecipeRatings } from "@/lib/use-ratings";
+import { useRecipeRating } from "@/lib/use-ratings";
 
 import { readLocalFavorites, toggleFavorite } from "@/lib/favorites-client";
 const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
 
 function getStoredFavorites(): string[] { return readLocalFavorites(); }
 
-export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?: number }) {
+export function RecipeCard({ recipe, matchScore, initialRating }: { recipe: Recipe; matchScore?: number; initialRating?: { count: number; average: number } }) {
   const [favorite, setFavorite] = useState(false);
   // Rating katalog (angka editorial) tidak pernah ditampilkan; hanya ulasan asli.
-  const ratings = useRecipeRatings();
+  const rating = useRecipeRating(recipe.slug, initialRating);
   const badge = recipeBadge(recipe);
   const tagJenis = fishingTypeTag(recipe);
 
@@ -59,7 +59,7 @@ export function RecipeCard({ recipe, matchScore }: { recipe: Recipe; matchScore?
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={`/resep/${recipe.slug}`} className="line-clamp-1 text-[17px] font-extrabold tracking-tight text-[#223528] transition hover:text-[#55734d]">{recipe.name}</Link>
-            <div className="mt-1.5 flex items-center gap-2"><RecipeRating rating={ratings[recipe.slug]} /></div>
+            <div className="mt-1.5 flex items-center gap-2"><RecipeRating rating={rating} /></div>
           </div>
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>

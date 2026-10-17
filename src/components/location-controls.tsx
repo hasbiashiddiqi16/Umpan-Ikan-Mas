@@ -115,7 +115,7 @@ export function LocationConsentBanner() {
   if (!hydrated || dismissed || consent !== null) return null;
 
   return (
-    <section aria-labelledby="location-consent-title" className="rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 sm:p-6">
+    <section aria-labelledby="location-consent-title" className="fixed inset-x-4 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-2xl rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 shadow-[0_20px_55px_rgba(23,43,32,.28)] sm:p-6 lg:bottom-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-[#3f6144]">
