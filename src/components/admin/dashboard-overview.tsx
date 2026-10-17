@@ -87,7 +87,7 @@ export function DashboardOverview() {
         <MetricCard title="Kunjungan halaman" value={data?.views ?? 0} description={data?.change === null || data?.change === undefined ? "Belum ada periode pembanding" : "vs. 30 hari sebelumnya"} icon={Eye} tone="bg-[#edf3e9] text-[#52724f]" change={data?.change} />
         <MetricCard title="Total konten CMS" value={data?.contentTotal ?? 0} description="Resep yang dikelola" icon={FileText} tone="bg-[#f2eee3] text-[#7b6738] (4.69:1 terburuk)" />
         <MetricCard title="Konten tayang" value={data?.published ?? 0} description="Terlihat di katalog publik" icon={Send} tone="bg-[#e9f1ee] text-[#4a7367] (4.57:1 terburuk)" />
-        <MetricCard title="Ulasan siap tampil" value={data?.approvedReviews ?? 0} description={data?.pendingReviews ? `${numberFormat.format(data.pendingReviews)} perlu tinjauan editor` : "Termasuk ulasan katalog tersinkron"} icon={MessageSquareText} tone="bg-[#f7ece7] text-[#915f47] (4.58:1 terburuk)" />
+        <MetricCard title="Ulasan siap tampil" value={data?.approvedReviews ?? 0} description={data?.pendingReviews ? `${numberFormat.format(data.pendingReviews)} ditahan sistem — perlu keputusanmu` : "Termasuk ulasan katalog tersinkron"} icon={MessageSquareText} tone="bg-[#f7ece7] text-[#915f47] (4.58:1 terburuk)" />
       </div>
 
       <p className="mt-4 rounded-xl border border-[#e7ebe5] bg-white px-4 py-3 text-[10px] leading-5 text-[#636d62] (4.63:1 terburuk)">
