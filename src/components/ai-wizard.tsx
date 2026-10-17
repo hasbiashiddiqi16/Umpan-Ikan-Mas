@@ -10,7 +10,7 @@ import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 import { reviews, type RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
-import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
 import { rankExpertRecipes } from "@/lib/expert-system";
 import { RecommendationCard } from "@/components/cards";
 import { useRecipeRatings } from "@/lib/use-ratings";
@@ -66,7 +66,7 @@ export function AIWizard({ initialRecipes, initialManagedSlugs }: { initialRecip
   });
 
   useEffect(() => {
-    const syncReviews = () => setMemberReviews(readCommunityReviews());
+    const syncReviews = () => setMemberReviews(readCommunityReviews().map(sebagaiUlasanPublik));
     syncReviews();
     const controller = new AbortController();
     void fetch("/api/public/recipes", { cache: "no-store", signal: controller.signal })

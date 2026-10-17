@@ -145,3 +145,58 @@ export async function reviewDeviceHeaders(): Promise<Record<string, string>> {
   const token = await ensureReviewDeviceToken();
   return token ? { "x-review-device": token } : {};
 }
+
+/** Kunci penyimpanan daftar ulasan yang sudah dilaporkan dari perangkat ini. */
+const LAPORAN_TERKIRIM_KEY = "umpan-mas-laporan-ulasan-v1";
+
+export type HasilLaporan = { ok: boolean; duplicate?: boolean; ditahan?: boolean; error?: string };
+
+/** Id ulasan yang sudah pernah dilaporkan dari peramban ini (untuk menyembunyikan tombolnya). */
+export function bacaLaporanTerkirim(): number[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(LAPORAN_TERKIRIM_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === "number" && Number.isSafeInteger(id)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function tandaiLaporanTerkirim(reviewId: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    const ids = new Set(bacaLaporanTerkirim());
+    ids.add(reviewId);
+    window.localStorage.setItem(LAPORAN_TERKIRIM_KEY, JSON.stringify([...ids].slice(-200)));
+  } catch {
+    // Penyimpanan tidak tersedia; status terkirim cukup berlaku sesi ini.
+  }
+}
+
+/** Mengirim laporan terhadap ulasan yang tampil; token perangkatnya sama seperti pengiriman ulasan. */
+export async function laporkanUlasan(reviewId: number, reason: string): Promise<HasilLaporan> {
+  const attempt = async (token: string | null) => {
+    const response = await fetch("/api/public/reviews/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { "x-review-device": token } : {}) },
+      body: JSON.stringify({ reviewId, reason }),
+    });
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await response.json()) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+    return { response, body };
+  };
+  try {
+    let { response, body } = await attempt(await ensureReviewDeviceToken());
+    if (response.status === 400 && body.code === "device") {
+      ({ response, body } = await attempt(await ensureReviewDeviceToken(true)));
+    }
+    if (response.ok) return { ok: true, duplicate: body.duplicate === true, ditahan: body.ditahan === true };
+    return { ok: false, error: typeof body.error === "string" ? body.error : "Laporan belum bisa dikirim. Coba lagi sebentar lagi." };
+  } catch {
+    return { ok: false, error: "Laporan belum bisa dikirim. Coba lagi sebentar lagi." };
+  }
+}

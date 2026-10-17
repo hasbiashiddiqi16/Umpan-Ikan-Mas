@@ -98,6 +98,28 @@ export const cmsReviews = pgTable("cms_reviews", {
 ]);
 
 /**
+ * Laporan pengunjung terhadap ulasan yang sudah tampil publik. Satu laporan
+ * per perangkat per ulasan; laporan terbuka ditinjau admin di Studio →
+ * Moderasi Ulasan, dan tiga pelapor berbeda menahan ulasan itu otomatis.
+ */
+export const cmsReviewReports = pgTable("cms_review_reports", {
+  id: serial("id").primaryKey(),
+  reviewId: integer("review_id").notNull(),
+  /** Alasan pilihan pelapor: spam | kasar | tidak-relevan | lainnya. */
+  reason: varchar("reason", { length: 30 }).notNull(),
+  /** Id perangkat anonim pelapor (token yang sama dengan pengiriman ulasan). */
+  device: varchar("device", { length: 64 }),
+  ipHash: varchar("ip_hash", { length: 64 }),
+  /** open = menunggu tindak lanjut; selesai = sudah ditindak; diabaikan = ditutup tanpa tindakan. */
+  status: varchar("status", { length: 20 }).notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("cms_review_reports_review_device_unique").on(table.reviewId, table.device),
+  index("cms_review_reports_review_idx").on(table.reviewId),
+  index("cms_review_reports_status_idx").on(table.status),
+]);
+
+/**
  * Resep favorit milik pengguna terdaftar. Favorit pengunjung anonim tetap
  * disimpan lokal di perangkat (localStorage); saat masuk, keduanya digabung
  * dan tabel ini menjadi sumber yang tersinkron antarperangkat.

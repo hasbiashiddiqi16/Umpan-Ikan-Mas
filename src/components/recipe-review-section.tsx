@@ -6,7 +6,7 @@ import { WATER_BODIES, type Recipe } from "@/data/recipes";
 import { CATCH_DETAILS_HINT, ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
-import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, type MemberReview } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, sebagaiUlasanPublik, type MemberReview } from "@/lib/community-storage";
 import { postReviewToServer, reviewDeviceHeaders } from "@/lib/review-client";
 import { REVIEW_HONEYPOT_FIELD } from "@/lib/review-guard-constants";
 import { TurnstileWidget } from "@/components/turnstile-widget";
@@ -334,7 +334,7 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
     () => approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment)),
     [approvedReviews, memberReviews],
   );
-  const visitorReviews = useMemo(() => [...memberReviews, ...remoteReviews], [memberReviews, remoteReviews]);
+  const visitorReviews = useMemo(() => [...memberReviews.map(sebagaiUlasanPublik), ...remoteReviews], [memberReviews, remoteReviews]);
   const aggregate = useMemo(() => summarizeReviews(memberReviews, remoteReviews), [memberReviews, remoteReviews]);
   // Kotak ringkasan memakai agregat server selama data klien belum termuat,
   // supaya tidak berkedip "Belum ada ulasan" sesaat di halaman yang sudah
@@ -358,10 +358,10 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</span></div>
       <p className="text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah tampil publik; ulasan yang sedang diperiksa dan contoh berlabel tidak ikut dihitung.</p>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
-      {examples.length > 0 && (
+      {reviewsLoaded && visitorReviews.length === 0 && examples.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div>
-          <p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{examples.length} contoh di bawah dibuat tim redaksi sebagai gambaran format ulasan. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan.</p>
+          <p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{examples.length} contoh di bawah dibuat tim redaksi sebagai gambaran format ulasan. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan. Begitu ada ulasan pengunjung untuk racikan ini, contoh ini tidak lagi ditampilkan.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((review, index) => <ReviewCard key={`contoh-${review.seedKey ?? index}`} review={review} />)}</div>
         </div>
       )}

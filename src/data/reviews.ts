@@ -15,6 +15,8 @@ export type RecipeReview = {
    * yang ditampilkan berlabel "Menunggu pemeriksaan"; ulasan dari server
    * selalu yang sudah tampil publik.
    */
+  /** ID baris server untuk ulasan publik (dipakai tombol Laporkan). */
+  id?: number;
   status?: "pending" | "approved";
   name: string;
   location: string;

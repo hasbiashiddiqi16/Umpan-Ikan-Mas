@@ -10,6 +10,7 @@ import {
   type AppearanceState,
   type PopupFeature,
   type PopupIcon,
+  type PopupStat,
 } from "@/lib/appearance";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { isPromoForced, markPromoSeen, nextPromoDueAt, shouldShowPromo } from "@/lib/promo-storage";
@@ -70,6 +71,8 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
   const [forced, setForced] = useState(false);
   const [appearance, setAppearance] = useState<AppearanceState | null>(override ? mergeAppearance(override) : null);
   const [settingsSettled, setSettingsSettled] = useState(Boolean(override) || preview);
+  // Angka asli dari server; selama belum tiba, angka tersimpan dipakai.
+  const [statistikSitus, setStatistikSitus] = useState<PopupStat[] | null>(null);
   const [maxHeight, setMaxHeight] = useState<number>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -100,9 +103,12 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
     let active = true;
     fetch("/api/appearance", { cache: "force-cache" })
       .then((response) => (response.ok ? response.json() : null))
-      .then((data: AppearanceState | null) => {
+      .then((data: (AppearanceState & { statistikSitus?: PopupStat[] | null }) | null) => {
         if (!active) return;
-        if (data) setAppearance(mergeAppearance(data));
+        if (data) {
+          setAppearance(mergeAppearance(data));
+          if (Array.isArray(data.statistikSitus) && data.statistikSitus.length > 0) setStatistikSitus(data.statistikSitus);
+        }
         setSettingsSettled(true);
       })
       .catch(() => {
@@ -221,8 +227,12 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
 
   if (!open || !settingsSettled || (!preview && !forced && !settings.enabled)) return null;
 
-  const posterMode = settings.mode === "poster";
-  const deskripsi = `${settings.judul} ${settings.ringkasan} ${settings.statistik.map((stat) => `${stat.value} ${stat.label}`).join(", ")}.`;
+  // Angka asli dari server selalu tampil sebagai teks: statistik tidak boleh
+  // membeku di dalam gambar poster. Mode poster (warisan) hanya tampil bila
+  // server tidak mengirim statistik.
+  const statistikTampil = statistikSitus ?? settings.statistik;
+  const posterMode = statistikSitus ? false : settings.mode === "poster";
+  const deskripsi = `${settings.judul} ${settings.ringkasan} ${statistikTampil.map((stat) => `${stat.value} ${stat.label}`).join(", ")}.`;
 
   return (
     <div
@@ -275,7 +285,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
           >
             <Image src={settings.media.latar.url} alt="" fill loading="eager" sizes="430px" className="object-cover object-center" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,28,19,.72)_0%,rgba(11,28,19,.62)_42%,rgba(11,28,19,.88)_100%)]" />
-            <PopupText settings={settings} compact={false} />
+            <PopupText settings={settings} statistik={statistikTampil} compact={false} />
           </div>
         )}
 
@@ -294,7 +304,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
  * sehingga tampilan tetap proporsional di semua ukuran layar dan tidak pernah
  * perlu digulir. `compact` dipakai kartu sempit di ponsel.
  */
-function PopupText({ settings, compact }: { settings: AppearanceState["popup"]; compact: boolean }) {
+function PopupText({ settings, statistik, compact }: { settings: AppearanceState["popup"]; statistik: PopupStat[]; compact: boolean }) {
   const pad = compact ? "6.5cqw" : "5.4cqw";
   return (
     <div className="absolute inset-0 flex flex-col justify-center" style={{ padding: pad, gap: "2.6cqw" }}>
@@ -314,8 +324,8 @@ function PopupText({ settings, compact }: { settings: AppearanceState["popup"]; 
         {settings.ringkasan}
       </p>
 
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${settings.statistik.length}, minmax(0, 1fr))`, gap: "2cqw" }}>
-        {settings.statistik.map((stat) => (
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${statistik.length}, minmax(0, 1fr))`, gap: "2cqw" }}>
+        {statistik.map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-white/15 bg-white/10 text-center" style={{ padding: "2.2cqw 1.6cqw" }}>
             <p className="font-black leading-none text-white" style={{ fontSize: "4.6cqw" }}>{stat.value}</p>
             <p className="font-semibold leading-tight text-white/75" style={{ fontSize: "2.1cqw", marginTop: "1.2cqw" }}>{stat.label}</p>

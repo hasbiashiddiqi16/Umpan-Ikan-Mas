@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fishingReports } from "@/data/fishingReports";
 import { reviews } from "@/data/reviews";
-import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews } from "@/lib/community-storage";
+import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
 import { CommunityCard } from "@/components/cards";
 import { Badge } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
@@ -60,7 +60,7 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   // pengirim sendiri yang masih ditahan, tampil berlabel menunggu.
   const memberOnlyReviews = useMemo(() => memberReviews.filter((local) => !approvedReviews.some((remote) => remote.name === local.name && remote.comment === local.comment)), [approvedReviews, memberReviews]);
   // Angka dan daftar ulasan hanya dari kiriman pengunjung; contoh dipisah dan diberi label.
-  const allReviews = useMemo(() => [...memberOnlyReviews, ...approvedReviews], [memberOnlyReviews, approvedReviews]);
+  const allReviews = useMemo(() => [...memberOnlyReviews.map(sebagaiUlasanPublik), ...approvedReviews], [memberOnlyReviews, approvedReviews]);
   const visibleReviews = useMemo(() => allReviews.slice(0, reviewLimit), [allReviews, reviewLimit]);
   const sampleReviews = useMemo(() => reviews.filter((review) => review.sample), []);
   const sampleShowcase = useMemo(() => sampleReviews.slice(0, 3), [sampleReviews]);

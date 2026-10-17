@@ -1,4 +1,5 @@
 import { Check, Clock3, Minus, X } from "lucide-react";
+import { ReviewReportButton } from "@/components/review-report-button";
 import { OPTIONAL_ADDITIONS_NOTE, type Ingredient } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { Badge, CatchIcon, FishingTypeIcon, Rating, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
@@ -131,6 +132,7 @@ export function ConditionTags({ suitable, notSuitable }: { suitable: string[]; n
 }
 
 export function ReviewCard({ review }: { review: RecipeReview }) {
+  const idLaporan = typeof review.id === "number" ? review.id : (review as { serverId?: number }).serverId;
   // Ulasan contoh wajib berlabel supaya tidak tertukar dengan kiriman pengunjung.
   return (
     <article className="flex h-full min-w-0 flex-col rounded-2xl border border-[#e7eae4] bg-white p-4 sm:p-5">
@@ -143,6 +145,7 @@ export function ReviewCard({ review }: { review: RecipeReview }) {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}><WeatherIcon weather={review.weather} /> {review.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}><WaterIcon /> {review.water}</Badge>{review.waterBody && <Badge tone="cream" className={cardMetaBadgeClass}><WaterBodyIcon /> {review.waterBody}</Badge>}{review.fishingType && <Badge tone="cream" className={cardMetaBadgeClass}><FishingTypeIcon /> {review.fishingType}</Badge>}{catchBadges(review).map((badge) => <Badge key={badge.label} tone="cream" className={cardMetaBadgeClass}><CatchIcon icon={badge.icon} /> {badge.label}</Badge>)}</div>
       <p className="mt-4 break-words text-sm leading-6 text-[#626e62] (4.59:1 terburuk)">“{review.comment}”</p>
+      {idLaporan && !review.sample && review.status !== "pending" ? <ReviewReportButton reviewId={idLaporan} /> : null}
     </article>
   );
 }
