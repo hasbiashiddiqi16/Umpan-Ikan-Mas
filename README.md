@@ -191,6 +191,8 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 
 **Komunitas kini menjadi tab di katalog.** Halaman mandiri `/komunitas` dilebur menjadi tab **Cerita & Ulasan Komunitas** di `/katalog` (`CommunityView` dirender tanpa hero saat menyemat di tab), dan `/komunitas` menjawab pengalihan permanen 308 ke `/katalog?tab=komunitas` — tautan lama dan hasil pencarian tidak mati, sitemap tidak lagi memuat `/komunitas`, dan menu desktop tidak lagi memisahkan Komunitas dari Katalog. Isi dan perilakunya (cerita hasil mancing, ulasan disetujui, contoh berlabel) tidak berubah.
 
+**Sub-tab Racikan adalah etalase kiriman warga.** Resep terbit yang dibagikan pengguna lewat `/bagikan` tampil di sana sebagai kartu racikan komunitas (foto, nama pengirim, tanggal bagikan, tautan ke detail resep), ditandai penanda `dariKomunitas` dari API resep publik — ID pemilik akun tidak pernah dikirim ke publik. Kartu laporan contoh hanya menjadi pengisi sub-tab itu selama belum ada kiriman warga, sama seperti blok contoh ulasan yang mundur begitu ulasan asli masuk.
+
 ## Kejujuran data ulasan dan laporan
 
 Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
