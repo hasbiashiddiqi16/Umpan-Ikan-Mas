@@ -1,7 +1,9 @@
-> 0.5%
-last 2 versions
-Firefox ESR
-ios_saf 12
-safari 12
-not op_mini all
-not dead
+# Target peramban modern: situs memakai container query (cqw) dan
+# Tailwind v4, yang memang butuh Chrome 105+, Safari 16+, Firefox 110+.
+# Target lama (Safari/iOS 12) memaksa polyfill lawas ikut dikirim.
+Chrome >= 105
+Edge >= 105
+Firefox >= 110
+Safari >= 16
+iOS >= 16
+Samsung >= 20
