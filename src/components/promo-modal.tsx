@@ -70,6 +70,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
   const [forced, setForced] = useState(false);
   const [appearance, setAppearance] = useState<AppearanceState | null>(override ? mergeAppearance(override) : null);
   const [settingsSettled, setSettingsSettled] = useState(Boolean(override) || preview);
+  const [posterTerjadwal, setPosterTerjadwal] = useState(false);
   const [maxHeight, setMaxHeight] = useState<number>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -112,6 +113,10 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
   }, [override]);
 
   const settings = mergeAppearance(appearance).popup;
+  // Props poster per lebar layar (untuk <picture> di bawah): hanya varian
+  // yang cocok dengan layar yang diunduh; juga dipakai tautan preload.
+  const { props: posterMobile } = getImageProps({ src: settings.media.mobile.url, width: 860, height: 1280, alt: "", sizes: "(max-width: 640px) 92vw, 430px" });
+  const { props: posterDesktop } = getImageProps({ src: settings.media.desktop.url, width: 1640, height: 1040, alt: "", sizes: "(max-width: 900px) 92vw, 820px" });
 
   // Kapan popup boleh tampil:
   // - kunjungan pertama, atau sesi peramban baru (mis. tab ditutup paksa), atau
@@ -148,6 +153,9 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
 
       delayTimer = window.setInterval(() => {
         if (cancelled) return;
+        // Popup akan tampil begitu halaman tenang: siapkan poster dari
+        // sekarang agar dialog langsung bergambar saat terbuka (menekan LCP).
+        setPosterTerjadwal(true);
         const waitedLongEnough = Date.now() - startedAt >= DELAY_BEFORE_OPEN_MS;
         const userIsIdle = Date.now() - lastInteractionAt >= IDLE_BEFORE_OPEN_MS;
         if (!waitedLongEnough || !userIsIdle) return;
@@ -174,6 +182,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
 
     return () => {
       cancelled = true;
+      setPosterTerjadwal(false);
       if (delayTimer !== undefined) window.clearInterval(delayTimer);
       if (dueTimer !== undefined) window.clearTimeout(dueTimer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -219,14 +228,23 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
     };
   }, [close, open, settingsSettled]);
 
-  if (!open || !settingsSettled || (!preview && !forced && !settings.enabled)) return null;
+  if (!open || !settingsSettled || (!preview && !forced && !settings.enabled)) {
+    // Popup belum tampil tetapi sudah terjadwal dalam mode poster: muat
+    // poster lebih dulu lewat preload (hanya varian yang cocok dengan lebar
+    // layar yang diunduh) agar dialog langsung tampil utuh saat terbuka.
+    if (!open && posterTerjadwal && settingsSettled && settings.enabled && settings.mode === "poster") {
+      return (
+        <>
+          <link rel="preload" as="image" media="(max-width: 639px)" imageSrcSet={posterMobile.srcSet} imageSizes={posterMobile.sizes} fetchPriority="high" />
+          <link rel="preload" as="image" media="(min-width: 640px)" imageSrcSet={posterDesktop.srcSet} imageSizes={posterDesktop.sizes} fetchPriority="high" />
+        </>
+      );
+    }
+    return null;
+  }
 
   const posterMode = settings.mode === "poster";
   const deskripsi = `${settings.judul} ${settings.ringkasan} ${settings.statistik.map((stat) => `${stat.value} ${stat.label}`).join(", ")}.`;
-  // Poster diarahkan per lebar layar (<picture>): peramban hanya mengunduh
-  // varian yang cocok, bukan poster ponsel dan desktop sekaligus.
-  const { props: posterMobile } = getImageProps({ src: settings.media.mobile.url, width: 860, height: 1280, alt: "", sizes: "(max-width: 640px) 92vw, 430px" });
-  const { props: posterDesktop } = getImageProps({ src: settings.media.desktop.url, width: 1640, height: 1040, alt: "", sizes: "(max-width: 900px) 92vw, 820px" });
 
   return (
     <div
@@ -252,7 +270,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
           type="button"
           onClick={close}
           aria-label="Tutup sambutan"
-          className="absolute right-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
+          className="absolute right-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-full bg-white/85 text-[#3c4b3e] shadow-sm backdrop-blur transition-[background-color] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-5 sm:top-5"
         >
           <X size={18} />
         </button>
