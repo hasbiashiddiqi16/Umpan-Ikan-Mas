@@ -85,6 +85,3 @@ export function catchBadges(details: CatchDetails): { icon: CatchBadgeIcon; labe
   return badges;
 }
 
-/** Kalimat penjelas singkat untuk formulir ulasan dan halaman resep. */
-export const CATCH_DETAILS_HINT =
-  "Durasi sesi dan jumlah joran membuat angka tangkapan bisa dibandingkan: 8 ekor dalam 8 jam tidak sama artinya dengan 8 ekor dalam 2 jam.";
