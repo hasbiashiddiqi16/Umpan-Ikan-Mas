@@ -8,7 +8,7 @@ import { recipes } from "@/data/recipes";
 import { cmsRecipeToRecipe, mergeRecipesBySlug, type CmsRecipeRecord } from "@/lib/cms";
 import { createClient } from "@/utils/supabase/client";
 import { supabasePublicConfig } from "@/utils/supabase/env";
-import { readLocalFavorites, writeLocalFavorites, FAVORITES_EVENT } from "@/lib/favorites-client";
+import { readLocalFavorites, syncFavoritesWithAccount, writeLocalFavorites, FAVORITES_EVENT } from "@/lib/favorites-client";
 import { RecipeCard } from "@/components/recipe-card";
 import { SectionHeader } from "@/components/shared";
 
@@ -42,6 +42,8 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
   const [memuat, setMemuat] = useState(true);
   const [galat, setGalat] = useState("");
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+  const [favoritAkunSiap, setFavoritAkunSiap] = useState(false);
+  const [resepPublikSiap, setResepPublikSiap] = useState(false);
   const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>([]);
   const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
 
@@ -72,10 +74,18 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
     return () => { window.removeEventListener(FAVORITES_EVENT, update); window.removeEventListener("storage", update); };
   }, []);
 
+  // Halaman ini khusus pengguna masuk: daftar akun adalah sumber
+  // kebenaran, perangkat hanya mencerminkannya.
+  useEffect(() => {
+    let aktif = true;
+    void syncFavoritesWithAccount().then((slugs) => { if (!aktif) return; setFavoriteSlugs(slugs); setFavoritAkunSiap(true); });
+    return () => { aktif = false; };
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/public/recipes", { cache: "no-store", signal: controller.signal })
-      .then(async (r) => r.ok ? r.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] })
+      .then(async (r) => { if (r.ok) setResepPublikSiap(true); return r.ok ? r.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] }; })
       .then((body) => { setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record))); setShadowedSlugs(body.shadowedSlugs ?? []); })
       .catch(() => undefined);
     return () => controller.abort();
@@ -86,6 +96,18 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
     const all = mergeRecipesBySlug(recipes.filter((r) => !managed.has(r.slug)), publishedRecipes);
     return all.filter((r) => favoriteSlugs.includes(r.slug));
   }, [favoriteSlugs, publishedRecipes, shadowedSlugs]);
+
+  // Slug favorit yang resepnya sudah tidak tampil publik (dihapus atau
+  // diarsipkan) dibersihkan dari akun dan perangkat, agar hitungan tab
+  // selalu sama dengan isi daftarnya.
+  useEffect(() => {
+    if (!resepPublikSiap || !favoritAkunSiap || favoriteSlugs.length === 0) return;
+    const tampil = new Set(savedRecipes.map((r) => r.slug));
+    const bersih = favoriteSlugs.filter((slug) => tampil.has(slug));
+    if (bersih.length === favoriteSlugs.length) return;
+    writeLocalFavorites(bersih);
+    void fetch("/api/user/favorites", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slugs: bersih }) }).catch(() => undefined);
+  }, [resepPublikSiap, favoritAkunSiap, favoriteSlugs, savedRecipes]);
 
   async function simpanNama() {
     const bersih = namaDraf.trim();
@@ -105,6 +127,7 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
       if (supabasePublicConfig()) { const supabase = createClient(); await supabase.auth.signOut(); }
     } catch { /* tetap keluar ke beranda */ }
     try { sessionStorage.removeItem("umpan-mas-favorites-synced"); } catch { /* abaikan */ }
+    writeLocalFavorites([]);
     router.replace("/");
     router.refresh();
   }
@@ -154,7 +177,7 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
       <div className="mt-8 flex flex-wrap gap-2" role="group" aria-label="Isi akun">
         {tombolTab("resep", "Resep Saya", resepSaya.length, BookOpen)}
         {tombolTab("ulasan", "Ulasan Saya", ulasanSaya.length, MessageSquareText)}
-        {tombolTab("favorit", "Favorit", favoriteSlugs.length, Heart)}
+        {tombolTab("favorit", "Favorit", savedRecipes.length, Heart)}
       </div>
 
       {memuat ? (
