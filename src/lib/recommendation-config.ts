@@ -80,10 +80,6 @@ export const MATCH_WEIGHTS_TOTAL = Object.values(MATCH_WEIGHTS).reduce((sum, bob
 /** Apakah bobot yang ada sekarang masih seimbang (jumlahnya 100)? */
 export const MATCH_WEIGHTS_BALANCED = MATCH_WEIGHTS_TOTAL === 100;
 
-/** Kalimat jujur untuk pengunjung: dari mana skor ini datang dan seberapa kuat buktinya. */
-export const MATCH_WEIGHTS_NOTE =
-  "Bobot ini masih dugaan awal, belum diuji data. Kami evaluasi dengan hit-rate@3 (apakah resep yang berhasil masuk 3 teratas) begitu ulasan cukup, lalu menyesuaikannya.";
-
 /**
  * Aturan evaluasi yang disepakati: sebuah ulasan dianggap **berhasil** kalau
  * rating ≥ 4 (sinyal utama) **dan** hasil tangkapannya tinggi; yang dihitung
