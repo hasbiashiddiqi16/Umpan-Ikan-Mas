@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, Heart, LogIn, LogOut, MessageSquareText, Plus, UserRound, UserRoundPlus } from "lucide-react";
 import { supabasePublicConfig } from "@/utils/supabase/env";
-import { syncFavoritesOnce } from "@/lib/favorites-client";
+import { syncFavoritesOnce, writeLocalFavorites } from "@/lib/favorites-client";
 
 type Sesi = { nama: string; email: string } | null;
 
@@ -78,6 +78,7 @@ export function AccountNav() {
       if (supabasePublicConfig()) { const { createClient } = await import("@/utils/supabase/client"); await createClient().auth.signOut(); }
     } catch { /* tetap kembali ke beranda */ }
     try { sessionStorage.removeItem("umpan-mas-favorites-synced"); } catch { /* abaikan */ }
+    writeLocalFavorites([]);
     router.replace("/");
     router.refresh();
   }
