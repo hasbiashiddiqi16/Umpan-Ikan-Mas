@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, MessageSquareText, Send, Star } from "lucide-react";
 import { WATER_BODIES, type Recipe } from "@/data/recipes";
-import { CATCH_DETAILS_HINT, ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
+import { ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import type { RecipeReview } from "@/data/reviews";
 import { provinces } from "@/data/provinces";
 import { COMMUNITY_REVIEWS_EVENT, markCommunityReviewSync, readCommunityReviews, readUnsyncedReviews, removeCommunityReviews, saveCommunityReview, sebagaiUlasanPublik, type MemberReview } from "@/lib/community-storage";
@@ -161,12 +161,12 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
           <div className="relative"><input aria-label="Jumlah ikan" className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="0" max="999" value={catchCount} onChange={(event) => setCatchCount(event.target.value)} placeholder="Jumlah ikan" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">ekor</span></div>
           <div className="relative"><input aria-label="Durasi sesi dalam jam" className={`${inputClass} pr-14`} type="number" inputMode="decimal" min="0.5" max="24" step="0.5" value={sessionHours} onChange={(event) => setSessionHours(event.target.value)} placeholder="Durasi sesi" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">jam</span></div>
           <div className="relative"><input aria-label="Jumlah joran" className={`${inputClass} pr-16`} type="number" inputMode="numeric" min="1" max="10" value={rodCount} onChange={(event) => setRodCount(event.target.value)} placeholder="Jumlah joran" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9aa198]">joran</span></div>
-        </div><span className="text-[10px] font-medium leading-5 text-[#9aa198]">{CATCH_DETAILS_HINT}</span></div>
+        </div></div>
         <label className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) sm:col-span-2">Ceritakan pengalaman<textarea className="min-h-28 min-w-0 w-full resize-y rounded-xl border border-[#e4e9e2] bg-white px-3.5 py-3 text-sm leading-6 text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10" value={comment} onChange={(event) => setComment(event.target.value)} minLength={12} maxLength={500} placeholder="Kondisi kolam, cara meracik, dan bagaimana hasilnya?" required /><span className="text-right text-[10px] font-medium text-[#9aa198]">{comment.length}/500</span></label>
       </div>
       <div className="hidden" aria-hidden="true"><label>Website<input type="text" name={REVIEW_HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" value={honeypot} onChange={(event) => setHoneypot(event.target.value)} /></label></div>
       <TurnstileWidget onToken={onTurnstileToken} />
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-[11px] leading-5 text-[#929a90]">Tanpa akun. Ulasan dikirim ke server, dibagikan ke semua pengunjung setelah disetujui editor, dan dibatasi satu ulasan per resep per perangkat dalam 24 jam.</p><button type="submit" disabled={submitting} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60"><Send size={15} /> {submitting ? "Mengirim…" : "Kirim ulasan"}</button></div>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><button type="submit" disabled={submitting} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60"><Send size={15} /> {submitting ? "Mengirim…" : "Kirim ulasan"}</button></div>
       {error && <p role="alert" className="mt-3 rounded-lg bg-[#fbefeb] px-3 py-2 text-xs font-semibold text-[#9b513f]">{error}</p>}
       {notice && <p role="status" className="mt-3 flex max-w-full items-start gap-2 rounded-lg bg-[#eef5eb] px-3 py-2 text-xs font-semibold leading-5 text-[#426641]"><CheckCircle2 size={15} className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">{notice}</span></p>}
     </form>
@@ -356,7 +356,6 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
       </div>
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</span></div>
-      <p className="text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Satu ulasan berarti satu pemancing yang mencoba racikan ini. Angka rating dan jumlah di halaman ini hanya dihitung dari ulasan pengunjung yang sudah tampil publik; ulasan yang sedang diperiksa dan contoh berlabel tidak ikut dihitung.</p>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
       {reviewsLoaded && visitorReviews.length === 0 && examples.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">
