@@ -7,7 +7,7 @@ import { getPublicRecipeData } from "@/lib/public-recipes";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Sistem Pakar Racikan Umpan Ikan Mas",
-  description: "Racik umpan ikan mas dari bahan yang tersedia dengan panduan kondisi kolam, fungsi bahan, dan resep komunitas.",
+  description: "Pilih bahan yang tersedia, lalu terima contoh komposisi 100 g, kondisi dominan dari resep terdekat, dan resep yang paling mendekati pilihanmu.",
   path: "/sistem-pakar",
 });
 

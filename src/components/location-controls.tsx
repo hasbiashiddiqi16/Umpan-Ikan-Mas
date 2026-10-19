@@ -124,7 +124,7 @@ export function LocationConsentBanner() {
           <div className="max-w-xl">
             <h2 id="location-consent-title" className="text-base font-extrabold text-[#2c3f30] sm:text-lg">Izinkan akses lokasi untuk isi form otomatis?</h2>
             <p className="mt-1.5 text-sm leading-6 text-[#5f6d60]">
-              Dengan izinmu, kolom <strong className="font-bold">provinsi</strong> dan <strong className="font-bold">kota</strong> pada form pencarian, AI Umpan, Sistem Pakar, filter katalog, dan form ulasan langsung menyesuaikan lokasi mancingmu.
+              Dengan izinmu, kolom <strong className="font-bold">provinsi</strong> dan <strong className="font-bold">kota</strong> pada form pencarian, AI Umpan, filter katalog, dan form ulasan langsung menyesuaikan lokasi mancingmu.
             </p>
             <p className="mt-2 inline-flex items-start gap-1.5 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">
               <ShieldCheck size={14} className="mt-0.5 shrink-0" />
