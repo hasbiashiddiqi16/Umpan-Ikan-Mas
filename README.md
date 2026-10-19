@@ -234,7 +234,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
 
-**Sistem pakar & AI Umpan.** Di Sistem Pakar, publik hanya memilih bahan (Langkah 2); Langkah 1 adalah output berisi contoh komposisi 100 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Sistem Pakar memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan AI Umpan tetap memakai konteks yang dipilih pengunjung. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
+**Sistem pakar & AI Umpan.** Di Sistem Pakar, publik hanya memilih bahan sebagai Langkah 1; hasil rekomendasi berisi contoh komposisi 100 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Sistem Pakar memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan AI Umpan tetap memakai konteks yang dipilih pengunjung. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
 
 ## Peringkat rating memakai rata-rata Bayesian
 
