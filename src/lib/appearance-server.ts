@@ -24,7 +24,7 @@ type MediaRow = { key: string; updatedAt: Date };
 function toInfo(key: MediaKey, row?: MediaRow): MediaInfo {
   return {
     key,
-    url: mediaUrl(key),
+    url: mediaUrl(key, row?.updatedAt ?? null),
     custom: Boolean(row),
     updatedAt: row ? row.updatedAt.toISOString() : null,
   };
@@ -77,11 +77,13 @@ export async function readMediaFile(key: string): Promise<{ mimeType: string; by
   return { mimeType: row.mimeType, bytes };
 }
 
-export async function saveMediaFile(key: string, mimeType: string, bytes: Buffer): Promise<void> {
+export async function saveMediaFile(key: string, mimeType: string, bytes: Buffer): Promise<Date> {
   const data = bytes.toString("base64");
+  const updatedAt = new Date();
   await db.insert(cmsMedia)
-    .values({ key, mimeType, data, byteSize: bytes.length })
-    .onConflictDoUpdate({ target: cmsMedia.key, set: { mimeType, data, byteSize: bytes.length, updatedAt: new Date() } });
+    .values({ key, mimeType, data, byteSize: bytes.length, updatedAt })
+    .onConflictDoUpdate({ target: cmsMedia.key, set: { mimeType, data, byteSize: bytes.length, updatedAt } });
+  return updatedAt;
 }
 
 /**

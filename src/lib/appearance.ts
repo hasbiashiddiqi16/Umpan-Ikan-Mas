@@ -263,8 +263,28 @@ export type AppearanceState = {
   };
 };
 
-export function mediaUrl(key: MediaKey): string {
+/** Informasi satu aset media untuk antarmuka. */
+export function mediaUrl(key: MediaKey, updatedAt?: Date | string | null): string {
+  if (updatedAt) {
+    const waktu = new Date(updatedAt).getTime();
+    if (Number.isFinite(waktu)) return `/api/media/${key}-v${waktu.toString(36)}`;
+  }
   return `/api/media/${key}`;
+}
+
+/**
+ * Mengurai kunci pada alamat `/api/media/<kunci>`: aset tampilan boleh
+ * memakai segmen versi waktu unggah (`popup-mobile-v<versi>`) supaya
+ * alamatnya berubah setiap gambar diganti — alamat yang sama akan terus
+ * menyajikan gambar lama dari cache pengoptimal/CDN/peramban. Kunci
+ * tanpa versi tetap diterima (alamat lama dan berkas bawaan).
+ */
+export function resolveMediaKey(raw: string): { key: MediaKey; versioned: boolean } | null {
+  if (isMediaKey(raw)) return { key: raw, versioned: false };
+  const cocok = /^([a-z-]+)-v[a-z0-9]{6,}$/.exec(raw);
+  const base = cocok?.[1];
+  if (base && isMediaKey(base)) return { key: base, versioned: true };
+  return null;
 }
 
 /**

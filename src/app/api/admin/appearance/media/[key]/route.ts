@@ -29,10 +29,10 @@ export async function POST(request: Request, context: RouteContext) {
     const mimeType = sniffImageMime(bytes);
     if (!mimeType) return Response.json({ error: "Format harus PNG, JPEG, atau WebP." }, { status: 400 });
 
-    await saveMediaFile(key, mimeType, bytes);
+    const updatedAt = await saveMediaFile(key, mimeType, bytes);
     return Response.json({
       notice: "Gambar tersimpan.",
-      media: { key, url: mediaUrl(key), custom: true, updatedAt: new Date().toISOString() },
+      media: { key, url: mediaUrl(key, updatedAt), custom: true, updatedAt: updatedAt.toISOString() },
     });
   } catch {
     return Response.json({ error: "Gambar gagal disimpan. Coba lagi." }, { status: 500 });
