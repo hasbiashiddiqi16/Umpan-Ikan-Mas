@@ -147,7 +147,7 @@ export default function HomePage() {
             <div className="absolute -right-16 -top-24 -z-10 h-72 w-72 rounded-full border-[42px] border-white/[.04]" /><div className="absolute -bottom-36 right-40 -z-10 h-72 w-72 rounded-full border-[32px] border-[#d5b66f]/[.09]" />
             <div className="grid gap-7 md:grid-cols-[1fr_auto] md:items-center">
               <div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#e5d5a9]"><Sparkles size={14} /> Rekomendasi yang terasa personal</span><h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Kondisi kolammu unik.<br className="hidden sm:block" /> Racikanmu juga bisa lebih pas.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Jawab beberapa pertanyaan singkat dan temukan racikan yang paling mendekati cuaca, air, serta jenis kolammu.</p></div>
-              <Link href="/sistem-pakar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e7bd66] px-6 text-sm font-extrabold text-[#263722] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#f0cb7a]"><Bot size={18} /> Coba Pakar Umpan <ChevronRight size={17} /></Link>
+              <Link href="/pakar-umpan" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e7bd66] px-6 text-sm font-extrabold text-[#263722] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#f0cb7a]"><Bot size={18} /> Coba Pakar Umpan <ChevronRight size={17} /></Link>
             </div>
           </section>
         </div>

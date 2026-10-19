@@ -33,7 +33,7 @@ export function QuickFinder() {
     // Pilihan ini dipakai halaman lain untuk menampilkan skor kecocokan —
     // skor hanya boleh muncul kalau pengunjung sudah mengisi sesuatu.
     saveVisitorPreferences({ province: province || undefined, weather, water, fishingType, budget });
-    router.push(`/ai-umpan?${params.toString()}`);
+    router.push(`/tanya-umpan?${params.toString()}`);
   }
 
   return (

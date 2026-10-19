@@ -156,8 +156,8 @@ export function Footer() {
           <p className="text-sm font-bold">Jelajahi</p>
           <div className="mt-4 grid gap-3 text-sm text-white/65">
             <Link className="hover:text-white" href="/katalog">Katalog umpan</Link>
-            <Link className="hover:text-white" href="/ai-umpan">Tanya Umpan</Link>
-            <Link className="hover:text-white" href="/sistem-pakar">Pakar Umpan & racik bahan</Link>
+            <Link className="hover:text-white" href="/tanya-umpan">Tanya Umpan</Link>
+            <Link className="hover:text-white" href="/pakar-umpan">Pakar Umpan & racik bahan</Link>
             <Link className="hover:text-white" href="/cuaca">Umpan berdasarkan cuaca</Link>
             <Link className="hover:text-white" href="/provinsi">Umpan per provinsi</Link>
           </div>

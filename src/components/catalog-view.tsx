@@ -152,7 +152,7 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
         <div><p className="mb-3 text-xs font-bold uppercase tracking-[.17em] text-[#616f62] (4.55:1 terburuk)">Cari racikan yang pas</p><h1 className="text-4xl font-black tracking-[-.045em] text-[#1f3225] sm:text-5xl">Katalog Umpan</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#636d63] (4.62:1 terburuk) sm:text-base">Temukan racikan berdasarkan kebutuhan dan kondisi mancing. Pilih dari pengalaman pemancing di berbagai daerah.</p></div>
         <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
           <Link href="/bagikan" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]">Bagikan Umpan Jitu Kamu <ArrowRight size={15} /></Link>
-          <Link href="/ai-umpan" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#e8eee5] px-5 text-sm font-bold text-[#35553a] transition hover:bg-[#dce8d9]">Bingung pilih? Tanya Umpan <ArrowRight size={15} /></Link>
+          <Link href="/tanya-umpan" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#e8eee5] px-5 text-sm font-bold text-[#35553a] transition hover:bg-[#dce8d9]">Bingung pilih? Tanya Umpan <ArrowRight size={15} /></Link>
         </div>
       </div>
       <div className="mb-6 flex gap-2" role="tablist" aria-label="Isi katalog">

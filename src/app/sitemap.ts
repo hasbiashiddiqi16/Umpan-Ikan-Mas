@@ -16,8 +16,8 @@ const publicPages: Array<{
   { path: "/katalog", changeFrequency: "weekly", priority: 0.9 },
   { path: "/provinsi", changeFrequency: "monthly", priority: 0.8 },
   { path: "/cuaca", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/ai-umpan", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/sistem-pakar", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/tanya-umpan", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/pakar-umpan", changeFrequency: "monthly", priority: 0.7 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

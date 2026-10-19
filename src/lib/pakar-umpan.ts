@@ -8,21 +8,21 @@ import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from
 
 export type { BlendItem } from "@/lib/blend-rules";
 
-export type ExpertRecipeResult = { recipe: Recipe; score: number; ingredientFit: number; communityFit: number; contextScore: number };
-export type ExpertDominantCondition = {
+export type PakarRecipeResult = { recipe: Recipe; score: number; ingredientFit: number; communityFit: number; contextScore: number };
+export type PakarDominantCondition = {
   label: string;
   value: string;
   count: number;
   total: number;
 };
-export type ExpertBlendResult = {
+export type PakarBlendResult = {
   title: string;
   ingredients: BlendItem[];
   warnings: string[];
   reasoning: string[];
-  recipeMatches: ExpertRecipeResult[];
+  recipeMatches: PakarRecipeResult[];
   evidenceCount: number;
-  dominantConditions: ExpertDominantCondition[];
+  dominantConditions: PakarDominantCondition[];
   /** Porsi per peran + status terhadap aturan min–maks. */
   roleShares: RoleShare[];
   suggestions: BlendSuggestion[];
@@ -77,14 +77,14 @@ function getCommunityFit(recipe: Recipe, preferences: UserPreferences, community
   return Math.round((averageRating / 5) * 70 + contextAverage * 30);
 }
 
-export function rankExpertRecipes(
+export function rankPakarRecipes(
   preferences: UserPreferences,
   selectedIds: string[] = [],
   // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
   // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
   communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = recipes,
-): ExpertRecipeResult[] {
+): PakarRecipeResult[] {
   const inBudget = filterRecipesByBudget(sourceRecipes, preferences.budget);
   const candidateRecipes = inBudget.length ? inBudget : sourceRecipes;
   const hasContext = Boolean(preferences.province || preferences.weather || preferences.water || preferences.waterBody || preferences.fishingType || preferences.season);
@@ -117,10 +117,10 @@ const CONDITION_CATEGORIES: { label: string; values: (recipe: Recipe) => readonl
  * hanya disebut dominan bila muncul pada lebih dari separuh resep terdekat.
  * Kategori yang beragam tidak dipaksakan menjadi satu kesimpulan.
  */
-export function getDominantConditions(recipeMatches: ExpertRecipeResult[]): ExpertDominantCondition[] {
+export function getPakarDominantConditions(recipeMatches: PakarRecipeResult[]): PakarDominantCondition[] {
   const total = recipeMatches.length;
   if (!total) return [];
-  const dominant: ExpertDominantCondition[] = [];
+  const dominant: PakarDominantCondition[] = [];
   for (const category of CONDITION_CATEGORIES) {
     const counts = new Map<string, number>();
     const firstSeen = new Map<string, number>();
@@ -145,13 +145,13 @@ export function getDominantConditions(recipeMatches: ExpertRecipeResult[]): Expe
   return dominant;
 }
 
-export function buildExpertBlend(
+export function buildPakarBlend(
   selectedIds: string[],
   // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
   // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
   communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = recipes,
-): ExpertBlendResult | null {
+): PakarBlendResult | null {
   const uniqueIds = [...new Set(selectedIds)];
   const selected = uniqueIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
   if (selected.length < 2) return null;
@@ -165,8 +165,8 @@ export function buildExpertBlend(
 
   const warnings = [...balance.warnings];
 
-  const recipeMatches = rankExpertRecipes({}, uniqueIds, communityReviews, sourceRecipes).slice(0, 3);
-  const dominantConditions = getDominantConditions(recipeMatches);
+  const recipeMatches = rankPakarRecipes({}, uniqueIds, communityReviews, sourceRecipes).slice(0, 3);
+  const dominantConditions = getPakarDominantConditions(recipeMatches);
   const evidenceCount = communityReviews.filter((review) => recipeMatches.some((match) => match.recipe.slug === review.recipeSlug)).length;
 
   const roles = new Set(selected.map((item) => item.role));
@@ -210,7 +210,7 @@ export function buildExpertBlend(
  * pengunjung (lokal + hasil moderasi); ulasan contoh tidak dihitung supaya
  * tidak ada angka komunitas yang mengarang.
  */
-export function getExpertKnowledgeStats(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0) {
+export function getPakarKnowledgeStats(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0) {
   return {
     recipes: activeRecipeCount,
     ingredients: ingredientKnowledge.length,
@@ -220,7 +220,7 @@ export function getExpertKnowledgeStats(localReviewCount = 0, activeRecipeCount 
   };
 }
 
-export function getKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0): string {
+export function getPakarKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0): string {
   const total = localReviewCount + approvedReviewCount;
   return `${activeRecipeCount} resep terkurasi, ${total} ulasan pengunjung, ${fishingReports.length} contoh laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
 }

@@ -13,14 +13,14 @@ const desktopLinks = [
   { label: "Katalog", href: "/katalog" },
   { label: "Cuaca", href: "/cuaca" },
   { label: "Provinsi", href: "/provinsi" },
-  { label: "Tanya Umpan", href: "/ai-umpan" },
-  { label: "Pakar Umpan", href: "/sistem-pakar" },
+  { label: "Tanya Umpan", href: "/tanya-umpan" },
+  { label: "Pakar Umpan", href: "/pakar-umpan" },
 ];
 
 const mobileLinks = [
   { label: "Home", href: "/", icon: Home },
   { label: "Katalog", href: "/katalog", icon: BookOpen },
-  { label: "Pakar", href: "/sistem-pakar", icon: Bot },
+  { label: "Pakar", href: "/pakar-umpan", icon: Bot },
   { label: "Provinsi", href: "/provinsi", icon: Map },
   { label: "Profil", href: "/profil", icon: UserRound },
 ];

@@ -6,20 +6,27 @@ import { updateSession } from "@/utils/supabase/middleware";
 /**
  * Titik masuk proxy (konvensi Next.js 16, sebelumnya `middleware.ts`).
  *
- * Tiga tugas:
- * 1. Menyegarkan sesi Supabase pada setiap permintaan.
- * 2. **Gerbang autentikasi area admin.** `/dashboard*` tidak boleh terbuka bagi
+ * Empat tugas:
+ * 1. Mengalihkan alamat lama fitur yang sudah berganti nama di level kode
+ *    (`/ai-umpan` → `/tanya-umpan`, `/sistem-pakar` → `/pakar-umpan`) secara
+ *    permanen sambil mempertahankan query string, agar tautan lama tidak mati.
+ * 2. Menyegarkan sesi Supabase pada setiap permintaan.
+ * 3. **Gerbang autentikasi area admin.** `/dashboard*` tidak boleh terbuka bagi
  *    pengunjung biasa: permintaan tanpa cookie sesi yang sah langsung dialihkan
  *    ke `/login` sebelum halaman dirender. Pemeriksaan di sini sengaja ringan
  *    (tanda tangan + masa berlaku, tanpa menyentuh basis data). Pemeriksaan
  *    penuh — termasuk versi password — tetap dilakukan `isAdminAuthenticated()`
  *    di `src/app/dashboard/layout.tsx` dan di setiap route handler admin.
- * 3. **`noindex` untuk area admin.** Respons `/dashboard*` dan `/login` diberi
+ * 4. **`noindex` untuk area admin.** Respons `/dashboard*` dan `/login` diberi
  *    `X-Robots-Tag: noindex, nofollow`, jadi rute ini tidak masuk hasil pencarian
  *    meski ada tautan atau percobaan pengindeksan dari luar.
  */
 const AUTH_GATE_PREFIXES = ["/dashboard"] as const;
 const NO_INDEX_PREFIXES = ["/dashboard", "/login", "/masuk", "/daftar", "/bagikan", "/profil", "/auth"] as const;
+const PENGALIHAN_RUTE_LAMA: Record<string, string> = {
+  "/ai-umpan": "/tanya-umpan",
+  "/sistem-pakar": "/pakar-umpan",
+};
 
 function cocokDengan(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -32,6 +39,15 @@ function tanpaIndeks<T extends NextResponse>(response: T): T {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Alamat lama fitur yang berganti nama diteruskan permanen ke alamat baru;
+  // clone URL mempertahankan query string (mis. kiriman Cari Cepat lama).
+  const tujuanRuteBaru = PENGALIHAN_RUTE_LAMA[pathname];
+  if (tujuanRuteBaru) {
+    const url = request.nextUrl.clone();
+    url.pathname = tujuanRuteBaru;
+    return NextResponse.redirect(url, 308);
+  }
 
   // Gerbang autentikasi: berhenti di sini kalau sesi tidak sah.
   if (AUTH_GATE_PREFIXES.some((prefix) => cocokDengan(pathname, prefix))) {
