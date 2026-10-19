@@ -110,7 +110,7 @@ function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onCha
   const update = (index: number, patch: Partial<IngredientRow>) => onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   const groups = [
     { key: false, title: "Bahan racikan", note: "Bahan inti resep yang selalu dipakai." },
-    { key: true, title: "Tambahan opsional", note: "Boleh dilewati; tidak dihitung sebagai pembeda di pencarian dan Sistem Pakar." },
+    { key: true, title: "Tambahan opsional", note: "Boleh dilewati; tidak dihitung sebagai pembeda di pencarian dan Pakar Umpan." },
   ] as const;
 
   return (

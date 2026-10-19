@@ -6,7 +6,7 @@ import { createPageMetadata } from "@/lib/seo";
 import { getPublicRecipeData } from "@/lib/public-recipes";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Rekomendasi Umpan Ikan Mas",
+  title: "Tanya Umpan Ikan Mas",
   description: "Temukan rekomendasi racikan umpan ikan mas berdasarkan lokasi, cuaca, kondisi air, jenis kolam, dan budget memancingmu.",
   path: "/ai-umpan",
 });

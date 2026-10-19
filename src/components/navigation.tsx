@@ -13,8 +13,8 @@ const desktopLinks = [
   { label: "Katalog", href: "/katalog" },
   { label: "Cuaca", href: "/cuaca" },
   { label: "Provinsi", href: "/provinsi" },
-  { label: "AI Umpan", href: "/ai-umpan" },
-  { label: "Sistem Pakar", href: "/sistem-pakar" },
+  { label: "Tanya Umpan", href: "/ai-umpan" },
+  { label: "Pakar Umpan", href: "/sistem-pakar" },
 ];
 
 const mobileLinks = [
