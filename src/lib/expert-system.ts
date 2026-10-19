@@ -1,14 +1,20 @@
 import { fishingReports } from "@/data/fishingReports";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
-import { SESI_GRAM, formatRupiah, wilayahLabel, wilayahUntukProvinsi, type BlendCost, type Wilayah } from "@/data/ingredient-prices";
+import { SESI_GRAM, formatRupiah, wilayahUntukProvinsi, type BlendCost, type Wilayah } from "@/data/ingredient-prices";
 import { normalizeFishingType, recipes, type Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { BLEND_ROLE_RULES, balanceBlend, type BlendHemat, type BlendItem, type BlendSuggestion, type RoleShare } from "@/lib/blend-rules";
-import { budgetRangeFor, calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
+import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
 
 export type { BlendItem } from "@/lib/blend-rules";
 
 export type ExpertRecipeResult = { recipe: Recipe; score: number; ingredientFit: number; communityFit: number; contextScore: number };
+export type ExpertDominantCondition = {
+  label: string;
+  value: string;
+  count: number;
+  total: number;
+};
 export type ExpertBlendResult = {
   title: string;
   ingredients: BlendItem[];
@@ -16,6 +22,7 @@ export type ExpertBlendResult = {
   reasoning: string[];
   recipeMatches: ExpertRecipeResult[];
   evidenceCount: number;
+  dominantConditions: ExpertDominantCondition[];
   /** Porsi per peran + status terhadap aturan min–maks. */
   roleShares: RoleShare[];
   suggestions: BlendSuggestion[];
@@ -51,6 +58,9 @@ function getCommunityFit(recipe: Recipe, preferences: UserPreferences, community
   // bukan diisi dari rating katalog yang tidak ada sumbernya.
   if (!evidence.length) return 50;
   const averageRating = evidence.reduce((sum, review) => sum + review.rating, 0) / evidence.length;
+  // Tanpa konteks kondisi dari pengunjung, bukti komunitas dibaca dari rating
+  // ulasan apa adanya — tidak ada kondisi tersembunyi yang ikut menilai.
+  if (!preferences.weather && !preferences.water && !preferences.fishingType) return Math.round((averageRating / 5) * 100);
   const contextPoints = evidence.map((review) => {
     let checks = 0;
     let matched = 0;
@@ -77,20 +87,66 @@ export function rankExpertRecipes(
 ): ExpertRecipeResult[] {
   const inBudget = filterRecipesByBudget(sourceRecipes, preferences.budget);
   const candidateRecipes = inBudget.length ? inBudget : sourceRecipes;
+  const hasContext = Boolean(preferences.province || preferences.weather || preferences.water || preferences.waterBody || preferences.fishingType || preferences.season);
   return candidateRecipes.map((recipe) => {
     const contextScore = calculateMatchScore(recipe, preferences);
     const ingredientFit = getIngredientFit(recipe, selectedIds);
     const communityFit = getCommunityFit(recipe, preferences, communityReviews);
-    // Context rules retain the product's weighted score; recipe/ingredient evidence refines the ranking.
-    const score = Math.max(0, Math.min(100, Math.round(contextScore * 0.8 + ingredientFit * 0.12 + communityFit * 0.08)));
+    // Bila pengunjung memberi konteks (mis. lewat AI Umpan), konteks tetap
+    // menentukan. Bila tidak ada konteks — seperti Sistem Pakar sekarang —
+    // urutan murni dari kecocokan bahan inti dan bukti rating ulasan.
+    const score = hasContext
+      ? Math.max(0, Math.min(100, Math.round(contextScore * 0.8 + ingredientFit * 0.12 + communityFit * 0.08)))
+      : Math.max(0, Math.min(100, Math.round(ingredientFit * 0.75 + communityFit * 0.25)));
     return { recipe, score, ingredientFit, communityFit, contextScore };
     // Seri diputus oleh kecocokan bahan, bukan angka rating/popularitas katalog.
-  }).sort((a, b) => b.score - a.score || b.ingredientFit - a.ingredientFit);
+  }).sort((a, b) => b.score - a.score || b.ingredientFit - a.ingredientFit || (hasContext ? 0 : b.communityFit - a.communityFit));
+}
+
+const CONDITION_CATEGORIES: { label: string; values: (recipe: Recipe) => readonly string[] }[] = [
+  { label: "Cuaca", values: (recipe) => recipe.weather },
+  { label: "Kondisi air", values: (recipe) => recipe.water },
+  { label: "Tipe air", values: (recipe) => recipe.waterBodies },
+  { label: "Jenis pemancingan", values: (recipe) => recipe.fishingTypes },
+  { label: "Musim", values: (recipe) => recipe.seasons },
+  { label: "Provinsi", values: (recipe) => recipe.provinces },
+];
+
+/**
+ * Kondisi dominan diringkas dari metadata resep-resep terdekat: satu nilai
+ * hanya disebut dominan bila muncul pada lebih dari separuh resep terdekat.
+ * Kategori yang beragam tidak dipaksakan menjadi satu kesimpulan.
+ */
+export function getDominantConditions(recipeMatches: ExpertRecipeResult[]): ExpertDominantCondition[] {
+  const total = recipeMatches.length;
+  if (!total) return [];
+  const dominant: ExpertDominantCondition[] = [];
+  for (const category of CONDITION_CATEGORIES) {
+    const counts = new Map<string, number>();
+    const firstSeen = new Map<string, number>();
+    recipeMatches.forEach((match, index) => {
+      for (const value of new Set(category.values(match.recipe))) {
+        counts.set(value, (counts.get(value) ?? 0) + 1);
+        if (!firstSeen.has(value)) firstSeen.set(value, index);
+      }
+    });
+    let bestValue: string | null = null;
+    let bestCount = 0;
+    for (const [value, count] of counts) {
+      if (count > bestCount || (count === bestCount && bestValue !== null && (firstSeen.get(value) ?? 0) < (firstSeen.get(bestValue) ?? 0))) {
+        bestValue = value;
+        bestCount = count;
+      }
+    }
+    if (bestValue !== null && bestCount > total / 2) {
+      dominant.push({ label: category.label, value: bestValue, count: bestCount, total });
+    }
+  }
+  return dominant;
 }
 
 export function buildExpertBlend(
   selectedIds: string[],
-  preferences: UserPreferences,
   // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
   // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
   communityReviews: RecipeReview[] = [],
@@ -100,43 +156,31 @@ export function buildExpertBlend(
   const selected = uniqueIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
   if (selected.length < 2) return null;
 
-  // Wilayah dipakai untuk perkiraan harga bahan: provinsi pengunjung dipetakan
-  // ke wilayah, dan tanpa provinsi dipakai harga dasar nasional.
-  const wilayah = wilayahUntukProvinsi(preferences.province);
+  // Harga selalu memakai dasar nasional: Sistem Pakar tidak lagi menanyakan
+  // provinsi, jadi tidak ada faktor wilayah pilihan pengunjung yang diterapkan.
+  const wilayah = wilayahUntukProvinsi();
+  const labelWilayah = "Nasional (harga dasar)";
   const balance = balanceBlend(selected, wilayah);
   if (!balance) return null;
 
   const warnings = [...balance.warnings];
-  // Budget tidak lagi hanya menyaring resep: perkiraan biaya campuran (dihitung
-  // dari komposisi) dibandingkan dengan rentang budget yang dipilih.
-  const budget = budgetRangeFor(preferences.budget);
-  if (budget && balance.costSesi.total > budget[1]) {
-    const hemat = balance.hemat ? ` Versi hemat memperkirakan ${formatRupiah(balance.hemat.selisihSesi)} lebih murah per sesi.` : "";
-    warnings.push(`Perkiraan biaya satu sesi (± ${SESI_GRAM} g) ${formatRupiah(balance.costSesi.total)} — di atas batas atas budget ${preferences.budget} (${formatRupiah(budget[1])}).${hemat}`);
-  }
+
+  const recipeMatches = rankExpertRecipes({}, uniqueIds, communityReviews, sourceRecipes).slice(0, 3);
+  const dominantConditions = getDominantConditions(recipeMatches);
+  const evidenceCount = communityReviews.filter((review) => recipeMatches.some((match) => match.recipe.slug === review.recipeSlug)).length;
 
   const roles = new Set(selected.map((item) => item.role));
   const reasoning: string[] = [
     `Basis racikan memakai ${selected.filter((item) => item.role === "Dasar").map((item) => item.name.toLowerCase()).join(" dan ") || "bahan pilihanmu"}.`,
     `Porsi antar peran dibagi ulang agar masuk aturan (${BLEND_ROLE_RULES.map((rule) => `${rule.role} ${rule.minPercent}–${rule.maxPercent}%`).join(", ")}), jadi satu fungsi tidak bisa mendominasi adonan.`,
     roles.has("Pengikat") ? "Bahan pengikat sudah dipilih; uleni perlahan dan sesuaikan kelembapan." : "Kombinasi belum memiliki pengikat, jadi tekstur mungkin lebih mudah lepas.",
+    "Modul ini tidak lagi meminta kondisi kolam; peringkat resep terdekat dihitung dari kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%).",
+    dominantConditions.length
+      ? `Kondisi yang paling sering muncul pada ${recipeMatches.length} resep terdekat: ${dominantConditions.map((condition) => `${condition.label.toLowerCase()} ${condition.value} (${condition.count} dari ${condition.total})`).join(", ")}. Ini rangkuman metadata resep terdekat, bukan isian kondisi pengunjung dan bukan janji hasil.`
+      : "Resep-resep terdekat tidak menunjukkan satu kondisi yang muncul pada lebih dari separuh resep, jadi sistem tidak memaksakan satu kondisi dominan.",
+    `Perkiraan biaya bahan dihitung dari komposisi memakai harga dasar nasional: ${formatRupiah(balance.cost100g.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`,
+    "Budget tidak lagi ditanyakan di modul ini; komposisi dinilai dari aturan peran, kecocokan bahan, bukti ulasan, dan saran pengganti saja.",
   ];
-  if (preferences.water === "Keruh") reasoning.push("Air keruh dipilih: mulai dari karakter aroma yang mudah dikenali, lalu uji sedikit demi sedikit di kolam.");
-  else if (preferences.water === "Jernih") reasoning.push("Air jernih dipilih: gunakan aroma secara ringan dan hindari menambah banyak essen sekaligus.");
-  else if (preferences.water) reasoning.push(`Kondisi air ${preferences.water.toLowerCase()} menjadi konteks; karakter air nyata tiap kolam tetap perlu diamati.`);
-  if (preferences.weather === "Hujan") reasoning.push("Cuaca hujan: cek perubahan suhu dan arus, lalu atur adonan agar cukup melekat pada kail.");
-  if (preferences.fishingType === "Lomba") reasoning.push("Untuk lomba, ubah satu variabel setiap percobaan agar respons racikan lebih mudah dibandingkan.");
-  reasoning.push(`Perkiraan biaya bahan dihitung dari komposisi memakai harga ${wilayahLabel(wilayah)}: ${formatRupiah(balance.cost100g.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`);
-  reasoning.push(
-    budget
-      ? balance.costSesi.total > budget[1]
-        ? `Budget ${preferences.budget} juga menilai komposisi — perkiraan biaya sekarang melewatinya, lihat peringatan di panel komposisi.`
-        : `Budget ${preferences.budget} juga menilai komposisi; perkiraan biaya sekarang masih di dalam rentang itu.`
-      : "Budget belum dipilih, jadi komposisi dinilai dari aturan peran dan saran pengganti saja.",
-  );
-
-  const recipeMatches = rankExpertRecipes(preferences, uniqueIds, communityReviews, sourceRecipes).slice(0, 3);
-  const evidenceCount = communityReviews.filter((review) => recipeMatches.some((match) => match.recipe.slug === review.recipeSlug)).length;
   const aroma = selected.find((item) => item.role === "Aroma" || item.role === "Protein");
   const base = selected.find((item) => item.role === "Dasar");
   const title = aroma && base ? `Racikan ${base.name.replace(/ ikan/i, "")} ${aroma.name}` : base ? `Racikan Seimbang ${base.name.replace(/ ikan/i, "")}` : `Campuran ${selected[0].name} & ${selected[1].name}`;
@@ -147,13 +191,14 @@ export function buildExpertBlend(
     reasoning,
     recipeMatches,
     evidenceCount,
+    dominantConditions,
     roleShares: balance.roleShares,
     suggestions: balance.suggestions,
     hemat: balance.hemat,
     cost100g: balance.cost100g,
     costSesi: balance.costSesi,
     wilayah,
-    wilayahLabel: wilayahLabel(wilayah),
+    wilayahLabel: labelWilayah,
     basisGram: balance.basisGram,
     sesiGram: balance.sesiGram,
     substituteNote: balance.substituteNote,
