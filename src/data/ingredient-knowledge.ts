@@ -3,7 +3,7 @@ export type IngredientRole = "Dasar" | "Pengikat" | "Protein" | "Aroma" | "Pelem
 export type IngredientKnowledge = {
   id: string;
   name: string;
-  /** Kunci ikon SVG (dipetakan ke Lucide di komponen sistem pakar). */
+  /** Kunci ikon SVG (dipetakan ke Lucide di komponen Pakar Umpan). */
   icon: string;
   role: IngredientRole;
   weight: number;

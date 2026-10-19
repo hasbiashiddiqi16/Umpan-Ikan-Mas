@@ -1,5 +1,5 @@
 /**
- * Bobot skor kecocokan "Sistem Pakar" — **satu-satunya tempat bobot ditulis**.
+ * Bobot skor kecocokan "Pakar Umpan" — **satu-satunya tempat bobot ditulis**.
  *
  * Kenapa dipindahkan ke sini: bobot sebelumnya tertulis di dalam kode
  * (`@/lib/recommendation`) sebagai angka permanen yang seolah-olah hasil

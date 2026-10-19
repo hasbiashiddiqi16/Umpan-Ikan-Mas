@@ -92,8 +92,8 @@ export function rankExpertRecipes(
     const contextScore = calculateMatchScore(recipe, preferences);
     const ingredientFit = getIngredientFit(recipe, selectedIds);
     const communityFit = getCommunityFit(recipe, preferences, communityReviews);
-    // Bila pengunjung memberi konteks (mis. lewat AI Umpan), konteks tetap
-    // menentukan. Bila tidak ada konteks — seperti Sistem Pakar sekarang —
+    // Bila pengunjung memberi konteks (mis. lewat Tanya Umpan), konteks tetap
+    // menentukan. Bila tidak ada konteks — seperti Pakar Umpan sekarang —
     // urutan murni dari kecocokan bahan inti dan bukti rating ulasan.
     const score = hasContext
       ? Math.max(0, Math.min(100, Math.round(contextScore * 0.8 + ingredientFit * 0.12 + communityFit * 0.08)))
@@ -156,7 +156,7 @@ export function buildExpertBlend(
   const selected = uniqueIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
   if (selected.length < 2) return null;
 
-  // Harga selalu memakai dasar nasional: Sistem Pakar tidak lagi menanyakan
+  // Harga selalu memakai dasar nasional: Pakar Umpan tidak lagi menanyakan
   // provinsi, jadi tidak ada faktor wilayah pilihan pengunjung yang diterapkan.
   const wilayah = wilayahUntukProvinsi();
   const labelWilayah = "Nasional (harga dasar)";

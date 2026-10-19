@@ -53,7 +53,7 @@ export function RecipeRating({ rating }: { rating?: { count: number; average: nu
  * Ikon-ikon ini **dekoratif** (`aria-hidden`): teks di sebelahnya sudah menamai
  * isinya, jadi screen reader cukup membaca teksnya — bukan nama emoji/ikon.
  * Ikon yang berdiri sendiri tanpa teks pendamping wajib dibungkus elemen
- * ber-`aria-label` oleh pemakainya (mis. medali peringkat di sistem pakar).
+ * ber-`aria-label` oleh pemakainya (mis. medali peringkat di Pakar Umpan).
  */
 export function WeatherIcon({ weather, size = 12, className = "" }: { weather: string; size?: number; className?: string }) {
   const Icon = weather === "Hujan" ? CloudRain : weather === "Cerah" || weather === "Panas" ? Sun : weather === "Berawan" ? CloudSun : Cloud;
@@ -156,8 +156,8 @@ export function Footer() {
           <p className="text-sm font-bold">Jelajahi</p>
           <div className="mt-4 grid gap-3 text-sm text-white/65">
             <Link className="hover:text-white" href="/katalog">Katalog umpan</Link>
-            <Link className="hover:text-white" href="/ai-umpan">AI Umpan</Link>
-            <Link className="hover:text-white" href="/sistem-pakar">Sistem Pakar & racik bahan</Link>
+            <Link className="hover:text-white" href="/ai-umpan">Tanya Umpan</Link>
+            <Link className="hover:text-white" href="/sistem-pakar">Pakar Umpan & racik bahan</Link>
             <Link className="hover:text-white" href="/cuaca">Umpan berdasarkan cuaca</Link>
             <Link className="hover:text-white" href="/provinsi">Umpan per provinsi</Link>
           </div>

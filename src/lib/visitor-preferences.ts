@@ -7,7 +7,7 @@ import type { UserPreferences } from "@/lib/recommendation";
  * Pilihan pengunjung yang tersimpan di perangkatnya sendiri.
  *
  * Skor kecocokan ("Match") hanya boleh muncul setelah pengunjung mengisi
- * sesuatu — kondisi di Cari Cepat, langkah AI Umpan, filter katalog, atau
+ * sesuatu — kondisi di Cari Cepat, langkah Tanya Umpan, filter katalog, atau
  * provinsi hasil izin lokasi. Selama belum ada isian, halaman menampilkan label
  * "Populer" (dari jumlah ulasan nyata) alih-alih persentase yang tidak jelas
  * asalnya.

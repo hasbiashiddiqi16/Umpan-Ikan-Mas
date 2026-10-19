@@ -134,7 +134,7 @@ export const DEFAULT_POPUP: PopupSettings = {
   ],
   fitur: [
     { icon: "target", text: "Cari racikan dari cuaca, kondisi air, dan budget." },
-    { icon: "spark", text: "AI Umpan & Sistem Pakar bantu meracik dari bahanmu." },
+    { icon: "spark", text: "Tanya Umpan & Pakar Umpan bantu meracik dari bahanmu." },
     { icon: "pin", text: "Kolom provinsi terisi otomatis kalau lokasi diizinkan." },
     { icon: "fish", text: "Semua resep pakai kroto 1 ons dan amis Deho / Sunbell." },
   ],
