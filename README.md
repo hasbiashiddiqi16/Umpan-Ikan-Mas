@@ -137,7 +137,7 @@ Semua dropdown (<select>) di halaman publik memakai kelas bersama `select-field`
 
 - **Tinggi dari padding, bukan `min-height`.** iOS Safari (mis. iPhone 7) mengabaikan `min-height` pada `<select>`, sehingga field tampak pendek dan teks nyaris menempel ke tepi atas/bawah. Karena itu tingginya ditentukan `py-3` (dan `pr-11` untuk ruang panah), lalu `min-h-*` hanya jadi penyelaras di layar besar (`sm:py-2.5`).
 - **Panah digambar sendiri.** Tampilan bawaan peramban dimatikan (`appearance: none` lewat `.select-field`) karena panah bawaannya menempel ke tepi. Komponen `SelectBox` (`src/components/form-fields.tsx`) menaruh ikon `ChevronDown` di dalam field dengan jarak `right-3.5` (14px) dari tepi kanan dan `pointer-events-none`, jadi area klik tetap milik dropdown dan teks punya jarak 14px dari panah.
-- Dropdown publik yang memakainya: `filter-bar.tsx` (termasuk panel filter mobile), `province-explorer.tsx`, `quick-finder.tsx`, `expert-system.tsx`, `ai-wizard.tsx` (tetap ada ikon pin di kiri), dan `recipe-review-section.tsx`.
+- Dropdown publik yang memakainya: `filter-bar.tsx` (termasuk panel filter mobile), `province-explorer.tsx`, `quick-finder.tsx`, `pakar-umpan.tsx`, `tanya-umpan-wizard.tsx` (tetap ada ikon pin di kiri), dan `recipe-review-section.tsx`.
 - Dropdown di dashboard/admin sengaja **tidak** diubah (`fieldClass` di `appearance-manager.tsx`, `content-manager.tsx`, dan `security-manager.tsx`).
 
 ## Popup sambutan pengunjung baru
@@ -234,7 +234,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
 
-**Pakar Umpan & Tanya Umpan.** Di Pakar Umpan, publik hanya memilih bahan sebagai Langkah 1; hasil rekomendasi berisi contoh komposisi 100 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Pakar Umpan memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan Tanya Umpan tetap memakai konteks yang dipilih pengunjung. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
+**Pakar Umpan & Tanya Umpan.** Di Pakar Umpan, publik hanya memilih bahan sebagai Langkah 1; hasil rekomendasi berisi contoh komposisi 100 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Pakar Umpan memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan Tanya Umpan tetap memakai konteks yang dipilih pengunjung. Di level kode, berkas, komponen, tipe, dan fungsi mengikuti nama baru (`tanya-umpan-wizard.tsx`, `pakar-umpan.tsx`, `pakar-umpan.ts`); alamat lama `/ai-umpan` dan `/sistem-pakar` hanya tersisa sebagai pengalihan permanen di `src/proxy.ts`. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
 
 ## Peringkat rating memakai rata-rata Bayesian
 
@@ -298,7 +298,7 @@ Sumbernya `GET /api/admin/recommendation-eval`, dan panel **"Uji urutan rekomend
 
 ## Aturan komposisi, pengganti bahan, dan perkiraan biaya per wilayah
 
-Sebelumnya komposisi di `/sistem-pakar` hanya "menjumlahkan persentase mengikuti bobot bahan": tidak ada pembatas, jadi kombinasi tak lazim (mis. empat bahan aroma) lewat tanpa satu pun peringatan, penanda pilihan hanya berbunyi `0/6 dipilih` dari 12 bahan tanpa menjelaskan batasnya, dan budget cuma menyaring resep — tidak pernah menilai racikannya. Sekarang:
+Sebelumnya komposisi di `/pakar-umpan` hanya "menjumlahkan persentase mengikuti bobot bahan": tidak ada pembatas, jadi kombinasi tak lazim (mis. empat bahan aroma) lewat tanpa satu pun peringatan, penanda pilihan hanya berbunyi `0/6 dipilih` dari 12 bahan tanpa menjelaskan batasnya, dan budget cuma menyaring resep — tidak pernah menilai racikannya. Sekarang:
 
 **Tabel aturan rasio per peran.** `BLEND_ROLE_RULES` di `src/lib/blend-rules.ts`, dan tabelnya tampil apa adanya di halaman:
 
@@ -386,7 +386,7 @@ emoji menjadi satu-satunya penanda visual di tombol, badge, dan pilihan.
   (termasuk teks 9–11px di kartu dan dashboard), dan bintang rating
   digelapkan ke 4,3:1 agar memenuhi kontras grafis 3:1 (WCAG 1.4.11).
 - Terverifikasi: tidak ada karakter emoji tersisa di `src/`, dan halaman
-  publik yang tersaji (/, /katalog, /cuaca, /sistem-pakar, /ai-umpan,
+  publik yang tersaji (/, /katalog, /cuaca, /pakar-umpan, /tanya-umpan,
   /resep/…) mengandung 0 emoji dengan ikon SVG + `aria-label`
   di seluruh halamannya.
 
