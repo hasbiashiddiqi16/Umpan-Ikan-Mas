@@ -252,16 +252,46 @@ export function resolvePopupSettings(stored: unknown): PopupSettings {
 
 export type MediaInfo = { key: MediaKey; url: string; custom: boolean; updatedAt: string | null };
 
+export type PopupAppearance = PopupSettings & {
+  /** Sidik jari isi popup; berubah setiap teks/mode/status/gambar popup berubah. */
+  version: string;
+  media: { mobile: MediaInfo; desktop: MediaInfo; latar: MediaInfo };
+};
+
 export type AppearanceState = {
   logo: MediaInfo;
   /** Logo yang dipakai di footer; berkasnya terpisah dari logo navbar. */
   footerLogo: MediaInfo;
   /** Gambar latar bagian hero di beranda. */
   hero: MediaInfo;
-  popup: PopupSettings & {
-    media: { mobile: MediaInfo; desktop: MediaInfo; latar: MediaInfo };
-  };
+  popup: PopupAppearance;
 };
+
+/**
+ * Versi konten popup. Berubah setiap kali teks, mode, status aktif, atau
+ * gambar popup diganti, supaya peramban yang sudah melihat versi lama
+ * menampilkan versi baru satu kali tanpa menghapus cache secara manual.
+ */
+export function getPopupVersion(popup: PopupSettings & { media: PopupAppearance["media"] }): string {
+  const fingerprint = JSON.stringify({
+    enabled: popup.enabled,
+    mode: popup.mode,
+    judul: popup.judul,
+    ringkasan: popup.ringkasan,
+    statistik: popup.statistik.map((item) => [item.value, item.label]),
+    fitur: popup.fitur.map((item) => [item.icon, item.text]),
+    media: (["mobile", "desktop", "latar"] as const).map((slot) => {
+      const info = popup.media[slot];
+      return [info.key, info.url, info.custom, info.updatedAt ?? ""];
+    }),
+  });
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < fingerprint.length; index += 1) {
+    hash ^= fingerprint.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `p${hash.toString(36)}`;
+}
 
 /** Informasi satu aset media untuk antarmuka. */
 export function mediaUrl(key: MediaKey, updatedAt?: Date | string | null): string {
@@ -295,7 +325,7 @@ export function resolveMediaKey(raw: string): { key: MediaKey; versioned: boolea
 export function mergeAppearance(value: unknown): AppearanceState {
   const base = defaultAppearance();
   if (!value || typeof value !== "object") return base;
-  const item = value as { logo?: Partial<MediaInfo>; footerLogo?: Partial<MediaInfo>; hero?: Partial<MediaInfo>; popup?: (Partial<PopupSettings> & { media?: Partial<AppearanceState["popup"]["media"]> }) | null };
+  const item = value as { logo?: Partial<MediaInfo>; footerLogo?: Partial<MediaInfo>; hero?: Partial<MediaInfo>; popup?: (Partial<PopupSettings> & { version?: unknown; media?: Partial<AppearanceState["popup"]["media"]> }) | null };
   const popup = resolvePopupSettings(item.popup);
   const media = item.popup?.media ?? {};
   const info = (key: MediaKey, candidate?: Partial<MediaInfo>): MediaInfo => ({
@@ -304,12 +334,13 @@ export function mergeAppearance(value: unknown): AppearanceState {
     custom: candidate?.custom === true,
     updatedAt: typeof candidate?.updatedAt === "string" ? candidate.updatedAt : null,
   });
-  return {
+  const merged: AppearanceState = {
     logo: info("logo", item.logo),
     footerLogo: info("logo-footer", item.footerLogo),
     hero: info("hero", item.hero),
     popup: {
       ...popup,
+      version: "",
       media: {
         mobile: info("popup-mobile", media.mobile),
         desktop: info("popup-desktop", media.desktop),
@@ -317,17 +348,22 @@ export function mergeAppearance(value: unknown): AppearanceState {
       },
     },
   };
+  // Versi selalu dihitung dari isi hasil gabungan (bukan dipercaya dari
+  // payload), supaya cocok dengan yang benar-benar akan ditampilkan.
+  merged.popup.version = getPopupVersion(merged.popup);
+  return merged;
 }
 
 export function defaultAppearance(): AppearanceState {
   const info = (key: MediaKey): MediaInfo => ({ key, url: mediaUrl(key), custom: false, updatedAt: null });
+  const popup: PopupSettings & { media: PopupAppearance["media"] } = {
+    ...DEFAULT_POPUP,
+    media: { mobile: info("popup-mobile"), desktop: info("popup-desktop"), latar: info("popup-latar") },
+  };
   return {
     logo: info("logo"),
     footerLogo: info("logo-footer"),
     hero: info("hero"),
-    popup: {
-      ...DEFAULT_POPUP,
-      media: { mobile: info("popup-mobile"), desktop: info("popup-desktop"), latar: info("popup-latar") },
-    },
+    popup: { ...popup, version: getPopupVersion(popup) },
   };
 }

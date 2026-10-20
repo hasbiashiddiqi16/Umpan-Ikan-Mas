@@ -5,6 +5,7 @@ import { cmsMedia, cmsSettings } from "@/db/schema";
 import {
   MEDIA_KEYS,
   defaultAppearance,
+  getPopupVersion,
   isRecipePhotoKeyForSlug,
   mediaUrl,
   recipePhotoKey,
@@ -42,18 +43,19 @@ export async function readAppearance(): Promise<AppearanceState> {
       .where(inArray(cmsMedia.key, [...MEDIA_KEYS]));
     const byKey = new Map(media.map((row) => [row.key, row as MediaRow]));
     const popup = resolvePopupSettings(setting?.value);
+    const popupData = {
+      ...popup,
+      media: {
+        mobile: toInfo("popup-mobile", byKey.get("popup-mobile")),
+        desktop: toInfo("popup-desktop", byKey.get("popup-desktop")),
+        latar: toInfo("popup-latar", byKey.get("popup-latar")),
+      },
+    };
     return {
       logo: toInfo("logo", byKey.get("logo")),
       footerLogo: toInfo("logo-footer", byKey.get("logo-footer")),
       hero: toInfo("hero", byKey.get("hero")),
-      popup: {
-        ...popup,
-        media: {
-          mobile: toInfo("popup-mobile", byKey.get("popup-mobile")),
-          desktop: toInfo("popup-desktop", byKey.get("popup-desktop")),
-          latar: toInfo("popup-latar", byKey.get("popup-latar")),
-        },
-      },
+      popup: { ...popupData, version: getPopupVersion(popupData) },
     };
   } catch {
     return defaultAppearance();

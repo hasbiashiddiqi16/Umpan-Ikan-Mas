@@ -5,7 +5,6 @@ import Image, { getImageProps } from "next/image";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import {
-  defaultAppearance,
   mergeAppearance,
   type AppearanceState,
   type PopupFeature,
@@ -61,6 +60,17 @@ type PromoModalProps = {
   onClose?: () => void;
 };
 
+/** Mengambil pengaturan terbaru dari API; `null` bila gagal/diabaikan. */
+async function fetchAppearance(): Promise<AppearanceState | null> {
+  try {
+    const response = await fetch("/api/appearance", { cache: "no-store" });
+    const data: unknown = response.ok ? await response.json() : null;
+    return data ? mergeAppearance(data) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function PromoModal({ override, preview = false, onClose }: PromoModalProps) {
   const pathname = usePathname();
   const hydrated = useHydrated();
@@ -71,14 +81,17 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
   const [appearance, setAppearance] = useState<AppearanceState | null>(override ? mergeAppearance(override) : null);
   const [settingsSettled, setSettingsSettled] = useState(Boolean(override) || preview);
   const [posterTerjadwal, setPosterTerjadwal] = useState(false);
+  const [posterState, setPosterState] = useState<{ key: string; ready: boolean; failed: boolean }>({ key: "", ready: false, failed: false });
   const [maxHeight, setMaxHeight] = useState<number>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const appearanceRef = useRef<AppearanceState | null>(appearance);
 
   const close = useCallback(() => {
     setOpen(false);
-    if (!preview) markPromoSeen();
+    // Penanda dicatat untuk versi yang sedang ditampilkan.
+    if (!preview) markPromoSeen(mergeAppearance(appearanceRef.current).popup.version);
     onClose?.();
   }, [onClose, preview]);
 
@@ -94,29 +107,61 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
     };
   }, []);
 
-  // Pengaturan tampilan diambil sekali saat halaman dibuka. Bila permintaan
-  // gagal (mis. sedang luring), nilai bawaan dipakai agar popup tetap tampil.
   useEffect(() => {
-    if (override) return;
-    let active = true;
-    fetch("/api/appearance", { cache: "force-cache" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: AppearanceState | null) => {
-        if (!active) return;
-        if (data) setAppearance(mergeAppearance(data));
-        setSettingsSettled(true);
-      })
-      .catch(() => {
-        if (active) setSettingsSettled(true);
-      });
-    return () => { active = false; };
+    appearanceRef.current = appearance;
+  }, [appearance]);
+
+  // Pengaturan SELALU diambil segar (`no-store`), bukan dari cache
+  // peramban: perubahan popup dari dashboard harus langsung terlihat.
+  // Bila permintaan gagal (mis. sedang luring), pengaturan terakhir yang
+  // berhasil dimuat — atau nilai bawaan — dipakai agar popup tetap tampil.
+  const loadAppearance = useCallback(async (): Promise<AppearanceState> => {
+    if (override) {
+      const next = mergeAppearance(override);
+      appearanceRef.current = next;
+      return next;
+    }
+    const next = await fetchAppearance();
+    if (next) {
+      appearanceRef.current = next;
+      setAppearance(next);
+      setSettingsSettled(true);
+      return next;
+    }
+    // Permintaan gagal: pakai pengaturan terakhir/bawaan agar popup tetap tampil.
+    setSettingsSettled(true);
+    return appearanceRef.current ?? mergeAppearance(null);
   }, [override]);
 
+  // Muat saat halaman dibuka dan segarkan lagi setiap pindah halaman,
+  // supaya tab yang lama terbuka pun akhirnya memakai popup terbaru.
+  useEffect(() => {
+    if (preview || override || !hydrated) return;
+    let active = true;
+    fetchAppearance().then((next) => {
+      if (!active) return;
+      if (next) {
+        appearanceRef.current = next;
+        setAppearance(next);
+      }
+      setSettingsSettled(true);
+    });
+    return () => { active = false; };
+  }, [hydrated, override, pathname, preview]);
+
   const settings = mergeAppearance(appearance).popup;
+  const popupVersion = settings.version;
   // Props poster per lebar layar (untuk <picture> di bawah): hanya varian
   // yang cocok dengan layar yang diunduh; juga dipakai tautan preload.
   const { props: posterMobile } = getImageProps({ src: settings.media.mobile.url, width: 860, height: 1280, alt: "", sizes: "(max-width: 640px) 92vw, 430px" });
   const { props: posterDesktop } = getImageProps({ src: settings.media.desktop.url, width: 1640, height: 1040, alt: "", sizes: "(max-width: 900px) 92vw, 820px" });
+
+  // Poster digambar transparan sampai gambarnya benar-benar selesai
+  // dimuat: dialog tidak lagi terbuka sebagai blok hijau kosong. Status
+  // kesiapan dikunci pada poster yang sedang tampil, jadi poster baru
+  // otomatis mulai dari transparan lagi.
+  const posterKey = `${settings.mode}:${popupVersion}:${settings.media.mobile.url}:${settings.media.desktop.url}`;
+  const posterVisible = posterState.key === posterKey && posterState.ready && !posterState.failed;
 
   // Kapan popup boleh tampil:
   // - kunjungan pertama, atau sesi peramban baru (mis. tab ditutup paksa), atau
@@ -127,14 +172,21 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
   useEffect(() => {
     if (preview) return;
     if (!hydrated) return;
+    if (!settingsSettled) return;
     if (pathname && EXCLUDED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
+    if (!settings.enabled && !isPromoForced()) return;
 
     let cancelled = false;
     let delayTimer: number | undefined;
     let dueTimer: number | undefined;
 
-    const openNow = () => {
+    const openNow = async () => {
+      // Cek ulang dengan pengaturan TERBARU tepat sebelum membuka: tab
+      // yang dibiarkan terbuka tidak lagi menampilkan popup versi lama.
+      const latest = await loadAppearance();
       if (cancelled) return;
+      if (!latest.popup.enabled && !isPromoForced()) return;
+      if (!shouldShowPromo(latest.popup.version)) return;
       if (delayTimer !== undefined) { window.clearInterval(delayTimer); delayTimer = undefined; }
       if (dueTimer !== undefined) { window.clearTimeout(dueTimer); dueTimer = undefined; }
       setForced(isPromoForced());
@@ -147,7 +199,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
       lastInteractionAt = Date.now();
     };
 
-    if (shouldShowPromo()) {
+    if (shouldShowPromo(popupVersion)) {
       document.addEventListener("pointerdown", markInteraction, true);
       document.addEventListener("keydown", markInteraction, true);
 
@@ -159,24 +211,25 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
         const waitedLongEnough = Date.now() - startedAt >= DELAY_BEFORE_OPEN_MS;
         const userIsIdle = Date.now() - lastInteractionAt >= IDLE_BEFORE_OPEN_MS;
         if (!waitedLongEnough || !userIsIdle) return;
-        openNow();
+        void openNow();
       }, 250);
     } else {
       // Masih dalam masa sembunyi: jadwalkan pemunculan berikutnya pada saat
       // jatah 24 jamnya habis (tab boleh tetap terbuka).
-      const dueAt = nextPromoDueAt();
+      const dueAt = nextPromoDueAt(popupVersion);
       if (dueAt !== null) {
         dueTimer = window.setTimeout(() => {
-          if (shouldShowPromo()) openNow();
+          void openNow();
         }, Math.max(1_000, dueAt - Date.now()));
       }
     }
 
     // Timer di tab latar bisa tertunda (peramban menidurkan tab), jadi saat tab
-    // kembali aktif keadaannya diperiksa ulang.
+    // kembali aktif keadaannya diperiksa ulang — termasuk kemungkinan admin
+    // baru saja mengganti popup (versinya berubah, jadi boleh tampil lagi).
     const onVisibilityChange = () => {
       if (cancelled || document.visibilityState !== "visible") return;
-      if (shouldShowPromo()) openNow();
+      void openNow();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -189,7 +242,7 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
       document.removeEventListener("pointerdown", markInteraction, true);
       document.removeEventListener("keydown", markInteraction, true);
     };
-  }, [hydrated, pathname, preview]);
+  }, [hydrated, loadAppearance, pathname, popupVersion, preview, settings.enabled, settingsSettled]);
 
   // Kunci scroll halaman, tangani Esc, dan tahan fokus di dalam dialog.
   useEffect(() => {
@@ -261,7 +314,9 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
         aria-labelledby="promo-welcome-title"
         aria-describedby="promo-welcome-description"
         style={{ maxHeight }}
-        className={`relative w-full overflow-hidden rounded-[26px] bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)] sm:rounded-[30px] ${
+        className={`relative w-full overflow-hidden rounded-[26px] sm:rounded-[30px] ${
+          posterMode && !posterVisible ? "bg-transparent" : "bg-[#0f2a1c] shadow-[0_30px_80px_rgba(12,26,18,.45)]"
+        } ${
           posterMode ? "max-w-[430px] sm:max-w-[820px]" : "max-w-[430px]"
         }`}
       >
@@ -280,7 +335,14 @@ export function PromoModal({ override, preview = false, onClose }: PromoModalPro
           <picture>
             <source media="(min-width: 640px)" srcSet={posterDesktop.srcSet} sizes={posterDesktop.sizes} width={1640} height={1040} />
             {/* <img> dari getImageProps agar <picture> memilih satu varian saja. */}
-            <img {...posterMobile} alt="" style={{ maxHeight }} className="block aspect-[860/1280] h-auto w-full sm:aspect-[1640/1040]" />
+            <img
+              {...posterMobile}
+              alt=""
+              style={{ maxHeight }}
+              onLoad={() => setPosterState({ key: posterKey, ready: true, failed: false })}
+              onError={() => setPosterState({ key: posterKey, ready: false, failed: true })}
+              className={`block aspect-[860/1280] h-auto w-full transition-opacity duration-200 sm:aspect-[1640/1040] ${posterVisible ? "opacity-100" : "opacity-0"}`}
+            />
           </picture>
         )}
 
