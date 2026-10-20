@@ -1,42 +1,29 @@
-export const PROMO_SEEN_KEY = "umpan-mas-promo-welcome-seen-v1";
+/**
+ * Penanda "popup sambutan sudah dilihat".
+ *
+ * Aturan tampil untuk SATU versi popup: kunjungan pertama, setiap sesi
+ * peramban baru (penanda sesi hilang saat peramban ditutup), dan lagi
+ * setelah lewat 24 jam. Penanda disimpan PER VERSI popup: begitu admin
+ * mengganti teks/gambar/status popup, versinya berubah dan pengunjung
+ * melihat versi baru satu kali — tanpa menghapus cache secara manual.
+ */
+
+export const PROMO_SEEN_KEY = "umpan-mas-promo-welcome-seen-v2";
+const PROMO_SEEN_LEGACY_KEY = "umpan-mas-promo-welcome-seen-v1";
 
 /** Saklar pratinjau: `?sambutan=1` memaksa popup tampil walau penanda sudah ada. */
 export const PROMO_FORCE_PARAM = "sambutan";
 
-/**
- * Lama popup tidak tampil lagi setelah terakhir dilihat.
- *
- * Aturan pemunculan popup sambutan:
- * 1. Muncul pada kunjungan pertama;
- * 2. Muncul lagi setiap **sesi peramban baru** — mis. tab ditutup paksa
- *    (`sessionStorage` ikut terhapus, sedang `localStorage` tetap ada);
- * 3. Muncul lagi setelah **lewat 24 jam** sejak terakhir dilihat, termasuk pada
- *    tab yang dibiarkan terbuka lama.
- *
- * Nilai penanda: waktu terakhir dilihat dalam milidetik (epoch). Penanda lama
- * yang masih berbentuk `"1"` (dari versi sebelumnya) dianggap "pernah dilihat
- * tetapi waktunya tidak diketahui", sehingga popup tampil sekali lagi lalu
- * memakai penanda waktu yang baru.
- */
+/** Lama satu versi popup tidak tampil lagi setelah terakhir dilihat. */
 export const PROMO_SEEN_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Batas bawah waktu yang masuk akal untuk sebuah penanda (9 September 2001,
- * dalam milidetik). Nilai di bawah ini — termasuk penanda lama `"1"` — dianggap
- * "pernah dilihat, waktunya tidak diketahui".
- */
-const MIN_REASONABLE_STAMP = 1_000_000_000_000;
+type PromoSeenRecord = { version: string; seenAt: number };
 
-/**
- * Penanda disimpan berlapis: `localStorage` (tetap antar kunjungan), lalu
- * `sessionStorage`, lalu memori. Kalau localStorage diblokir — mode privat, atau
- * halaman dibuka di dalam iframe yang di-sandbox — popup tetap tampil sekali per
- * sesi, bukan malah tidak pernah muncul.
- */
-let memorySeen = false;
-let memorySeenAt = 0;
+/** Cadangan in-memory bila storage peramban tidak tersedia/diblokir. */
+let memoryRecord: PromoSeenRecord | null = null;
 
 function store(kind: "localStorage" | "sessionStorage"): Storage | null {
+  if (typeof window === "undefined") return null;
   try {
     return window[kind];
   } catch {
@@ -45,96 +32,68 @@ function store(kind: "localStorage" | "sessionStorage"): Storage | null {
   }
 }
 
-/** Waktu terakhir dilihat menurut satu penyimpanan; `null` bila tidak ada/tak terbaca. */
-function readStamp(target: Storage | null): number | null {
-  if (!target) return null;
+function parseRecord(raw: string | null): PromoSeenRecord | null {
+  if (!raw) return null;
   try {
-    const raw = target.getItem(PROMO_SEEN_KEY);
-    if (!raw) return null;
-    const nilai = Number(raw);
-    return Number.isFinite(nilai) && nilai >= MIN_REASONABLE_STAMP ? nilai : null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const { version, seenAt } = parsed as { version?: unknown; seenAt?: unknown };
+    if (typeof version !== "string" || version.length === 0) return null;
+    if (typeof seenAt !== "number" || !Number.isFinite(seenAt) || seenAt <= 0) return null;
+    return { version, seenAt };
   } catch {
     return null;
   }
 }
 
-/** Apakah penyimpanan ini punya penanda sama sekali (termasuk bentuk lama `"1"`). */
-function hasFlag(target: Storage | null): boolean {
-  if (!target) return false;
+function readRecord(target: Storage | null): PromoSeenRecord | null {
+  if (!target) return null;
   try {
-    return target.getItem(PROMO_SEEN_KEY) !== null;
+    return parseRecord(target.getItem(PROMO_SEEN_KEY));
   } catch {
-    return false;
+    return null;
   }
 }
 
-function writeStamp(target: Storage | null, at: number): void {
+function writeRecord(target: Storage | null, record: PromoSeenRecord): void {
   if (!target) return;
   try {
-    target.setItem(PROMO_SEEN_KEY, String(at));
+    target.setItem(PROMO_SEEN_KEY, JSON.stringify(record));
   } catch {
     // Penyimpanan lain (atau memori) tetap dipakai.
   }
 }
 
-function removeFlag(target: Storage | null): void {
+function removeKey(target: Storage | null, key: string): void {
   if (!target) return;
   try {
-    target.removeItem(PROMO_SEEN_KEY);
+    target.removeItem(key);
   } catch {
     // Diabaikan: pemanggil tetap membersihkan penyimpanan lain.
   }
 }
 
-/** Apakah popup sudah dilihat pada sesi peramban yang sedang berjalan. */
-export function hasSeenPromoThisSession(): boolean {
-  if (typeof window === "undefined") return true;
-  return memorySeen || hasFlag(store("sessionStorage"));
+/** Catatan terakhir dari semua lapisan (yang paling baru yang menang). */
+function readPromoSeenRecord(): PromoSeenRecord | null {
+  const candidates = [readRecord(store("localStorage")), readRecord(store("sessionStorage")), memoryRecord]
+    .filter((record): record is PromoSeenRecord => record !== null);
+  if (!candidates.length) return null;
+  return candidates.reduce((latest, record) => (record.seenAt > latest.seenAt ? record : latest));
 }
 
-/** Waktu terakhir popup dilihat (epoch ms), atau `null` bila belum/tidak diketahui. */
-export function lastSeenAt(): number | null {
-  if (typeof window === "undefined") return null;
-  const waktu = readStamp(store("localStorage")) ?? readStamp(store("sessionStorage"));
-  if (waktu !== null) return waktu;
-  return memorySeenAt > 0 ? memorySeenAt : null;
-}
-
-/** Apakah popup masih dalam masa sembunyi (sesi ini dan belum lewat 24 jam). */
-export function hasSeenPromo(now = Date.now()): boolean {
-  if (!hasSeenPromoThisSession()) return false;
-  const waktu = lastSeenAt();
-  return waktu !== null && now - waktu < PROMO_SEEN_WINDOW_MS;
-}
-
-/** Menandai popup sudah dilihat sekarang (dipakai saat popup ditutup). */
-export function markPromoSeen(at = Date.now()): void {
-  memorySeen = true;
-  memorySeenAt = at;
-  if (typeof window === "undefined") return;
-  writeStamp(store("localStorage"), at);
-  writeStamp(store("sessionStorage"), at);
-}
-
-/**
- * Mengosongkan penanda di memori saja.
- *
- * Penanda di memori adalah cadangan saat `localStorage` dan `sessionStorage`
- * sama-sama diblokir. Pada halaman baru isinya otomatis kosong; fungsi ini
- * dipakai uji untuk menirukan halaman/sesi yang benar-benar baru dibuka.
- */
-export function resetPromoMemoryForTests(): void {
-  memorySeen = false;
-  memorySeenAt = 0;
-}
-
-/** Menghapus penanda di semua lapisan, mis. dari tombol "tampilkan lagi" di dashboard. */
-export function clearPromoSeen(): void {
-  memorySeen = false;
-  memorySeenAt = 0;
-  if (typeof window === "undefined") return;
-  removeFlag(store("localStorage"));
-  removeFlag(store("sessionStorage"));
+function readLegacySeenAt(): number | null {
+  for (const target of [store("localStorage"), store("sessionStorage")]) {
+    if (!target) continue;
+    try {
+      const raw = target.getItem(PROMO_SEEN_LEGACY_KEY);
+      if (!raw) continue;
+      const nilai = Number(raw);
+      if (Number.isFinite(nilai) && nilai > 0) return nilai;
+    } catch {
+      // Abaikan lapisan yang tidak terbaca.
+    }
+  }
+  return null;
 }
 
 export function isPromoForced(): boolean {
@@ -146,20 +105,83 @@ export function isPromoForced(): boolean {
   }
 }
 
+/** Apakah popup (versi ini, bila disebut) sudah dilihat pada sesi berjalan. */
+export function hasSeenPromoThisSession(version?: string): boolean {
+  if (memoryRecord && (version === undefined || memoryRecord.version === version)) return true;
+  const sessionRecord = readRecord(store("sessionStorage"));
+  if (!sessionRecord) return false;
+  return version === undefined || sessionRecord.version === version;
+}
+
+/** Waktu terakhir popup (versi ini, bila disebut) dilihat; `null` bila belum. */
+export function lastSeenAt(version?: string): number | null {
+  const record = readPromoSeenRecord();
+  if (record) return version === undefined || record.version === version ? record.seenAt : null;
+  // Tanpa catatan berversi, hormati stempel format lama untuk pemanggil lama.
+  return version === undefined ? readLegacySeenAt() : null;
+}
+
+/** Apakah popup masih dalam masa sembunyi (sesi ini dan belum lewat 24 jam). */
+export function hasSeenPromo(version?: string | number, now = Date.now()): boolean {
+  const versi = typeof version === "string" ? version : undefined;
+  const waktuAcuan = typeof version === "number" ? version : now;
+  if (!hasSeenPromoThisSession(versi)) return false;
+  const waktu = lastSeenAt(versi);
+  return waktu !== null && waktuAcuan - waktu < PROMO_SEEN_WINDOW_MS;
+}
+
+/** Menandai popup versi ini sudah dilihat sekarang (dipakai saat popup ditutup). */
+export function markPromoSeen(version: string, at = Date.now()): void {
+  const record: PromoSeenRecord = { version, seenAt: at };
+  memoryRecord = record;
+  writeRecord(store("localStorage"), record);
+  writeRecord(store("sessionStorage"), record);
+}
+
 /**
- * Tampil saat kunjungan pertama, saat sesi peramban baru (tab ditutup paksa),
- * setelah lewat 24 jam, atau selalu saat dipaksa lewat `?sambutan=1`.
+ * Mengosongkan penanda di memori saja (dipakai uji untuk menirukan
+ * halaman/sesi yang benar-benar baru dibuka).
  */
-export function shouldShowPromo(now = Date.now()): boolean {
+export function resetPromoMemoryForTests(): void {
+  memoryRecord = null;
+}
+
+/** Menghapus penanda di semua lapisan, mis. dari tombol "tampilkan lagi" di dashboard. */
+export function clearPromoSeen(): void {
+  memoryRecord = null;
+  if (typeof window === "undefined") return;
+  removeKey(store("localStorage"), PROMO_SEEN_KEY);
+  removeKey(store("sessionStorage"), PROMO_SEEN_KEY);
+  removeKey(store("localStorage"), PROMO_SEEN_LEGACY_KEY);
+  removeKey(store("sessionStorage"), PROMO_SEEN_LEGACY_KEY);
+}
+
+/**
+ * Tampil saat: dipaksa `?sambutan=1`, versi ini belum pernah dilihat,
+ * sesi peramban baru, atau sudah lewat 24 jam sejak versi ini terakhir
+ * dilihat. Versi yang berubah selalu boleh tampil satu kali.
+ */
+export function shouldShowPromo(version?: string, now = Date.now()): boolean {
   if (isPromoForced()) return true;
+  if (version !== undefined) {
+    const record = readPromoSeenRecord();
+    if (!record || record.version !== version) return true;
+    if (!hasSeenPromoThisSession(version)) return true;
+    return now - record.seenAt >= PROMO_SEEN_WINDOW_MS;
+  }
   if (!hasSeenPromoThisSession()) return true;
   const waktu = lastSeenAt();
   if (waktu === null) return true;
   return now - waktu >= PROMO_SEEN_WINDOW_MS;
 }
 
-/** Kapan popup berikutnya boleh muncul; `null` bila belum ada penanda waktu. */
-export function nextPromoDueAt(): number | null {
+/** Kapan popup versi ini boleh muncul lagi; `null` bila boleh tampil sekarang. */
+export function nextPromoDueAt(version?: string): number | null {
+  if (version !== undefined) {
+    const record = readPromoSeenRecord();
+    if (!record || record.version !== version) return null;
+    return record.seenAt + PROMO_SEEN_WINDOW_MS;
+  }
   const waktu = lastSeenAt();
   return waktu === null ? null : waktu + PROMO_SEEN_WINDOW_MS;
 }

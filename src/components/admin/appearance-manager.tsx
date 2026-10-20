@@ -14,6 +14,7 @@ import {
   MEDIA_MAX_BYTES,
   POPUP_ICONS,
   POPUP_ICON_LABELS,
+  getPopupVersion,
   mergeAppearance,
   type AppearanceState,
   type MediaKey,
@@ -94,8 +95,9 @@ export function AppearanceManager() {
   const applyAppearance = useCallback((payload: unknown) => {
     const data = mergeAppearance(payload);
     setState(data);
-    const { media: _media, ...popup } = data.popup;
+    const { media: _media, version: _version, ...popup } = data.popup;
     void _media;
+    void _version;
     setForm(popup);
   }, []);
 
@@ -193,7 +195,7 @@ export function AppearanceManager() {
   const hero = state?.hero;
   const media = state?.popup.media;
   const previewAppearance: AppearanceState | undefined = state && media
-    ? { logo: state.logo, footerLogo: state.footerLogo, hero: state.hero, popup: { ...form, media } }
+    ? { logo: state.logo, footerLogo: state.footerLogo, hero: state.hero, popup: { ...form, media, version: getPopupVersion({ ...form, media }) } }
     : undefined;
 
   return (
@@ -361,7 +363,7 @@ export function AppearanceManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Popup sambutan</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Muncul pada kunjungan pertama, setiap sesi peramban baru (tab ditutup lalu dibuka lagi), dan setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam. Tanpa scroll, dan aksinya hanya menutup.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Muncul pada kunjungan pertama, setiap sesi peramban baru (tab ditutup lalu dibuka lagi), setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan satu kali setiap isi/gambar popup diganti. Tanpa scroll, dan aksinya hanya menutup.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={showAgain} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#e2e7e0] bg-white px-3 text-[10px] font-bold text-[#5c6b5c] transition hover:bg-[#f4f7f2]">
@@ -511,7 +513,7 @@ export function AppearanceManager() {
             <div className="rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
               <p className="text-xs font-extrabold text-[#354639]">Yang dilihat pengunjung</p>
               <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#606d62] (4.67:1 terburuk)">
-                <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, dan lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam — setelah halaman tenang (± 1,4 detik).</li>
+                <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan satu kali setiap kali popup diganti — setelah halaman tenang (± 1,4 detik). Pengunjung tidak perlu menghapus cache.</li>
                 <li>• Selama masa itu, pengunjung yang berpindah halaman tidak melihatnya berulang kali.</li>
                 <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>
                 <li>• Tanpa scroll; aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
@@ -545,15 +547,13 @@ function applyMedia(state: AppearanceState, media: AppearanceState["logo"]): App
   if (media.key === "logo") return { ...state, logo: media };
   if (media.key === "logo-footer") return { ...state, footerLogo: media };
   if (media.key === "hero") return { ...state, hero: media };
-  return {
-    ...state,
-    popup: {
-      ...state.popup,
-      media: {
-        mobile: media.key === "popup-mobile" ? media : state.popup.media.mobile,
-        desktop: media.key === "popup-desktop" ? media : state.popup.media.desktop,
-        latar: media.key === "popup-latar" ? media : state.popup.media.latar,
-      },
+  const popup = {
+    ...state.popup,
+    media: {
+      mobile: media.key === "popup-mobile" ? media : state.popup.media.mobile,
+      desktop: media.key === "popup-desktop" ? media : state.popup.media.desktop,
+      latar: media.key === "popup-latar" ? media : state.popup.media.latar,
     },
   };
+  return { ...state, popup: { ...popup, version: getPopupVersion(popup) } };
 }
