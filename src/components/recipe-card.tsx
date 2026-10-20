@@ -5,14 +5,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Heart, Users } from "lucide-react";
 import type { Recipe } from "@/data/recipes";
-import { Badge, FishingTypeIcon, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
+import { Badge, cardMetaBadgeClass, FishingTypeIcon, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
 import { MatchOrPopularBadge } from "@/components/match-or-popular";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
 import { useRecipeRating } from "@/lib/use-ratings";
 
 import { readLocalFavorites, toggleFavorite } from "@/lib/favorites-client";
-const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
-
 function getStoredFavorites(): string[] { return readLocalFavorites(); }
 
 export function RecipeCard({ recipe, matchScore, initialRating }: { recipe: Recipe; matchScore?: number; initialRating?: { count: number; average: number } }) {
