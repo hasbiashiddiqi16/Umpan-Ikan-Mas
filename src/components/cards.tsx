@@ -5,12 +5,10 @@ import { ArrowRight, ArrowUpRight, Check, Cloud, CloudRain, CloudSun, MapPin, Me
 import { recipes, type Recipe } from "@/data/recipes";
 import type { Province } from "@/data/provinces";
 import type { FishingReport } from "@/data/fishingReports";
-import { Badge, FishingTypeIcon, Rating, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
+import { Badge, cardMetaBadgeClass, FishingTypeIcon, Rating, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
 import { describeRating } from "@/lib/rating-utils";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
 import { formatCount } from "@/lib/utils";
-
-const cardMetaBadgeClass = "h-7 w-[106px] shrink-0 justify-center justify-self-center whitespace-nowrap !px-2 !text-[11px]";
 
 /**
  * Jumlah "N racikan" di kartu cuaca **dihitung dari katalog**, bukan ditulis
@@ -76,9 +74,13 @@ export function CommunityCard({ report, showPhoto = false }: { report: FishingRe
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-bold text-[#405543]" style={{ backgroundColor: report.color }}>{report.initials}</span>
-          <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><Badge tone="cream" className="!text-[10px]">Data contoh</Badge></div><p className="mt-1 flex items-center gap-1 text-xs text-[#666d66] (4.57:1 terburuk)"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
+          <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><Badge tone="cream">Data contoh</Badge></div><p className="mt-1 flex items-center gap-1 text-xs text-[#666d66] (4.57:1 terburuk)"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3"><Badge className={cardMetaBadgeClass}><WeatherIcon weather={report.weather} /> {report.weather}</Badge><Badge tone="cream" className={cardMetaBadgeClass}><WaterIcon /> {report.water}</Badge><Badge tone="cream" className={cardMetaBadgeClass}><FishingTypeIcon /> {report.fishingType}</Badge></div>
+        <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3">
+          <Badge className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.weather}><WeatherIcon weather={report.weather} className="shrink-0" /> {report.weather}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.water}><WaterIcon className="shrink-0" /> {report.water}</span></Badge>
+          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.fishingType}><FishingTypeIcon className="shrink-0" /> {report.fishingType}</span></Badge>
+        </div>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{describeCatchSummary(report)}</p></div></div>
         <p className="mt-4 flex-1 text-sm leading-6 text-[#646d64] (4.60:1 terburuk)">“{report.comment}”</p>
         <div className="mt-4 flex items-center justify-between border-t border-[#edf0eb] pt-3"><Rating value={report.rating} compact /><Link href={`/resep/${report.recipeSlug}`} className="text-xs font-bold text-[#35573a] hover:underline">Lihat detail <ArrowRight size={13} className="ml-1 inline" /></Link></div>
