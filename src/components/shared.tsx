@@ -16,6 +16,9 @@ export function Badge({ children, tone = "sage", className = "", title }: { chil
   return <span title={title} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]} ${className}`}>{children}</span>;
 }
 
+/** Gaya label meta pada kartu resep dan kartu ulasan (cuaca, air, jenis, tangkapan). */
+export const cardMetaBadgeClass = "h-7 w-full min-w-0 max-w-full justify-start !px-2 !text-[11px] !text-left";
+
 export function Rating({ value, count, compact = false }: { value: number; count?: number; compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-sm" aria-label={`Rating ${value.toFixed(1)} dari 5${count ? `, ${count} ulasan` : ""}`}>
