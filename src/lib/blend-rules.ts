@@ -13,7 +13,8 @@ import { SUBSTITUTE_NOTE, catatanPengganti, penggantiTercatat } from "@/data/ing
  * beserta saran bahannya.
  */
 
-export const BLEND_BASIS_GRAM = 100;
+export const BLEND_BASIS_GRAM = 150;
+const TOTAL_PERSEN = 100;
 export const MIN_BLEND_INGREDIENTS = 2;
 export const MAX_BLEND_INGREDIENTS = 6;
 /** Satu bahan yang porsinya di bawah ini tidak akan berpengaruh nyata di adonan. */
@@ -27,7 +28,7 @@ export type RoleRule = {
 };
 
 /**
- * Rentang rasio per peran (persen dari adonan kering 100 g). Angka ini titik
+ * Rentang rasio per peran (persen dari total campuran kering). Angka ini titik
  * awal yang bisa diperiksa — bukan angka baku hasil penelitian, dan sengaja
  * ditulis apa adanya sebagai bahan diskusi.
  */
@@ -77,9 +78,9 @@ export type BlendItem = IngredientKnowledge & { percent: number; grams: number; 
 
 export type BlendHemat = {
   ids: string[];
-  total100g: number;
+  totalBasis: number;
   totalSesi: number;
-  selisih100g: number;
+  selisihBasis: number;
   selisihSesi: number;
 };
 
@@ -88,7 +89,7 @@ export type BlendBalance = {
   roleShares: RoleShare[];
   warnings: string[];
   suggestions: BlendSuggestion[];
-  cost100g: BlendCost;
+  costBasis: BlendCost;
   costSesi: BlendCost;
   hemat: BlendHemat | null;
   basisGram: number;
@@ -186,14 +187,14 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
   const bobotPeran = rulesHadir.map((rule) => (unik.filter((item) => item.role === rule.role).reduce((jumlah, item) => jumlah + item.weight, 0) / totalBobot) * 100);
   const mins = rulesHadir.map((rule) => rule.minPercent);
   const maxs = rulesHadir.map((rule) => rule.maxPercent);
-  const diatur = bagiProporsi(BLEND_BASIS_GRAM, bobotPeran, mins, maxs);
+  const diatur = bagiProporsi(TOTAL_PERSEN, bobotPeran, mins, maxs);
   // Kalau rentang aturan tidak bisa dipenuhi sekaligus (mis. hanya dua bahan
   // sehingga porsi Dasar tetap di atas 60%), komposisi dikembalikan ke proporsi
   // bahan pilihan pengunjung dan pelanggarannya dilaporkan — bukan dipaksa
   // masuk aturan dengan angka yang tidak lagi mencerminkan pilihan itu.
-  const memaksaProporsi = Math.abs(diatur.reduce((jumlah, item) => jumlah + item, 0) - BLEND_BASIS_GRAM) > 0.5;
+  const memaksaProporsi = Math.abs(diatur.reduce((jumlah, item) => jumlah + item, 0) - TOTAL_PERSEN) > 0.5;
   const dasarPeran = memaksaProporsi ? bobotPeran : diatur;
-  const peranBulat = rapikanBatas(bulatkanKeTarget(dasarPeran, BLEND_BASIS_GRAM), mins, maxs);
+  const peranBulat = rapikanBatas(bulatkanKeTarget(dasarPeran, TOTAL_PERSEN), mins, maxs);
 
   const items: BlendItem[] = [];
   const roleShares: RoleShare[] = [];
@@ -236,9 +237,11 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
   roleShares.filter((share) => share.status === "lebih").forEach((share) => warnings.push(`Porsi ${share.role} ${share.percent}% — di atas aturan ${share.min}–${share.max}%. ${saranLebih(share)}`));
   if (unik.some((item) => item.id === "pandan")) warnings.push("Jika pandan yang dipakai berupa essen, takar dalam tetes terpisah—jangan dihitung sebagai gram adonan.");
 
-  const cost100g = hitungBiayaCampuran(items.map((item) => ({ id: item.id, gram: item.percent })), wilayah);
-  const costSesi = hitungBiayaCampuran(items.map((item) => ({ id: item.id, gram: (item.percent * SESI_GRAM) / BLEND_BASIS_GRAM })), wilayah);
-  const rupiahPerBahan = new Map(cost100g.perBahan.map((line) => [line.id, line.rupiah]));
+  const gramPerBahan = bulatkanKeTarget(items.map((item) => (item.percent * BLEND_BASIS_GRAM) / TOTAL_PERSEN), BLEND_BASIS_GRAM);
+  items.forEach((item, index) => { item.grams = gramPerBahan[index]; });
+  const costBasis = hitungBiayaCampuran(items.map((item) => ({ id: item.id, gram: item.grams })), wilayah);
+  const costSesi = hitungBiayaCampuran(items.map((item) => ({ id: item.id, gram: (item.percent * SESI_GRAM) / TOTAL_PERSEN })), wilayah);
+  const rupiahPerBahan = new Map(costBasis.perBahan.map((line) => [line.id, line.rupiah]));
   items.forEach((item) => { item.rupiah = rupiahPerBahan.get(item.id) ?? 0; });
 
   const suggestions: BlendSuggestion[] = [];
@@ -297,7 +300,7 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
     });
   }
 
-  return { items, roleShares, warnings, suggestions, cost100g, costSesi };
+  return { items, roleShares, warnings, suggestions, costBasis, costSesi };
 }
 
 /**
@@ -327,19 +330,19 @@ export function balanceBlend(selected: IngredientKnowledge[], wilayah: Wilayah =
     const bahan = hematIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
     if (bahan.length >= MIN_BLEND_INGREDIENTS) {
       const alternatif = hitungBlend(bahan, wilayah);
-      if (alternatif.cost100g.total < dasar.cost100g.total) {
+      if (alternatif.costBasis.total < dasar.costBasis.total) {
         hemat = {
           ids: hematIds,
-          total100g: alternatif.cost100g.total,
+          totalBasis: alternatif.costBasis.total,
           totalSesi: alternatif.costSesi.total,
-          selisih100g: dasar.cost100g.total - alternatif.cost100g.total,
+          selisihBasis: dasar.costBasis.total - alternatif.costBasis.total,
           selisihSesi: dasar.costSesi.total - alternatif.costSesi.total,
         };
         const penggantian = dasar.items.map((item, index) => ({ dari: item.name, ke: namaBahan(hematIds[index]), berubah: hematIds[index] !== item.id })).filter((item) => item.berubah);
         dasar.suggestions.push({
           jenis: "hemat",
           judul: `Versi hemat: ganti ${penggantian.map((item) => `${item.dari} → ${item.ke}`).join(", ")}.`,
-          detail: `Perkiraan hemat ${formatRupiah(hemat.selisih100g)} per 100 g adonan dan ${formatRupiah(hemat.selisihSesi)} per sesi (± ${SESI_GRAM} g), dengan peran yang sama sehingga rasio tetap di dalam aturan. Pakai tombol "Terapkan versi hemat" di bawah untuk menggantinya sekaligus.`,
+          detail: `Perkiraan hemat ${formatRupiah(hemat.selisihBasis)} per ${BLEND_BASIS_GRAM} g adonan dan ${formatRupiah(hemat.selisihSesi)} per sesi (± ${SESI_GRAM} g), dengan peran yang sama sehingga rasio tetap di dalam aturan. Pakai tombol "Terapkan versi hemat" di bawah untuk menggantinya sekaligus.`,
           penggantiIds: [],
         });
       }
