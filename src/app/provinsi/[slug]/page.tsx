@@ -135,7 +135,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
   if (!province) notFound();
   const regionalRecipes = (await getPublicRecipes()).filter((recipe) => recipe.provinces.includes(province.name));
   // Angka ulasan (statistik + urutan cadangan) dihitung di pulau `Suspense`
-  // di bawah — hanya dari ulasan asli yang sudah disetujui, bukan contoh.
+  // di bawah — hanya dari ulasan asli yang sudah disetujui.
   const provinceUrl = absoluteUrl(`/provinsi/${province.slug}`);
   const homeUrl = absoluteUrl("/");
   const provincesUrl = absoluteUrl("/provinsi");
@@ -171,7 +171,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan katalog untuk {province.name}. Provinsi adalah salah satu indikator. Karakter air setiap kolam tetap bisa berbeda.</p>
           <Suspense fallback={<ProvinceStatsSkeleton />}><ProvinceStats province={province} regionalRecipes={regionalRecipes} /></Suspense>
         </section>
-        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan hanya menghitung ulasan pengunjung yang sudah disetujui. Ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
+        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan hanya menghitung ulasan pengunjung yang sudah disetujui. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
         <Suspense fallback={<ProvinceRecipesSkeleton />}><ProvinceRecipesSection province={province} regionalRecipes={regionalRecipes} /></Suspense>
       </main>
       <Footer />

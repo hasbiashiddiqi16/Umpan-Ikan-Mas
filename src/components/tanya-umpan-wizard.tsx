@@ -112,11 +112,10 @@ export function TanyaUmpanWizard({ initialRecipes, initialManagedSlugs }: { init
   }, [markLocationTouched]);
 
   const extraReviews = useMemo(() => approvedReviews.filter((remote) => !memberReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, memberReviews]);
-  // Satu-satunya sumber daftar: resep basis data berstatus terbit
-  // dari API publik (data contoh statis sudah dihapus).
+  // Satu-satunya sumber daftar: resep basis data berstatus terbit dari API publik.
   const recommendationRecipes = publishedRecipes;
   const pakarResults = useMemo(
-    // Ulasan contoh tidak dipakai sebagai bukti; hanya ulasan pengunjung asli.
+    // Hanya ulasan pengunjung asli yang dipakai sebagai bukti.
     () => rankPakarRecipes(preferences, [], [...memberReviews, ...extraReviews], recommendationRecipes),
     [preferences, memberReviews, extraReviews, recommendationRecipes],
   );

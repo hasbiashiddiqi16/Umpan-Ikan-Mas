@@ -51,8 +51,6 @@ export const cmsRecipes = pgTable("cms_recipes", {
 
 export const cmsReviews = pgTable("cms_reviews", {
   id: serial("id").primaryKey(),
-  /** Diisi hanya untuk ulasan contoh katalog agar proses sinkronisasi idempoten. */
-  seedKey: varchar("seed_key", { length: 220 }),
   recipeSlug: varchar("recipe_slug", { length: 180 }).notNull(),
   name: varchar("name", { length: 80 }).notNull(),
   location: varchar("location", { length: 180 }).notNull(),
@@ -90,7 +88,6 @@ export const cmsReviews = pgTable("cms_reviews", {
   userId: uuid("user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  uniqueIndex("cms_reviews_seed_key_unique").on(table.seedKey),
   index("cms_reviews_status_created_idx").on(table.status, table.createdAt),
   index("cms_reviews_recipe_idx").on(table.recipeSlug),
   index("cms_reviews_device_recipe_created_idx").on(table.device, table.recipeSlug, table.createdAt),

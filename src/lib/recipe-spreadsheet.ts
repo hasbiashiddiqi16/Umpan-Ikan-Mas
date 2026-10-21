@@ -338,50 +338,6 @@ export async function readSpreadsheetRows(buffer: Buffer, filename: string): Pro
   return rows;
 }
 
-/** Dua baris contoh pada template: resep asli katalog agar formatnya jelas. */
-const TEMPLATE_EXAMPLES: Record<string, string>[] = [
-  {
-    title: "Umpan Putih Kroto",
-    slug: "umpan-putih-kroto",
-    summary: "Racikan lembut beraroma gurih yang jadi andalan pemancing saat hujan dan air kolam mulai keruh.",
-    status: "published",
-    price: "Rp20.000–25.000",
-    difficulty: "Mudah",
-    weather: "Hujan, Mendung, Berawan",
-    water: "Keruh, Hijau",
-    waterBodies: "Kolam",
-    fishingTypes: "Harian, Lomba",
-    provinces: "DKI Jakarta",
-    seasons: "Musim Hujan, Peralihan",
-    ingredients: "Pelet ikan | Pelet Jitu | 50 g\nSusu bubuk | Dancow Full Cream | 20 g\nTepung terigu | Rose Brand | 25 g\nTelur ayam | - | 1 butir\nSantan | Kara | 30 ml\nKroto segar | - | 1 ons\nEssen pandan | Sesuai selera | 3–5 tetes | opsional",
-    steps: "Haluskan pelet hingga teksturnya lembut\nCampurkan susu bubuk dan tepung sampai merata\nMasukkan telur dan santan sedikit demi sedikit\nAduk hingga adonan kalis dan mudah dibentuk\nTambahkan kroto dan essen, aduk perlahan\nKukus 15–20 menit, lalu dinginkan sebelum digunakan",
-    suitable: "Hujan\nAir keruh\nKolam harian\nIkan mas aktif",
-    notSuitable: "Air sangat jernih\nKondisi sangat panas",
-    author: "Tim UMPAN MAS",
-    image: "",
-  },
-  {
-    title: "Roti Tawar Kroto Lomba",
-    slug: "roti-tawar-kroto-lomba",
-    summary: "Tekstur lembut dari roti tawar dengan kroto segar untuk sesi lomba berdurasi panjang.",
-    status: "published",
-    price: "Rp30.000–38.000",
-    difficulty: "Menengah",
-    weather: "Hujan, Mendung",
-    water: "Keruh, Hijau",
-    waterBodies: "Kolam",
-    fishingTypes: "Lomba",
-    provinces: "DKI Jakarta",
-    seasons: "Musim Hujan",
-    ingredients: "Roti tawar | Sari Roti | 2 lembar\nKroto | Segar | 1 ons\nSusu bubuk | Full cream | 15 g\nSantan | Kara | 15 ml",
-    steps: "Remas roti tawar hingga halus\nTambahkan susu bubuk dan santan\nMasukkan kroto, aduk perlahan\nBentuk kecil dan simpan dalam wadah tertutup",
-    suitable: "Kolam lomba\nHujan\nAir kehijauan",
-    notSuitable: "Kolam air bening\nCuaca panas terik",
-    author: "Tim UMPAN MAS",
-    image: "",
-  },
-];
-
 /** Bangun berkas template `.xlsx` (lembar "Resep" + lembar "Petunjuk"). */
 export async function buildRecipeTemplateWorkbook(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -390,7 +346,6 @@ export async function buildRecipeTemplateWorkbook(): Promise<Buffer> {
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true };
   headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EFE4" } };
-  for (const contoh of TEMPLATE_EXAMPLES) sheet.addRow(contoh);
   sheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true }; });
 
   const guide = workbook.addWorksheet("Petunjuk");
@@ -398,11 +353,11 @@ export async function buildRecipeTemplateWorkbook(): Promise<Buffer> {
   const barisPetunjuk = [
     "CARA MENGISI TEMPLATE IMPOR RESEP",
     "",
-    "1. Satu baris = satu resep. Isi mulai baris ke-2. Dua baris contoh di lembar \"Resep\" boleh diganti atau dihapus.",
+    "1. Satu baris = satu resep. Isi mulai baris ke-2. Lembar \"Resep\" hanya berisi judul kolom; tidak ada baris bawaan yang ikut terimpor.",
     "2. Unggah lewat Dashboard → Konten → Impor Excel. Format .xlsx atau .csv, ukuran maksimal 2 MB, maksimal 200 baris per berkas.",
     "3. Kolom wajib: Judul, Ringkasan, Bahan, Langkah. Jenis kolam wajib diisi minimal satu (Harian/Lomba/Galatama).",
-    "4. Untuk kolom pilihan seperti Cuaca dan Kondisi air, pisahkan beberapa nilai dengan koma. Contoh Cuaca: Hujan, Mendung, Berawan.",
-    "5. Bahan ditulis per bahan: Nama | Merek | Takaran. Tulis setiap bahan pada baris baru di dalam sel yang sama. Tambahkan \"| opsional\" di belakang bahan yang boleh dilewati. Contoh: Pelet ikan | Pelet Jitu | 50 g\nKroto | Segar | 1 ons | opsional.",
+    "4. Untuk kolom pilihan seperti Cuaca dan Kondisi air, pisahkan beberapa nilai dengan koma. Daftar nilai yang sah tercantum di bagian NILAI YANG SAH di bawah.",
+    "5. Bahan ditulis per bahan dengan format Nama bahan | Merek | Takaran. Tulis setiap bahan pada baris baru di dalam sel yang sama. Tambahkan \"| opsional\" di belakang bahan yang boleh dilewati.",
     "6. Tulis setiap langkah pada baris baru di dalam sel yang sama. Nomor di awal langkah otomatis dibuang.",
     "7. Harga acuan untuk saringan budget dihitung otomatis dari Label harga (titik tengah rentangnya) — tidak ada kolom angka harga.",
     "8. Slug boleh dikosongkan (dibuat otomatis dari judul). Bila slug sama dengan resep yang sudah ada, resep itu DIPERBARUI — bukan dibuat duplikat.",

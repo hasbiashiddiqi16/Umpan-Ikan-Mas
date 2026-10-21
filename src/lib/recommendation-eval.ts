@@ -6,12 +6,11 @@
  * resep itu muncul di 3 teratas susunan sistem?
  *
  * Aturan penting supaya angkanya jujur:
- * 1. Yang dievaluasi hanya **ulasan nyata yang sudah disetujui** dan bukan
- *    ulasan contoh (`seed_key` kosong, tanggalnya tidak di masa depan).
+ * 1. Yang dievaluasi hanya **ulasan nyata yang sudah disetujui** dan tanggalnya tidak di masa depan.
  * 2. Ulasan yang sedang dinilai dikeluarkan dari bukti pemutus seri
  *    (leave-one-out), jadi tidak ada kebocoran: resep tidak dibantu oleh
  *    ulasan yang justru sedang diuji.
- * 3. Bila sampelnya belum cukup (`TUNING_TARGET`), laporan hanya menampilkan
+ * 3. Bila datanya belum cukup (`TUNING_TARGET`), laporan hanya menampilkan
  *    keadaan dan **tidak** menyarankan penggantian bobot.
  */
 import { normalizeFishingType, type Recipe } from "@/data/recipes";
@@ -55,7 +54,7 @@ export type HitRateAtK = {
   /** Jumlah ulasan yang bisa dievaluasi (punya resep yang ada di katalog). */
   evaluable: number;
   hits: number;
-  /** null berarti belum ada sampel — bukan 0. */
+  /** null berarti belum ada data — bukan 0. */
   hitRate: number | null;
 };
 
@@ -67,7 +66,7 @@ export type RecommendationEvalReport = {
   minRating: number;
   highCatchMin: number;
   minStrictReviewsForTuning: number;
-  sample: {
+  ringkasan: {
     approvedRealReviews: number;
     /** Ulasan yang menyertakan angka hasil tangkapan. */
     withCatchCount: number;
@@ -90,7 +89,7 @@ export type RecommendationEvalReport = {
   current: { strict: HitRateAtK; ratingOnly: HitRateAtK };
   candidates: { nama: string; weights: MatchWeights; strict: HitRateAtK; ratingOnly: HitRateAtK }[];
   recommendation: {
-    /** true hanya kalau sampelnya sudah cukup untuk mengganti bobot. */
+    /** true hanya kalau datanya sudah cukup untuk mengganti bobot. */
     dapatDituning: boolean;
     namaTerbaik: string | null;
     selisihHitRate: number | null;
@@ -222,10 +221,10 @@ export function hitRateAtK(
   return { evaluable, hits, hitRate: evaluable ? hits / evaluable : null };
 }
 
-/** Laporan lengkap: keadaan sekarang + kandidat bobot + saran (bila sampel cukup). */
+/** Laporan lengkap: keadaan sekarang + kandidat bobot + saran (bila data cukup). */
 export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalReview[]): RecommendationEvalReport {
   const slugs = new Set(recipes.map((recipe) => recipe.slug));
-  const sample = {
+  const ringkasan = {
     approvedRealReviews: reviews.length,
     withCatchCount: reviews.filter((review) => typeof review.catchCount === "number").length,
     withSessionMinutes: reviews.filter((review) => typeof review.sessionMinutes === "number").length,
@@ -248,15 +247,15 @@ export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalRe
   }));
 
   const sekarang = candidates.find((kandidat) => kandidat.weights === MATCH_WEIGHTS) ?? candidates[0];
-  const cukupSampel = sample.strictSuccess >= TUNING_TARGET.minStrictReviewsForTuning;
+  const cukupData = ringkasan.strictSuccess >= TUNING_TARGET.minStrictReviewsForTuning;
   const denganHitRate = candidates.filter((kandidat) => kandidat.strict.hitRate !== null);
   const terbaik = [...denganHitRate].sort((a, b) => (b.strict.hitRate ?? 0) - (a.strict.hitRate ?? 0))[0];
   const selisih = terbaik && sekarang.strict.hitRate !== null ? (terbaik.strict.hitRate ?? 0) - sekarang.strict.hitRate : null;
 
   const syarat = `rating ≥ ${TUNING_TARGET.minRating} dan laju tangkapan ≥ ${TUNING_TARGET.highCatchPerHourMin.toLocaleString("id-ID")} ekor/jam (sesi ≥ ${TUNING_TARGET.minSessionMinutesForRate} menit)`;
-  const alasanBelumDituning = sample.strictSuccess === 0
-    ? `Belum ada ulasan yang memenuhi syarat "berhasil" (${syarat}). Durasi sesi, jumlah joran, dan hasil tangkapan semuanya opsional, jadi angkanya tumbuh seiring ulasan baru.${sample.strictAbsoluteOnly ? ` ${sample.strictAbsoluteOnly} ulasan menyebut tangkapan ≥ ${TUNING_TARGET.highCatchMin} ekor tanpa durasi, jadi belum bisa dibandingkan.` : ""}`
-    : `Baru ${sample.strictSuccess} ulasan memenuhi syarat "berhasil" — minimal ${TUNING_TARGET.minStrictReviewsForTuning} agar hasil tuning layak dipercaya.`;
+  const alasanBelumDituning = ringkasan.strictSuccess === 0
+    ? `Belum ada ulasan yang memenuhi syarat "berhasil" (${syarat}). Durasi sesi, jumlah joran, dan hasil tangkapan semuanya opsional, jadi angkanya tumbuh seiring ulasan baru.${ringkasan.strictAbsoluteOnly ? ` ${ringkasan.strictAbsoluteOnly} ulasan menyebut tangkapan ≥ ${TUNING_TARGET.highCatchMin} ekor tanpa durasi, jadi belum bisa dibandingkan.` : ""}`
+    : `Baru ${ringkasan.strictSuccess} ulasan memenuhi syarat "berhasil" — minimal ${TUNING_TARGET.minStrictReviewsForTuning} agar hasil tuning layak dipercaya.`;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -272,15 +271,15 @@ export function buildRecommendationEvalReport(recipes: Recipe[], reviews: EvalRe
       minSessionMinutesForRate: TUNING_TARGET.minSessionMinutesForRate,
       highCatchMin: TUNING_TARGET.highCatchMin,
     },
-    sample,
+    ringkasan,
     current: { strict: sekarang.strict, ratingOnly: sekarang.ratingOnly },
     candidates,
     recommendation: {
-      dapatDituning: cukupSampel,
-      namaTerbaik: cukupSampel && terbaik ? terbaik.nama : null,
-      selisihHitRate: cukupSampel ? selisih : null,
-      alasan: cukupSampel
-        ? `Sampel sudah cukup: kandidat "${terbaik?.nama}" menang ${formatPersen(selisih)} dibanding bobot sekarang. Ganti bobot di @/lib/recommendation-config setelah memeriksa ulang.`
+      dapatDituning: cukupData,
+      namaTerbaik: cukupData && terbaik ? terbaik.nama : null,
+      selisihHitRate: cukupData ? selisih : null,
+      alasan: cukupData
+        ? `Ringkasan sudah cukup: kandidat "${terbaik?.nama}" menang ${formatPersen(selisih)} dibanding bobot sekarang. Ganti bobot di @/lib/recommendation-config setelah memeriksa ulang.`
         : alasanBelumDituning,
     },
   };

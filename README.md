@@ -108,9 +108,9 @@ Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalank
 
 Kata sandi dashboard juga bisa diganti tanpa deploy dari **Studio → Keamanan** di dalam dashboard. Kata sandi baru disimpan sebagai hash scrypt di tabel `cms_settings` (kunci `admin_password`) dan menimpa `ADMIN_PASSWORD` selama ada. Setiap penggantian menaikkan nomor versi yang ikut ditanamkan ke cookie sesi, sehingga sesi di perangkat lain otomatis berakhir sementara perangkat yang mengganti tetap masuk. Tombol "Pakai password server lagi" menghapus penimpa tersebut sehingga `ADMIN_PASSWORD` berlaku kembali. Bila Anda lupa kata sandi yang dipasang di dashboard: ubah `ADMIN_PASSWORD` di host lalu deploy ulang, masuk dengan nilai baru itu, dan pasang kata sandi pilihan Anda lagi. Jangan menghapus `ADMIN_PASSWORD` dari environment — ia adalah kunci cadangan sekaligus penanda tangan sesi bila `ADMIN_SESSION_SECRET` kosong.
 
-**Data contoh sudah dihapus.** Resep contoh statis (Umpan Putih Kroto, Vanila Telur Bebek, Roti Tawar Kroto Lomba), ulasan contoh, dan laporan contoh tidak lagi ada di kode; tombol **Sinkronkan katalog** beserta endpoint `POST /api/admin/recipes/import` ikut dihapus, jadi situs hanya menampilkan resep basis data berstatus `published` dan ulasan pengunjung asli. Salinan data contoh yang terlanjur tersinkronisasi ke basis data dibersihkan sekali dengan `npm run data:hapus-contoh` (mode laporan) lalu `npm run data:hapus-contoh -- --terapkan` memakai `DATABASE_URL` produksi: ulasan contoh (`seed_key` terisi) dihapus permanen, ketiga resep contoh diarsipkan agar hilang dari publik tetapi masih dapat dipulihkan atau dihapus permanen dari dashboard, dan ulasan pengunjung asli tidak disentuh. Migrasi `20261015123000_prune_catalog_to_dki_jakarta` menghapus resep dan ulasan lama dari basis data, jadi katalog lama tidak hidup lagi.
+**Data contoh dihapus permanen.** Tidak ada lagi daftar resep, ulasan, atau laporan contoh di kode; tombol **Sinkronkan katalog** beserta endpoint `POST /api/admin/recipes/import` ikut dihapus, jadi situs hanya menampilkan resep basis data berstatus `published` dan ulasan pengunjung asli. Migrasi `20261021090000_remove_sample_data` menghapus permanen salinan basis datanya saat deploy: seluruh ulasan katalog lama, ketiga resep contoh, laporan/ulasan/favorit/media/analitik yang menunjuk ke data tersebut, lalu kolom `seed_key` beserta indeksnya ikut dibuang. Tidak ada arsip, label, atau saringan khusus yang dipertahankan — setelah migrasi, sistem tidak mengenal data contoh sama sekali. Skrip pembersih manual lama (`data:hapus-contoh`) ikut dihapus karena pembersihannya kini menjadi bagian migrasi deploy.
 
-**Impor resep dari Excel.** Di `/dashboard/konten` ada tombol **Template Excel** (mengunduh `template-impor-resep.xlsx`: lembar "Resep" berisi dua baris contoh dan lembar "Petunjuk" berisi cara mengisi plus daftar nilai sah tiap kolom) dan **Impor Excel** untuk mengunggah berkas `.xlsx`/`.csv` (maks 2 MB, maks 200 baris). Satu baris = satu resep dengan nama kolom yang sama seperti formulir (Judul, Ringkasan, Cuaca, Jenis kolam, Bahan, Langkah, dst.); nilai ganda dipisahkan titik koma, bahan ditulis `Nama | Merek | Takaran` (tambahkan `| opsional` bila boleh dilewati), dan harga acuan diturunkan otomatis dari Label harga seperti di formulir. `POST /api/admin/recipes/import-spreadsheet` memeriksa semua baris dengan `validateCmsRecipeInput` yang sama seperti formulir (plus pemeriksaan per kolom agar pesan galat menyebut kolom dan nilai yang salah): bila satu baris tidak valid, tidak ada yang disimpan dan dashboard menampilkan laporan per baris. Slug yang sudah ada diperbarui, slug baru dibuat — jadi mengunggah ulang berkas yang sama aman.
+**Impor resep dari Excel.** Di `/dashboard/konten` ada tombol **Template Excel** (mengunduh `template-impor-resep.xlsx`: lembar "Resep" yang hanya berisi judul kolom dan lembar "Petunjuk" berisi cara mengisi plus daftar nilai sah tiap kolom) dan **Impor Excel** untuk mengunggah berkas `.xlsx`/`.csv` (maks 2 MB, maks 200 baris). Satu baris = satu resep dengan nama kolom yang sama seperti formulir (Judul, Ringkasan, Cuaca, Jenis kolam, Bahan, Langkah, dst.); nilai ganda dipisahkan titik koma, bahan ditulis `Nama | Merek | Takaran` (tambahkan `| opsional` bila boleh dilewati), dan harga acuan diturunkan otomatis dari Label harga seperti di formulir. `POST /api/admin/recipes/import-spreadsheet` memeriksa semua baris dengan `validateCmsRecipeInput` yang sama seperti formulir (plus pemeriksaan per kolom agar pesan galat menyebut kolom dan nilai yang salah): bila satu baris tidak valid, tidak ada yang disimpan dan dashboard menampilkan laporan per baris. Slug yang sudah ada diperbarui, slug baru dibuat — jadi mengunggah ulang berkas yang sama aman.
 
 ## Istilah jenis kolam: "Galatama"
 
@@ -190,7 +190,7 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Ulasan pengunjung asli di tab komunitas katalog memakai format yang sama supaya jelas cara membacanya.
 - **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
 
-**Komunitas kini menjadi tab di katalog.** Halaman mandiri `/komunitas` dilebur menjadi tab **Cerita & Ulasan Komunitas** di `/katalog` (`CommunityView` dirender tanpa hero saat menyemat di tab), dan `/komunitas` menjawab pengalihan permanen 308 ke `/katalog?tab=komunitas` — tautan lama dan hasil pencarian tidak mati, sitemap tidak lagi memuat `/komunitas`, dan menu desktop tidak lagi memisahkan Komunitas dari Katalog. Isinya kini hanya kiriman asli: racikan warga terbit dan ulasan pengunjung yang disetujui — kartu laporan contoh dan blok contoh ulasan sudah dihapus bersama data contohnya.
+**Komunitas kini menjadi tab di katalog.** Halaman mandiri `/komunitas` dilebur menjadi tab **Cerita & Ulasan Komunitas** di `/katalog` (`CommunityView` dirender tanpa hero saat menyemat di tab), dan `/komunitas` menjawab pengalihan permanen 308 ke `/katalog?tab=komunitas` — tautan lama dan hasil pencarian tidak mati, sitemap tidak lagi memuat `/komunitas`, dan menu desktop tidak lagi memisahkan Komunitas dari Katalog. Isinya kini hanya kiriman asli: racikan warga terbit dan ulasan pengunjung yang disetujui — seluruh kontennya berasal dari kiriman asli.
 
 **Sub-tab Racikan adalah etalase kiriman warga.** Resep terbit yang dibagikan pengguna lewat `/bagikan` tampil di sana sebagai kartu racikan komunitas (foto, nama pengirim, tanggal bagikan, tautan ke detail resep), ditandai penanda `dariKomunitas` dari API resep publik — ID pemilik akun tidak pernah dikirim ke publik. Selama belum ada kiriman warga, sub-tab itu menampilkan keadaan kosong yang mengajak pengunjung membagikan racikannya.
 
@@ -198,20 +198,20 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 
 Situs tidak menampilkan angka komunitas yang dikarang. Aturannya:
 
-- **Ulasan contoh sudah dihapus.** `src/data/reviews.ts` kini hanya menyimpan tipe `RecipeReview`; blok "Contoh penulisan ulasan" berlabel **Data contoh** di halaman resep dan etalase contoh di tab komunitas ikut dihapus. Yang tampil dan dihitung hanya ulasan pengunjung asli, jadi halaman tanpa ulasan menampilkan "Belum ada ulasan" apa adanya.
-- **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved`, `seed_key` kosong (bukan contoh), dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
+- **Tidak ada ulasan contoh.** `src/data/reviews.ts` hanya menyimpan tipe `RecipeReview` tanpa penanda contoh. Yang tampil dan dihitung hanya ulasan pengunjung asli, jadi halaman tanpa ulasan menampilkan "Belum ada ulasan" apa adanya.
+- **Angka asli hanya dari ulasan pengunjung.** `src/lib/review-summary.ts` (`getRecipeRatings()`) menghitung jumlah dan rata-rata rating dari `cms_reviews` dengan syarat: status `approved` dan `created_at <= now()`. Dipakai oleh `GET /api/public/reviews/summary` dan dibaca komponen lewat `src/lib/use-ratings.ts`.
 - **Kalau belum ada ulasan, tulis apa adanya.** Kartu resep, halaman resep, dan bagian ulasan menampilkan **"Belum ada rating"** / **"Belum ada ulasan"** — bukan angka katalog.
 - **Angka katalog tidak lagi tampil sebagai statistik.** `rating`, `reviewCount`, dan `users` di `src/data/recipes.ts` kini dikosongkan (0) pada tiga resep yang dipertahankan dan hanya dipakai internal (tampilan admin di Content Studio, selalu diberi label "angka katalog"), bukan sebagai statistik komunitas. Urutan "Rating Tertinggi"/"Ulasan Terbanyak" di katalog dan pilihan racikan di halaman cuaca memakai rating ulasan nyata, dan "N racikan" pada kartu cuaca dihitung dari katalog — bukan angka tetap.
 - **Tanggal masa depan ditolak.** `src/lib/review-dates.ts` menyediakan `isFutureReviewDate` (toleransi jam 60 detik) dan `clampReviewCreatedAt`. API publik menolak `POST` bertanggal masa depan (400), API baca (`/api/public/reviews`, `/api/admin/reviews`, ringkasan) menyaring `created_at <= now()`, dan sinkronisasi katalog memangkas tanggal contoh yang melewati waktu server.
-- **Laporan contoh sudah dihapus.** Seksi **Cerita Pemancing** di beranda kini menampilkan ulasan pengunjung asli terbaru dari basis data (`getLatestCommunityReviews()` di `src/lib/review-summary.ts`, syarat yang sama dengan rating: disetujui, bukan contoh, tidak bertanggal masa depan); selama belum ada, yang tampil adalah ajakan untuk berbagi pengalaman.
-- Migrasi `netlify/database/migrations/20261014090000_prune_sample_reviews_and_future_dates` menyisakan 3 contoh per resep dan merapikan tanggal yang sudah terlanjur melewati waktu server.
-- **Katalog dipangkas ke data jujur DKI Jakarta.** `src/data/recipes.ts` kini hanya memuat Umpan Putih Kroto, Vanila Telur Bebek, dan Roti Tawar Kroto Lomba — tiga resep yang data asalnya memang mencantumkan DKI Jakarta — dan ketiganya berlabel provinsi `["DKI Jakarta"]`. Migrasi `20261015123000_prune_catalog_to_dki_jakarta` menghapus 197 resep lain dari `cms_recipes` dan semua ulasan selain 9 contoh berlabel untuk ketiga resep itu dari `cms_reviews` (termasuk ulasan non-contoh), serta mengosongkan angka katalog pada resep yang dipertahankan. Berkas foto resep yang tidak terpakai ikut dihapus dari `public/images` (menyusut dari ±18 MB menjadi di bawah 1 MB). Ketiga resep yang dulu dipertahankan itu kini juga sudah dihapus dari kode (lihat **Data contoh sudah dihapus** di atas), sehingga tidak ada lagi daftar resep statis di `src/data/recipes.ts` — berkas itu tinggal menyimpan tipe, kosakata kondisi, dan helper bersama.
+- **Laporan contoh sudah dihapus.** Seksi **Cerita Pemancing** di beranda kini menampilkan ulasan pengunjung asli terbaru dari basis data (`getLatestCommunityReviews()` di `src/lib/review-summary.ts`, syarat yang sama dengan rating: disetujui dan tidak bertanggal masa depan); selama belum ada, yang tampil adalah ajakan untuk berbagi pengalaman.
+- Migrasi lama pernah merapikan tanggal ulasan yang melewati waktu server. Sisa data katalog lama dari masa itu kini dihapus permanen oleh migrasi `20261021090000_remove_sample_data`, termasuk kolom penandanya.
+- **Tidak ada katalog statis yang dipertahankan.** `src/data/recipes.ts` hanya menyimpan tipe, kosakata kondisi, dan helper bersama; daftar resep publik selalu dibaca dari `cms_recipes`. Migrasi `20261021090000_remove_sample_data` menghapus permanen sisa resep contoh dari basis data beserta seluruh referensi yang menunjuk kepadanya, jadi slug lama tidak lagi tampil, terhitung, atau menjadi acuan di permukaan mana pun.
 
 ## Badge resep diturunkan dari satu field
 
 Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
-- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya (mis. "Roti Tawar Kroto Lomba"), jenis itulah yang dipakai. Semua resep katalog mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
+- **Satu field: jenis pemancingan.** `src/data/recipes.ts` menghitung `category` dari `fishingTypes` resep lewat `primaryFishingType()` — dan kalau nama resep menyebut jenisnya, jenis itulah yang dipakai. Semua resep katalog mengikuti jalur yang sama, jadi tidak ada kategori hasil urutan kartu.
 - **Satu tempat menulis teks badge.** `src/lib/recipe-badge.ts` (`recipeBadge()`) menentukan label dan warna badge dari `recipe.category`; semua kartu, kepala halaman resep, dan kartu rekomendasi Tanya Umpan memakainya. Karena sumbernya sama dengan tag kondisi, badge tidak mungkin lagi bertentangan dengan tag — mis. badge "Lomba" dengan tag "Harian".
 - **Tidak ada badge berdasarkan posisi.** Prop `featured` pada `RecipeCard` dihapus, termasuk label "🏆 Rekomendasi" yang dulu otomatis diberikan ke kartu pertama. Setiap kartu menampilkan jenis resep yang sebenarnya.
 - **Tag kondisi menampilkan seluruh jenis.** Kartu menulis "🎣 Harian / Lomba" (bukan hanya jenis pertama), dan jenis pertama selalu sama dengan badge.
@@ -226,7 +226,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 ## Satu sumber angka, skor kecocokan, dan label "Populer"
 
-**Satu sumber angka.** Semua angka komunitas di halaman publik berasal dari satu tempat: tabel `cms_reviews`. `getRecipeRatings()` (`src/lib/review-summary.ts`) menghitung jumlah dan rata-rata rating hanya dari ulasan pengunjung yang sudah disetujui (`seed_key` kosong) dan tidak bertanggal masa depan. Kolom `rating`, `reviewCount`, dan `users` pada baris resep basis data tidak pernah ditampilkan sebagai statistik komunitas — yang tampil selalu hasil hitung dari `cms_reviews`.
+**Satu sumber angka.** Semua angka komunitas di halaman publik berasal dari satu tempat: tabel `cms_reviews`. `getRecipeRatings()` (`src/lib/review-summary.ts`) menghitung jumlah dan rata-rata rating hanya dari ulasan pengunjung yang sudah disetujui dan tidak bertanggal masa depan. Kolom `rating`, `reviewCount`, dan `users` pada baris resep basis data tidak pernah ditampilkan sebagai statistik komunitas — yang tampil selalu hasil hitung dari `cms_reviews`.
 
 **Definisi "mencoba".** Tulisan "N pemancing mencoba" berarti **jumlah ulasan pengunjung** pada resep itu: satu ulasan = satu pemancing yang mencoba. Angkanya tidak pernah melebihi jumlah ulasan, dan selalu disertai penjelasan di halaman resep ("Satu ulasan berarti satu pemancing yang mencoba racikan ini…"). Kalimat penjelas yang sama dipakai pada atribut `title` kartu resep lewat `describeRating()` (`src/lib/rating-utils.ts`). Tombol "Saya coba" belum ada; kalau nanti ditambahkan, angkanya harus tetap berasal dari tabel yang sama.
 
@@ -234,7 +234,7 @@ Badge di kartu **tidak lagi ditulis manual per kartu**. Aturannya:
 
 **Label "Populer".** Kalau pengunjung belum mengisi apa pun, tempat skor match diisi label **"Populer"** — hanya untuk resep yang paling banyak diulas (`POPULAR_MIN_REVIEWS = 2`, maksimal 10 resep; `popularRecipeSlugs()`). Kalau belum ada resep yang memenuhi ambang itu, tidak ada label yang tampil. Di beranda, bagian racikan berjudul "Racikan Populer" hanya dipakai saat sudah ada ulasan pengunjung; sebelumnya tetap "Racikan Pilihan" dengan urutan kurasi.
 
-**Pakar Umpan & Tanya Umpan.** Di Pakar Umpan, publik hanya memilih bahan sebagai Langkah 1; hasil rekomendasi berisi contoh komposisi 150 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Pakar Umpan memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan Tanya Umpan tetap memakai konteks yang dipilih pengunjung. Di level kode, berkas, komponen, tipe, dan fungsi mengikuti nama baru (`tanya-umpan-wizard.tsx`, `pakar-umpan.tsx`, `pakar-umpan.ts`); alamat lama `/ai-umpan` dan `/sistem-pakar` hanya tersisa sebagai pengalihan permanen di `src/proxy.ts`. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas — ulasan contoh tidak ikut analisis. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
+**Pakar Umpan & Tanya Umpan.** Di Pakar Umpan, publik hanya memilih bahan sebagai Langkah 1; hasil rekomendasi berisi contoh komposisi 150 g, kondisi dominan dari resep terdekat, dan 3 resep paling mendekati. Peringkat Pakar Umpan memakai kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%) tanpa konteks kondisi tersembunyi, sedangkan Tanya Umpan tetap memakai konteks yang dipilih pengunjung. Di level kode, berkas, komponen, tipe, dan fungsi mengikuti nama baru (`tanya-umpan-wizard.tsx`, `pakar-umpan.tsx`, `pakar-umpan.ts`); alamat lama `/ai-umpan` dan `/sistem-pakar` hanya tersisa sebagai pengalihan permanen di `src/proxy.ts`. Hanya ulasan pengunjung yang dipakai sebagai bukti komunitas. Tanpa bukti komunitas, nilainya netral (50), bukan diambil dari rating katalog.
 
 ## Peringkat rating memakai rata-rata Bayesian
 
@@ -284,7 +284,7 @@ Total selalu 100 (dijaga `MATCH_WEIGHTS_TOTAL`/`MATCH_WEIGHTS_BALANCED`), dan bo
 - laporan tetap menampilkan dua angka: **ketat** (rating ≥ 4 **dan** laju tinggi) dan **longgar** (rating ≥ 4 saja);
 - hit-rate@3 dihitung di `src/lib/recommendation-eval.ts` dengan **fungsi urutan yang sama** seperti situs (`getRecommendedRecipes` dengan bobot sebagai parameter — tidak ada rumus tandingan);
 - ulasan yang sedang diuji **dikeluarkan dari bukti pemutus seri** (leave-one-out), supaya resep tidak dibantu ulasan yang justru sedang dinilai;
-- hanya ulasan nyata yang sudah disetujui yang dihitung (ulasan contoh dan yang belum disetujui tidak pernah ikut);
+- hanya ulasan nyata yang sudah disetujui yang dihitung (yang belum disetujui tidak pernah ikut);
 - **tuning hanya disarankan setelah ≥ 30 ulasan "berhasil"**. Di bawah itu laporan hanya menampilkan keadaan dan berkata "Belum bisa dituning" — bobot tidak diubah berdasarkan sampel tipis.
 
 Cara menjalankannya (server harus jalan; hitung ulang kapan saja):
@@ -328,36 +328,7 @@ Bukti pengujian (dijalankan di dev :3000 dan produksi :3100): **63 uji murni** a
 
 ## Foto adonan per resep dan alt text unik
 
-Setiap resep kini punya foto dan alt text-nya sendiri, diatur dari satu
-tempat: `src/data/recipe-photos.ts`. Setelah katalog dipangkas, yang
-tersisa hanya tiga berkas foto resep:
-
-- **Umpan Putih Kroto** memakai berkas klasik `/images/recipe-putih.jpg`
-  yang memang cocok dengan adonannya.
-- **Vanila Telur Bebek** memakai `/images/recipes/vanila-telur-bebek.jpg`.
-- **Roti Tawar Kroto Lomba** memakai
-  `/images/recipes/roti-tawar-kroto-lomba.jpg`.
-
-Pemetaannya dikunci dari slug di `CORE_RECIPE_PHOTOS`. Berkas foto 197
-resep lama yang sudah dihapus ikut dibuang dari `public/images/recipes/`
-(plus dua berkas klasik yang tidak terpakai), jadi folder gambar menyusut
-dari ±18 MB menjadi di bawah 1 MB; skrip pembuat foto turunan
-(`scripts/buat-foto-racikan.py`) ikut dihapus karena katalog turunan sudah
-tidak ada. Foto resep baru cukup diunggah dari dashboard (tersimpan di
-tabel media), bukan dibuat dari skrip.
-
-- **Alt text unik per resep** disimpan di field `imageAlt`, diturunkan oleh
-  `buildRecipeImageAlt` dari nama resep, warna adonan pada fotonya, bahan
-  inti, jenis pemancingan, dan kondisi air. Field yang sama dipakai kartu
-  katalog, kartu rekomendasi, halaman detail (termasuk metadata berbagi/Open
-  Graph), dan resep CMS dari dashboard — tidak ada lagi alt generik yang
-  diulang antarresep.
-- **Foto pengirim ulasan tidak dikarang.** Ulasan pengunjung saat ini tidak
-  memiliki unggahan foto, jadi kartu komunitas menampilkan foto racikan
-  katalog dari resep yang dicoba dengan label "Ilustrasi racikan" dan alt
-  yang menyatakannya sebagai ilustrasi katalog — bukan seolah-olah foto
-  kiriman pemancingnya. Bila unggahan foto ulasan ditambahkan nanti, foto
-  itulah yang harus menggantikan ilustrasi ini.
+Setiap resep kini punya foto dan alt text-nya sendiri. Alamat foto datang dari data CMS (`image`), sedangkan `src/data/recipe-photos.ts` hanya menurunkan teks alt dari nama, bahan, dan konteks resep. Tidak ada lagi pemetaan foto yang dikunci ke slug tertentu, dan berkas foto khusus resep contoh lama sudah dihapus dari `public/images/recipes/`. Berkas `/images/recipe-putih.jpg` hanya dipertahankan sebagai foto bawaan umum saat sebuah resep belum punya foto. Foto resep baru cukup diunggah dari dashboard (tersimpan di tabel media), bukan dibuat dari skrip.
 
 ## Ikon SVG (bukan emoji) dan kontras WCAG AA
 

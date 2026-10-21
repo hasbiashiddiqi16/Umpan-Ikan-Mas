@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { WATER_BODIES, normalizeFishingType } from "@/data/recipes";
@@ -17,11 +17,11 @@ export async function GET(request: Request) {
   if (slug && slug.length > 180) return Response.json({ reviews: [] });
   try {
     // Ulasan katalog dirender dari data statis pada detail resep. Hanya ulasan
-    // komunitas yang dikirimkan ke API agar ulasan contoh (seed_key) tidak tampil ganda.
+    // komunitas yang dikirimkan ke API agar tidak terjadi duplikasi tampilan.
     // Ulasan bertanggal masa depan tidak pernah dikirim ke halaman publik.
     const rows = slug
-      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(50)
-      : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(250);
+      ? await db.select().from(cmsReviews).where(and(eq(cmsReviews.recipeSlug, slug), eq(cmsReviews.status, "approved"), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(50)
+      : await db.select().from(cmsReviews).where(and(eq(cmsReviews.status, "approved"), lte(cmsReviews.createdAt, sql`now()`))).orderBy(desc(cmsReviews.createdAt)).limit(250);
     return Response.json({
       reviews: rows.map((review) => ({
         ...review,

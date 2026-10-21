@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     const rows = await db
       .select({ id: cmsReviews.id, name: cmsReviews.name, comment: cmsReviews.comment, status: cmsReviews.status })
       .from(cmsReviews)
-      .where(and(isNull(cmsReviews.seedKey), filters.length === 1 ? filters[0] : or(...filters)));
+      .where(filters.length === 1 ? filters[0] : or(...filters));
 
     const byId = new Map(rows.map((row) => [row.id, row]));
     // Ulasan lama belum menyimpan ID server, jadi dicocokkan lewat isi kiriman.

@@ -18,7 +18,7 @@ export type AnalyticsPayload = {
   archived: number;
   pendingReviews: number;
   approvedReviews: number;
-  /** Ulasan pengunjung sungguhan (tanpa ulasan contoh) — sumber angka peringkat katalog. */
+  /** Ulasan pengunjung — sumber angka peringkat katalog. */
   visitorReviewCount: number;
   visitorReviewAverage: number;
   /** Ambang m pada skor Bayesian yang dipakai pemeringkatan. */

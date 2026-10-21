@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     const previousViews = Number(previousCount?.value ?? 0);
     const change = previousViews === 0 ? null : Math.round(((views - previousViews) / previousViews) * 100);
     // Angka yang sama dengan pemeringkatan publik: rata-rata seluruh ulasan
-    // pengunjung (C, tanpa ulasan contoh) dan ambang m skor Bayesian.
+    // pengunjung (C) dan ambang m skor Bayesian.
     const { global, minReviews } = await getRatingSummary();
     return Response.json({
       views,

@@ -106,8 +106,8 @@ function RatedSectionsSkeleton() {
 }
 
 /**
- * Cerita pemancing di beranda kini hanya dari ulasan pengunjung asli
- * terbaru — laporan contoh statis sudah dihapus. Pulau async terpisah
+ * Cerita pemancing di beranda hanya menampilkan ulasan pengunjung asli
+ * terbaru. Pulau async terpisah
  * di dalam `Suspense` supaya hero dan seksi statis tidak tertahan
  * menunggu query ulasan.
  */

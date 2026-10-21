@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
 import { bacaDenganCobaUlang, sedangPrerenderBuild } from "@/lib/db-retry";
 import { cmsReviews } from "@/db/schema";
@@ -31,9 +31,7 @@ export type RatingSummary = {
 /**
  * Rating publik sebuah resep — **hanya** dari ulasan asli pengunjung.
  *
- * Syaratnya: status sudah disetujui, bukan ulasan contoh (`seed_key` kosong),
- * dan tanggalnya tidak melewati waktu server. Ulasan contoh tidak pernah ikut
- * dihitung, karena itu data contoh — bukan bukti komunitas.
+ * Syaratnya: status sudah disetujui dan tanggalnya tidak melewati waktu server.
  */
 export async function getRatingSummary(): Promise<RatingSummary> {
   const ratings = await getRecipeRatings();
@@ -59,7 +57,7 @@ async function bacaRatingDariBasisData(): Promise<RecipeRatingMap> {
       average: sql<number>`coalesce(avg(${cmsReviews.rating}), 0)::float8`,
     })
     .from(cmsReviews)
-    .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`)))
+    .where(and(eq(cmsReviews.status, "approved"), lte(cmsReviews.createdAt, sql`now()`)))
     .groupBy(cmsReviews.recipeSlug);
   return Object.fromEntries(
     rows.map((row) => [row.slug, { count: Number(row.total) || 0, average: Number(row.average) || 0 }]),
@@ -69,8 +67,7 @@ async function bacaRatingDariBasisData(): Promise<RecipeRatingMap> {
 /**
  * Ulasan pengunjung asli terbaru untuk permukaan komunitas (mis. seksi
  * Cerita Pemancing di beranda). Syaratnya sama dengan rating: sudah
- * disetujui, bukan ulasan contoh (`seed_key` kosong), dan tanggalnya
- * tidak melewati waktu server. Hasilnya dibentuk sebagai `RecipeReview`
+ * disetujui dan tanggalnya tidak melewati waktu server. Hasilnya dibentuk sebagai `RecipeReview`
  * supaya bisa langsung ditampilkan kartu ulasan yang sama dengan
  * halaman resep.
  */
@@ -78,7 +75,7 @@ async function bacaUlasanTerbaruDariBasisData(limit: number): Promise<RecipeRevi
   const rows = await db
     .select()
     .from(cmsReviews)
-    .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`)))
+    .where(and(eq(cmsReviews.status, "approved"), lte(cmsReviews.createdAt, sql`now()`)))
     .orderBy(desc(cmsReviews.createdAt))
     .limit(limit);
   return rows.map((review) => ({
