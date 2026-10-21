@@ -132,7 +132,7 @@ export function describeRating(rating?: RecipeRating, sampleCount = 0) {
     return "Belum ada ulasan pengunjung. Contoh ulasan berlabel tidak ikut dihitung.";
   }
   const jumlah = `${new Intl.NumberFormat("id-ID").format(rating.count)} ulasan pengunjung yang disetujui`;
-  return `${jumlah} — satu ulasan berarti satu pemancing yang mencoba${sampleCount ? "; ulasan contoh berlabel tidak dihitung" : ""}.`;
+  return `${jumlah} — satu ulasan berarti satu pemancing yang mencoba.${sampleCount ? " Ulasan contoh berlabel tidak dihitung." : ""}`;
 }
 
 /** Rangkuman kondisi yang dipilih pengunjung, untuk menjelaskan asal skor kecocokan. */

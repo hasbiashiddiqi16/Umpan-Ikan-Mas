@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     const [ledakan] = await db.select({ total: count() }).from(cmsReviews).where(and(eq(cmsReviews.device, device.id), gte(cmsReviews.createdAt, new Date(Date.now() - 60 * 60 * 1000)), ne(cmsReviews.status, "rejected")));
     if (Number(ledakan?.total ?? 0) >= 3) alasanTahan.push("Banyak ulasan dari perangkat ini dalam satu jam terakhir");
     const status = alasanTahan.length ? "pending" : "approved";
-    const holdReason = alasanTahan.length ? alasanTahan.join("; ").slice(0, 255) : null;
+    const holdReason = alasanTahan.length ? alasanTahan.join(", ").slice(0, 255) : null;
     const [created] = await db
       .insert(cmsReviews)
       .values({ recipeSlug, name: pengirim, location, rating, weather: item.weather, water: item.water, waterBody, fishingType: normalizeFishingType(item.fishingType), catchCount, sessionMinutes, rodCount, comment, status, holdReason, device: device.id, ipHash: hashReviewValue(`ip:${ip}`), payloadHash, userId: account?.id ?? null })

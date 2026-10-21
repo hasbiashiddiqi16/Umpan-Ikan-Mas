@@ -78,7 +78,7 @@ export function RegisteredUsersManager() {
       <div className="mb-7">
         <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#656d64]"><Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Pengguna</span></div>
         <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Pengguna terdaftar</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#626c62]">Akun yang mendaftar lewat halaman Masuk/Daftar (Supabase Auth), beserta resep, ulasan, dan favorit mereka. Daftar ini hanya-baca; penghapusan atau pemblokiran akun dilakukan dari dashboard Supabase (Authentication → Users).</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#626c62]">Akun yang mendaftar lewat halaman Masuk/Daftar (Supabase Auth), beserta resep, ulasan, dan favorit mereka. Daftar ini hanya-baca. Penghapusan atau pemblokiran akun dilakukan dari dashboard Supabase (Authentication → Users).</p>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -142,7 +142,7 @@ export function RegisteredUsersManager() {
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 border-t border-[#eef0ec] bg-[#fafbf9] px-4 py-3 text-[9px] text-[#959c93] sm:px-5"><ShieldCheck size={12} /> Hanya admin yang masuk dashboard yang dapat melihat daftar ini; halaman ini tidak terhubung ke situs publik.</div>
+        <div className="flex items-center gap-2 border-t border-[#eef0ec] bg-[#fafbf9] px-4 py-3 text-[9px] text-[#959c93] sm:px-5"><ShieldCheck size={12} /> Hanya admin yang masuk dashboard yang dapat melihat daftar ini. Halaman ini tidak terhubung ke situs publik.</div>
       </section>
     </AdminShell>
   );

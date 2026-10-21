@@ -34,9 +34,9 @@ export type RoleRule = {
 export const BLEND_ROLE_RULES: RoleRule[] = [
   { role: "Dasar", minPercent: 40, maxPercent: 60, alasan: "Fondasi adonan harus jadi porsi terbesar: di bawah 40% adonan mudah lepas, di atas 60% pengikat dan aroma tidak kebagian tempat." },
   { role: "Pengikat", minPercent: 10, maxPercent: 25, alasan: "Cukup untuk menyatukan adonan, tetapi tidak sampai keras seperti karet." },
-  { role: "Protein", minPercent: 5, maxPercent: 20, alasan: "Tambahan berprotein sebagai daya tarik; berlebihan membuat adonan sulit dipulung." },
-  { role: "Aroma", minPercent: 5, maxPercent: 25, alasan: "Aroma bekerja sebagai penanda; kalau dominan, karakter bahan dasar justru tertutup." },
-  { role: "Pelembap", minPercent: 5, maxPercent: 20, alasan: "Menjaga adonan tidak kering; kelebihan cairan membuat adonan lepas dari kail." },
+  { role: "Protein", minPercent: 5, maxPercent: 20, alasan: "Tambahan berprotein memberi daya tarik. Pemakaian berlebihan membuat adonan sulit dipulung." },
+  { role: "Aroma", minPercent: 5, maxPercent: 25, alasan: "Aroma bekerja sebagai penanda. Kalau dominan, karakter bahan dasar justru tertutup." },
+  { role: "Pelembap", minPercent: 5, maxPercent: 20, alasan: "Menjaga adonan tidak kering. Kelebihan cairan membuat adonan lepas dari kail." },
 ];
 
 export const BLEND_RULES_SUMMARY =
@@ -231,7 +231,7 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
   }
   if (!peranTerpakai.has("Dasar")) warnings.push("Belum ada bahan dasar. Tambahkan pelet ikan atau roti tawar agar campuran punya fondasi.");
   if (!peranTerpakai.has("Pengikat")) warnings.push("Belum ada bahan pengikat. Sedikit tapioka, terigu, atau telur dapat membantu tekstur lebih menyatu.");
-  if (!peranTerpakai.has("Pelembap")) warnings.push("Tambahkan air atau santan sedikit demi sedikit saat mengaduk; takaran cairan tidak perlu dihabiskan.");
+  if (!peranTerpakai.has("Pelembap")) warnings.push("Tambahkan air atau santan sedikit demi sedikit saat mengaduk. Takaran cairan tidak perlu dihabiskan.");
   roleShares.filter((share) => share.status === "kurang").forEach((share) => warnings.push(`Porsi ${share.role} ${share.percent}% — di bawah aturan ${share.min}–${share.max}%. ${saranKurang(share)}`));
   roleShares.filter((share) => share.status === "lebih").forEach((share) => warnings.push(`Porsi ${share.role} ${share.percent}% — di atas aturan ${share.min}–${share.max}%. ${saranLebih(share)}`));
   if (unik.some((item) => item.id === "pandan")) warnings.push("Jika pandan yang dipakai berupa essen, takar dalam tetes terpisah—jangan dihitung sebagai gram adonan.");
@@ -252,7 +252,7 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
       const detail = [bedaPeran.length ? `Perannya berbeda (${item.role} → ${[...new Set(bedaPeran)].join(", ")}), jadi rasio peran ikut berubah.` : null, catatan].filter(Boolean).join(" ");
       suggestions.push({ jenis: "pengganti", judul: `Tidak ada ${item.name.toLowerCase()}? Pakai ${pilihan.map(namaBahan).join(" atau ")}.`, detail, penggantiIds: pilihan, untukId: item.id });
     } else {
-      suggestions.push({ jenis: "pengganti", judul: `Tidak ada ${item.name.toLowerCase()}?`, detail: catatan ?? "Belum ada pengganti seperan di basis pengetahuan; lewati saja bahan ini.", penggantiIds: [], untukId: item.id });
+      suggestions.push({ jenis: "pengganti", judul: `Tidak ada ${item.name.toLowerCase()}?`, detail: catatan ?? "Belum ada pengganti seperan di basis pengetahuan. Lewati saja bahan ini.", penggantiIds: [], untukId: item.id });
     }
   });
 
@@ -262,7 +262,7 @@ function hitungBlend(selected: IngredientKnowledge[], wilayah: Wilayah) {
       suggestions.push({
         jenis: "aturan",
         judul: `Tambah ${kandidat.map((item) => item.name).join(" atau ")} untuk menaikkan porsi ${share.role} (sekarang ${share.percent}%, aturan ${share.min}–${share.max}%).`,
-        detail: "Cukup satu bahan tambahan; sisanya dibagi ulang otomatis.",
+        detail: "Cukup satu bahan tambahan. Sisanya dibagi ulang otomatis.",
         penggantiIds: kandidat.map((item) => item.id),
       });
     }

@@ -107,7 +107,7 @@ export function RecommendationEvalPanel() {
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {data.candidates.map((kandidat) => <li key={kandidat.nama} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="min-w-0 truncate font-semibold text-[#4b5b4d]">{kandidat.nama}</span><span className="shrink-0 font-black tabular-nums text-[#31593a]">{formatHitRate(kandidat.strict)}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}; semuanya masih ikut di hit-rate versi longgar (rating saja).</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}. Semuanya tetap ikut hit-rate versi longgar (rating saja).</p>
             </div>
           </div>
         </>

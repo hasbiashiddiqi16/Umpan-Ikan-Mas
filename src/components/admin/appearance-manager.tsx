@@ -516,7 +516,7 @@ export function AppearanceManager() {
                 <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan satu kali setiap kali popup diganti — setelah halaman tenang (± 1,4 detik). Pengunjung tidak perlu menghapus cache.</li>
                 <li>• Selama masa itu, pengunjung yang berpindah halaman tidak melihatnya berulang kali.</li>
                 <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>
-                <li>• Tanpa scroll; aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
+                <li>• Tanpa scroll. Aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
                 <li>• Teks nilai pada mode teks dibatasi panjangnya agar selalu muat.</li>
               </ul>
             </div>

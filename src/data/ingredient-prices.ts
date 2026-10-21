@@ -13,7 +13,7 @@ export const PRICE_UPDATED_AT = "Oktober 2026";
 export const PRICE_NOTE =
   "Angka ini perkiraan harga pasar yang dibulatkan ke ratusan rupiah, bukan harga tetap dan bukan janji harga. Harga nyata bergantung kota, toko, dan musim — pakai tabel ini sebagai gambaran.";
 export const PRICE_FACTOR_NOTE =
-  "Harga dasar berlaku nasional; faktor wilayah menyesuaikan perkiraan untuk daerah yang biasanya lebih mahal karena distribusi.";
+  "Harga dasar berlaku nasional. Faktor wilayah menyesuaikan perkiraan untuk daerah yang biasanya lebih mahal karena distribusi.";
 
 export type Wilayah = "Nasional" | "Jawa" | "Sumatera" | "Kalimantan" | "Sulawesi" | "Bali & Nusa Tenggara" | "Maluku & Papua";
 
@@ -68,7 +68,7 @@ export const ingredientPrices: IngredientPrice[] = [
   { id: "jagung", satuan: "per 100 g", hargaDasar: 1700, basisGram: 100, mode: "gram", catatan: "Sekitar 2 tongkol kecil jagung manis." },
   { id: "susu-bubuk", satuan: "per 100 g", hargaDasar: 10000, basisGram: 100, mode: "gram", catatan: "Susu bubuk 400 g sekitar Rp 40.000." },
   { id: "keju", satuan: "per 100 g", hargaDasar: 13000, basisGram: 100, mode: "gram", catatan: "Keju cheddar 170 g sekitar Rp 22.000." },
-  { id: "pandan", satuan: "per pemakaian", hargaDasar: 500, basisGram: null, mode: "pakai", catatan: "Essen pandan (± Rp 7.000 per botol kecil) cukup untuk puluhan kali pakai; sebagian pemancing memakai daun pandan." },
+  { id: "pandan", satuan: "per pemakaian", hargaDasar: 500, basisGram: null, mode: "pakai", catatan: "Essen pandan (± Rp 7.000 per botol kecil) cukup untuk puluhan kali pakai. Sebagian pemancing memakai daun pandan." },
   { id: "santan", satuan: "per 100 g", hargaDasar: 6200, basisGram: 100, mode: "gram", catatan: "Santan instan 65 ml sekitar Rp 4.000." },
   { id: "kelapa", satuan: "per 100 g", hargaDasar: 3300, basisGram: 100, mode: "gram", catatan: "Satu butir kelapa (± 300 g parutan) sekitar Rp 10.000." },
 ];

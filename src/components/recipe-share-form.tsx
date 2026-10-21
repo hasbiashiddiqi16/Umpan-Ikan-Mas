@@ -223,7 +223,7 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
       <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60 sm:w-auto sm:min-w-56">
         {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <Send size={17} />} {sunting ? "Simpan perubahan" : "Bagikan & tayangkan resep"}
       </button>
-      <p className="text-xs leading-5 text-[#7c857c]">Resepmu langsung tayang di katalog atas nama {sunting ? "kamu" : "akunmu"}. Mohon isi bahan dan langkah dengan jujur sesuai pengalamanmu; admin dapat mengarsipkan resep yang menyesatkan.</p>
+      <p className="text-xs leading-5 text-[#7c857c]">Resepmu langsung tayang di katalog atas nama {sunting ? "kamu" : "akunmu"}. Mohon isi bahan dan langkah dengan jujur sesuai pengalamanmu. Admin dapat mengarsipkan resep yang menyesatkan.</p>
     </form>
   );
 }

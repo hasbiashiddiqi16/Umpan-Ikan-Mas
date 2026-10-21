@@ -66,7 +66,7 @@ export const MATCH_WEIGHTS_VERSION = "sementara-1 (2026-10-14)";
  * permanen tanpa bukti".
  */
 export const MATCH_WEIGHT_ENTRIES: { key: MatchWeightKey; label: string; bobot: number; alasan: string }[] = [
-  { key: "waterBody", label: "Tipe air", bobot: MATCH_WEIGHTS.waterBody, alasan: "Kolam, sungai, dan danau punya karakter berbeda; satu provinsi bisa punya banyak kolam yang tidak sama." },
+  { key: "waterBody", label: "Tipe air", bobot: MATCH_WEIGHTS.waterBody, alasan: "Kolam, sungai, dan danau punya karakter berbeda. Satu provinsi bisa memiliki banyak kolam dengan karakter yang tidak sama." },
   { key: "water", label: "Kondisi air", bobot: MATCH_WEIGHTS.water, alasan: "Warna dan kejernihan air yang kamu lihat langsung memengaruhi pilihan aroma." },
   { key: "weather", label: "Cuaca", bobot: MATCH_WEIGHTS.weather, alasan: "Cuaca mengubah suhu dan keaktifan ikan saat sesi berjalan." },
   { key: "fishingType", label: "Jenis pemancingan", bobot: MATCH_WEIGHTS.fishingType, alasan: "Tekanan kolam saat harian, lomba, dan galatama berbeda." },
