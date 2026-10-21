@@ -1,5 +1,3 @@
-import { CORE_RECIPE_PHOTOS, buildRecipeImageAlt } from "@/data/recipe-photos";
-
 export type Weather = "Hujan" | "Mendung" | "Cerah" | "Berawan" | "Panas";
 export type WaterCondition = "Keruh" | "Hijau" | "Jernih" | "Kekuningan";
 export type FishingType = "Harian" | "Lomba" | "Galatama";
@@ -168,95 +166,6 @@ export type Recipe = {
 };
 
 /**
- * Katalog jujur kini hanya berisi tiga racikan kurasi yang memang cocok
- * dicoba di kolam-kolam DKI Jakarta. Angka rating, jumlah ulasan, dan
- * pemancing pada data katalog sengaja dikosongkan: angka komunitas hanya
- * boleh lahir dari ulasan pengunjung yang disetujui, bukan dari katalog.
- *
- * Field yang diturunkan saat katalog dirakit: `category` (dari jenis
- * pemancingan) dan `waterBodies` (dari teks resep, lihat
- * `waterBodiesFromText`).
- */
-type CoreRecipe = Omit<Recipe, "category" | "waterBodies" | "imageAlt">;
-
-const coreRecipes: CoreRecipe[] = [
-  {
-    slug: "umpan-putih-kroto",
-    name: "Umpan Putih Kroto",
-    rating: 0,
-    reviewCount: 0,
-    users: 0,
-    price: "Rp20.000–25.000",
-    priceValue: 22500,
-    difficulty: "Mudah",
-    image: "/images/recipe-putih.jpg",
-    weather: ["Hujan", "Mendung", "Berawan"],
-    water: ["Keruh", "Hijau"],
-    fishingTypes: ["Harian", "Lomba"],
-    provinces: ["DKI Jakarta"],
-    seasons: ["Musim Hujan", "Peralihan"],
-    popularity: 0,
-    summary: "Racikan lembut beraroma gurih yang jadi andalan pemancing saat hujan dan air kolam mulai keruh.",
-    ingredients: [
-      { name: "Pelet ikan", brand: "Pelet Jitu", amount: "50 g" },
-      { name: "Susu bubuk", brand: "Dancow Full Cream", amount: "20 g" },
-      { name: "Tepung terigu", brand: "Rose Brand", amount: "25 g" },
-      { name: "Telur ayam", brand: "-", amount: "1 butir" },
-      { name: "Santan", brand: "Kara", amount: "30 ml" },
-      { name: "Kroto segar", brand: "-", amount: "15 g" },
-      { name: "Essen pandan", brand: "Sesuai selera", amount: "3–5 tetes" },
-    ],
-    steps: ["Haluskan pelet hingga teksturnya lembut.", "Campurkan susu bubuk dan tepung sampai merata.", "Masukkan telur dan santan sedikit demi sedikit.", "Aduk hingga adonan kalis dan mudah dibentuk.", "Tambahkan kroto dan essen, aduk perlahan.", "Kukus 15–20 menit, lalu dinginkan sebelum digunakan."],
-    suitable: ["Hujan", "Air keruh", "Kolam harian", "Ikan mas aktif"],
-    notSuitable: ["Air sangat jernih", "Kondisi sangat panas"],
-  },
-  {
-    slug: "vanila-telur-bebek",
-    name: "Vanila Telur Bebek",
-    rating: 0,
-    reviewCount: 0,
-    users: 0,
-    price: "Rp28.000–35.000",
-    priceValue: 31500,
-    difficulty: "Menengah",
-    image: "/images/recipes/vanila-telur-bebek.jpg",
-    weather: ["Mendung", "Berawan", "Cerah"],
-    water: ["Hijau", "Kekuningan"],
-    fishingTypes: ["Lomba", "Galatama"],
-    provinces: ["DKI Jakarta"],
-    seasons: ["Musim Panas", "Peralihan"],
-    popularity: 0,
-    summary: "Aroma manis lembut untuk menambah variasi ketika ikan kurang responsif pada umpan gurih.",
-    ingredients: [{ name: "Pelet halus", brand: "Jitu", amount: "50 g" }, { name: "Telur bebek", brand: "-", amount: "1 butir" }, { name: "Tepung ketan", brand: "Rose Brand", amount: "20 g" }, { name: "Essen vanila", brand: "-", amount: "3 tetes" }],
-    steps: ["Campur pelet dan tepung ketan.", "Masukkan telur sedikit demi sedikit.", "Tambahkan essen vanila.", "Uleni hingga kenyal dan diamkan 10 menit."],
-    suitable: ["Kolam lomba", "Cuaca berawan", "Air kehijauan"],
-    notSuitable: ["Hujan deras", "Air sangat keruh"],
-  },
-  {
-    slug: "roti-tawar-kroto-lomba",
-    name: "Roti Tawar Kroto Lomba",
-    rating: 0,
-    reviewCount: 0,
-    users: 0,
-    price: "Rp30.000–38.000",
-    priceValue: 34000,
-    difficulty: "Menengah",
-    image: "/images/recipes/roti-tawar-kroto-lomba.jpg",
-    weather: ["Hujan", "Mendung"],
-    water: ["Keruh", "Hijau"],
-    fishingTypes: ["Lomba"],
-    provinces: ["DKI Jakarta"],
-    seasons: ["Musim Hujan"],
-    popularity: 0,
-    summary: "Tekstur lembut dari roti tawar dengan kroto segar untuk sesi lomba berdurasi panjang.",
-    ingredients: [{ name: "Roti tawar", brand: "Sari Roti", amount: "2 lembar" }, { name: "Kroto", brand: "Segar", amount: "15 g" }, { name: "Susu bubuk", brand: "Full cream", amount: "15 g" }, { name: "Santan", brand: "Kara", amount: "15 ml" }],
-    steps: ["Remas roti tawar hingga halus.", "Tambahkan susu bubuk dan santan.", "Masukkan kroto, aduk perlahan.", "Bentuk kecil dan simpan dalam wadah tertutup."],
-    suitable: ["Kolam lomba", "Hujan", "Air kehijauan"],
-    notSuitable: ["Kolam air bening", "Cuaca panas terik"],
-  },
-];
-
-/**
  * Kroto ditakar dalam ons, bukan gram, mengikuti kebiasaan pemancing: kebanyakan
  * memakai 1 ons (≈ 100 g). Bahan amis merujuk merek tuna kaleng yang umum
  * dipakai sebagai perangsang amis, yaitu Deho atau Sunbell Katsuo.
@@ -266,72 +175,8 @@ export const AMIS_TUNA_BRAND = "Deho / Sunbell Katsuo";
 export const AMIS_OIL_BRAND = "Deho / Sunbell";
 export const OPTIONAL_ADDITIONS_NOTE = `${KROTO_AMOUNT} ≈ 100 g. Kroto paling pas dicampurkan saat hendak memancing, dan bahan amis umumnya memakai merek Deho atau Sunbell.`;
 
-const KROTO_PATTERN = /kroto/i;
-/** Ikan kalengan yang mungkin sudah ada, agar baris tuna amis tidak dobel. */
-const CANNED_FISH_PATTERN = /sarden|tongkol|pindang|katsuo/i;
-
-const coreKrotoIngredient: Ingredient = { name: "Kroto", brand: "Segar", amount: KROTO_AMOUNT };
-const optionalKrotoIngredient: Ingredient = { ...coreKrotoIngredient, optional: true };
-const amisTunaIngredient: Ingredient = { name: "Ikan tuna kaleng (amis)", brand: AMIS_TUNA_BRAND, amount: "2 sdm", optional: true };
-const amisOilIngredient: Ingredient = { name: "Minyak ikan amis", brand: AMIS_OIL_BRAND, amount: "1 sdm", optional: true };
-
-/**
- * Semua resep katalog mendapat tambahan yang sama:
- * - Kroto bertakaran ons. Resep yang memang berbasis kroto (nama atau bahannya
- *   menyebut kroto) memakai kroto sebagai bahan inti; sisanya sebagai opsi.
- * - Tuna kaleng amis (Deho / Sunbell) selama resep belum memakai ikan kalengan,
- *   plus minyaknya.
- */
-function withOptionalAdditions(recipe: Omit<Recipe, "imageAlt">, fromCatalog: boolean): Omit<Recipe, "imageAlt"> {
-  // Resep yang memang berbasis kroto (mis. Umpan Putih Kroto) memakai kroto
-  // sebagai bahan inti; pada resep lain kroto ditandai opsional agar tidak
-  // menyesatkan.
-  const krotoIsCore = KROTO_PATTERN.test(recipe.name) || (fromCatalog && recipe.ingredients.some((item) => KROTO_PATTERN.test(item.name)));
-  const ingredients = recipe.ingredients.map((item) => {
-    if (!KROTO_PATTERN.test(item.name)) return { ...item };
-    // Takaran kroto diseragamkan ke ons; merek dipertahankan bila sudah diisi.
-    // Kroto warisan template pada resep non-kroto ditandai opsional.
-    return {
-      ...item,
-      name: "Kroto",
-      amount: KROTO_AMOUNT,
-      brand: item.brand && item.brand !== "-" ? item.brand : "Segar",
-      ...(krotoIsCore ? {} : { optional: true }),
-    };
-  });
-  const additions: Ingredient[] = [];
-  if (!ingredients.some((item) => KROTO_PATTERN.test(item.name))) additions.push(krotoIsCore ? coreKrotoIngredient : optionalKrotoIngredient);
-  if (!recipe.ingredients.some((item) => CANNED_FISH_PATTERN.test(item.name))) additions.push(amisTunaIngredient);
-  additions.push(amisOilIngredient);
-  return { ...recipe, ingredients: [...ingredients, ...additions] };
-}
-
-/**
- * Semua resep katalog merakit `category` dari satu field yang sama dengan
- * tag kondisi, yaitu jenis pemancingan. Tidak ada lagi kategori yang
- * ditulis manual per resep maupun dipilih berdasarkan urutan kartu.
- */
-export const recipes: Recipe[] = coreRecipes.map((recipe) => {
-  const fishingTypes = orderFishingTypes(recipe.name, recipe.fishingTypes);
-  const waterBodies = waterBodiesFromText(recipe.name, recipe.summary, recipe.suitable);
-  const lengkap = withOptionalAdditions(
-    {
-      ...recipe,
-      image: CORE_RECIPE_PHOTOS[recipe.slug] ?? recipe.image,
-      fishingTypes,
-      category: fishingTypes[0],
-      // Label tipe air hanya dari teks resep; sisanya memakai label bawaan
-      // katalog kolam (lihat DEFAULT_WATER_BODIES).
-      waterBodies: waterBodies.length ? waterBodies : [...DEFAULT_WATER_BODIES],
-    },
-    true,
-  );
-  return { ...lengkap, imageAlt: buildRecipeImageAlt(lengkap) };
-});
-
 /** Cakupan Jabodetabek dihitung dari resep berlabel DKI Jakarta, Jawa Barat, dan Banten. */
 export const jabodetabekProvinces = ["DKI Jakarta", "Jawa Barat", "Banten"] as const;
-export const jabodetabekRecipeCount = recipes.filter((recipe) => recipe.provinces.some((province) => jabodetabekProvinces.includes(province as (typeof jabodetabekProvinces)[number]))).length;
 
 export const defaultPreferences = {
   province: "DKI Jakarta",

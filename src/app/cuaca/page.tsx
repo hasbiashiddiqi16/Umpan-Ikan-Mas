@@ -6,7 +6,7 @@ import { PageShell } from "@/components/navigation";
 import { Footer, SectionHeader } from "@/components/shared";
 import { RecipeCard } from "@/components/recipe-card";
 import { RecipeCardSkeleton } from "@/components/skeletons";
-import { recipes } from "@/data/recipes";
+import type { Recipe } from "@/data/recipes";
 import { createPageMetadata } from "@/lib/seo";
 import { getRecipeRatings } from "@/lib/review-summary";
 import { getPublicRecipes } from "@/lib/public-recipes";
@@ -18,10 +18,10 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 const guides = [
-  { id: "musim-hujan", title: "Musim Hujan", icon: CloudRain, description: "Perubahan suhu dan aliran air bisa memengaruhi aktivitas ikan. Racikan beraroma gurih sering menjadi titik awal yang dicoba pemancing.", conditions: ["Hujan ringan hingga sedang", "Air dapat berubah lebih keruh", "Perhatikan aliran masuk kolam"], tip: "Sesuaikan kelembapan adonan agar tetap menempel saat air lebih aktif. Hindari menambahkan essen terlalu banyak sekaligus.", filter: (recipe: (typeof recipes)[number]) => recipe.seasons.includes("Musim Hujan") },
-  { id: "musim-panas", title: "Musim Panas", icon: Sun, description: "Pada hari panas, suhu permukaan dan kejernihan air dapat berubah. Racikan dengan aroma lebih ringan bisa menjadi opsi awal.", conditions: ["Cuaca panas atau cerah", "Ikan mungkin mencari area teduh", "Air kolam bisa lebih hangat"], tip: "Coba cari spot teduh dan mulai dengan aroma yang ringan. Respons tiap kolam berbeda, jadi uji dengan takaran kecil.", filter: (recipe: (typeof recipes)[number]) => recipe.seasons.includes("Musim Panas") || recipe.seasons.includes("Kemarau") },
-  { id: "mendung", title: "Mendung", icon: Cloud, description: "Cuaca teduh sering memberi transisi yang menarik antara panas dan hujan. Racikan fleksibel membantu saat kondisi sulit ditebak.", conditions: ["Cahaya matahari tidak langsung", "Cuaca bisa berubah cepat", "Pantau kejernihan air"], tip: "Bawa satu racikan utama dan satu alternatif dengan aroma berbeda. Catat pergantian cuaca saat ikan mulai merespons.", filter: (recipe: (typeof recipes)[number]) => recipe.weather.includes("Mendung") },
-  { id: "cerah", title: "Cerah", icon: CloudSun, description: "Visibilitas air dapat lebih baik saat cerah. Banyak pemancing memulai dari racikan natural dan mengamati respons ikan.", conditions: ["Cahaya cukup terang", "Air dapat terlihat lebih jernih", "Perhatikan bayangan di spot"], tip: "Mulai dengan umpan beraroma ringan dan hindari gerakan berlebihan di tepi kolam yang tenang.", filter: (recipe: (typeof recipes)[number]) => recipe.weather.includes("Cerah") || recipe.weather.includes("Berawan") },
+  { id: "musim-hujan", title: "Musim Hujan", icon: CloudRain, description: "Perubahan suhu dan aliran air bisa memengaruhi aktivitas ikan. Racikan beraroma gurih sering menjadi titik awal yang dicoba pemancing.", conditions: ["Hujan ringan hingga sedang", "Air dapat berubah lebih keruh", "Perhatikan aliran masuk kolam"], tip: "Sesuaikan kelembapan adonan agar tetap menempel saat air lebih aktif. Hindari menambahkan essen terlalu banyak sekaligus.", filter: (recipe: Recipe) => recipe.seasons.includes("Musim Hujan") },
+  { id: "musim-panas", title: "Musim Panas", icon: Sun, description: "Pada hari panas, suhu permukaan dan kejernihan air dapat berubah. Racikan dengan aroma lebih ringan bisa menjadi opsi awal.", conditions: ["Cuaca panas atau cerah", "Ikan mungkin mencari area teduh", "Air kolam bisa lebih hangat"], tip: "Coba cari spot teduh dan mulai dengan aroma yang ringan. Respons tiap kolam berbeda, jadi uji dengan takaran kecil.", filter: (recipe: Recipe) => recipe.seasons.includes("Musim Panas") || recipe.seasons.includes("Kemarau") },
+  { id: "mendung", title: "Mendung", icon: Cloud, description: "Cuaca teduh sering memberi transisi yang menarik antara panas dan hujan. Racikan fleksibel membantu saat kondisi sulit ditebak.", conditions: ["Cahaya matahari tidak langsung", "Cuaca bisa berubah cepat", "Pantau kejernihan air"], tip: "Bawa satu racikan utama dan satu alternatif dengan aroma berbeda. Catat pergantian cuaca saat ikan mulai merespons.", filter: (recipe: Recipe) => recipe.weather.includes("Mendung") },
+  { id: "cerah", title: "Cerah", icon: CloudSun, description: "Visibilitas air dapat lebih baik saat cerah. Banyak pemancing memulai dari racikan natural dan mengamati respons ikan.", conditions: ["Cahaya cukup terang", "Air dapat terlihat lebih jernih", "Perhatikan bayangan di spot"], tip: "Mulai dengan umpan beraroma ringan dan hindari gerakan berlebihan di tepi kolam yang tenang.", filter: (recipe: Recipe) => recipe.weather.includes("Cerah") || recipe.weather.includes("Berawan") },
 ];
 
 /**
@@ -42,7 +42,7 @@ export const revalidate = 3600;
 async function WeatherGuideSections() {
   const ratings = await getRecipeRatings();
   const publicRecipes = await getPublicRecipes();
-  const urutUlasan = (a: (typeof recipes)[number], b: (typeof recipes)[number]) =>
+  const urutUlasan = (a: Recipe, b: Recipe) =>
     (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0);
   return (
         <div className="space-y-12">{guides.map((guide, index) => {

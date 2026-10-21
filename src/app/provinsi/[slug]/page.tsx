@@ -6,7 +6,7 @@ import { ArrowLeft, BookOpen, MapPin, MessageCircle, Sparkles } from "lucide-rea
 import { PageShell } from "@/components/navigation";
 import { Footer, SectionHeader } from "@/components/shared";
 import { ProvinceExplorer } from "@/components/province-explorer";
-import { recipes } from "@/data/recipes";
+import type { Recipe as RecipeData } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata } from "@/lib/seo";
@@ -41,7 +41,7 @@ export const revalidate = 3600;
 
 
 type Province = (typeof provinces)[number];
-type Recipe = (typeof recipes)[number];
+type Recipe = RecipeData;
 
 /**
  * Tiga angka ringkas di kepala halaman. Hanya "ulasan pengunjung" yang
@@ -110,7 +110,7 @@ async function ProvinceRecipesSection({ province, regionalRecipes }: { province:
   return (
     <>
       {structuredData && <JsonLd data={structuredData} />}
-      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum. Karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
+      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum. Karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
     </>
   );
 }

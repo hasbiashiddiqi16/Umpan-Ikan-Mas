@@ -2,7 +2,6 @@ import { and, count, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsRecipes, cmsReviews } from "@/db/schema";
 import { WATER_BODIES, normalizeFishingType } from "@/data/recipes";
-import { recipes } from "@/data/recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { ROD_MAX, ROD_MIN, SESSION_MAX_MINUTES, SESSION_MIN_MINUTES } from "@/lib/catch-details";
 import { isFutureReviewDate } from "@/lib/review-dates";
@@ -95,9 +94,8 @@ export async function POST(request: Request) {
     if (rodCount !== null && (!Number.isInteger(rodCount) || rodCount < ROD_MIN || rodCount > ROD_MAX)) {
       return Response.json({ error: "Jumlah joran harus antara 1 dan 10." }, { status: 400 });
     }
-    const isSeedRecipe = recipes.some((recipe) => recipe.slug === recipeSlug);
-    const [cmsRecipe] = isSeedRecipe ? [] : await db.select({ id: cmsRecipes.id, ownerId: cmsRecipes.ownerId }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
-    if (!isSeedRecipe && !cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
+    const [cmsRecipe] = await db.select({ id: cmsRecipes.id, ownerId: cmsRecipes.ownerId }).from(cmsRecipes).where(and(eq(cmsRecipes.slug, recipeSlug), eq(cmsRecipes.status, "published"))).limit(1);
+    if (!cmsRecipe) return Response.json({ error: "Resep tidak ditemukan atau belum dipublikasikan." }, { status: 404 });
     // Bila pengirim sedang masuk, ulasan terhubung ke akunnya dan nama yang
     // tampil adalah nama akun. Ulasan anonim tetap berjalan seperti sebelumnya.
     const account = await getCurrentUser().catch(() => null);

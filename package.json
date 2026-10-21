@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
+    "data:hapus-contoh": "node scripts/hapus-data-contoh.mjs",
     "vercel-build": "node scripts/migrate.mjs --optional && next build",
     "supabase:check": "node scripts/supabase-check.mjs",
     "eval:rekomendasi": "node scripts/eval-rekomendasi.mjs"

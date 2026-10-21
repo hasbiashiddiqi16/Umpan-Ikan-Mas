@@ -1,8 +1,10 @@
 import { cache } from "react";
-import { and, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
 import { bacaDenganCobaUlang, sedangPrerenderBuild } from "@/lib/db-retry";
 import { cmsReviews } from "@/db/schema";
+import { normalizeFishingType } from "@/data/recipes";
+import type { RecipeReview } from "@/data/reviews";
 
 import { BAYESIAN_MIN_REVIEWS, globalReviewAverage } from "@/lib/rating-utils";
 import type { RecipeRating, RecipeRatingMap } from "@/lib/rating-utils";
@@ -63,6 +65,56 @@ async function bacaRatingDariBasisData(): Promise<RecipeRatingMap> {
     rows.map((row) => [row.slug, { count: Number(row.total) || 0, average: Number(row.average) || 0 }]),
   );
 }
+
+/**
+ * Ulasan pengunjung asli terbaru untuk permukaan komunitas (mis. seksi
+ * Cerita Pemancing di beranda). Syaratnya sama dengan rating: sudah
+ * disetujui, bukan ulasan contoh (`seed_key` kosong), dan tanggalnya
+ * tidak melewati waktu server. Hasilnya dibentuk sebagai `RecipeReview`
+ * supaya bisa langsung ditampilkan kartu ulasan yang sama dengan
+ * halaman resep.
+ */
+async function bacaUlasanTerbaruDariBasisData(limit: number): Promise<RecipeReview[]> {
+  const rows = await db
+    .select()
+    .from(cmsReviews)
+    .where(and(eq(cmsReviews.status, "approved"), isNull(cmsReviews.seedKey), lte(cmsReviews.createdAt, sql`now()`)))
+    .orderBy(desc(cmsReviews.createdAt))
+    .limit(limit);
+  return rows.map((review) => ({
+    id: review.id,
+    name: review.name,
+    location: review.location,
+    recipeSlug: review.recipeSlug,
+    rating: review.rating,
+    weather: review.weather,
+    water: review.water,
+    waterBody: review.waterBody ?? undefined,
+    // Ulasan lama bisa tersimpan dengan sebutan "Galat"; dibaca sebagai "Galatama".
+    fishingType: normalizeFishingType(review.fishingType),
+    catchCount: review.catchCount ?? undefined,
+    sessionMinutes: review.sessionMinutes ?? undefined,
+    rodCount: review.rodCount ?? undefined,
+    date: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(review.createdAt),
+    comment: review.comment,
+  }));
+}
+
+export const getLatestCommunityReviews = cache(async (limit = 3): Promise<RecipeReview[]> => {
+  // Tanpa basis data terkonfigurasi (pengembangan lokal), memang
+  // belum ada ulasan komunitas untuk ditampilkan.
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await bacaDenganCobaUlang(() => bacaUlasanTerbaruDariBasisData(limit));
+  } catch (error) {
+    console.error("Gagal membaca ulasan komunitas terbaru dari basis data:", error);
+    // Pola yang sama seperti rating: saat build kegagalan tidak
+    // menggagalkan build, tetapi saat runtime galat dilempar agar
+    // ISR tidak menyimpan daftar kosong hasil kegagalan sesaat.
+    if (sedangPrerenderBuild()) return [];
+    throw new Error("Basis data ulasan sedang tidak terjangkau. Coba lagi sesaat lagi.");
+  }
+});
 
 export const getRecipeRatings = cache(async (): Promise<RecipeRatingMap> => {
   // Tanpa basis data terkonfigurasi (pengembangan lokal), memang

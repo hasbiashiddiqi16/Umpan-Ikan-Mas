@@ -6,14 +6,14 @@ import { PageShell } from "@/components/navigation";
 import { Hero } from "@/components/hero";
 import { QuickFinder } from "@/components/quick-finder";
 import { RecipeCard } from "@/components/recipe-card";
-import { WeatherCard, ProvinceCard, CommunityCard } from "@/components/cards";
+import { WeatherCard, ProvinceCard, jumlahRacikanUntuk, weatherStyles } from "@/components/cards";
+import { ReviewCard } from "@/components/recipe-details";
 import { Footer, SectionHeader } from "@/components/shared";
 import { RecipeCardSkeleton } from "@/components/skeletons";
 import { defaultPreferences, type Recipe } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
-import { fishingReports } from "@/data/fishingReports";
 import { getRecommendedRecipes } from "@/lib/recommendation";
-import { getRecipeRatings } from "@/lib/review-summary";
+import { getLatestCommunityReviews, getRecipeRatings } from "@/lib/review-summary";
 import { countRecipesForProvince, getPublicRecipes } from "@/lib/public-recipes";
 import { createPageMetadata } from "@/lib/seo";
 
@@ -105,6 +105,35 @@ function RatedSectionsSkeleton() {
   );
 }
 
+/**
+ * Cerita pemancing di beranda kini hanya dari ulasan pengunjung asli
+ * terbaru — laporan contoh statis sudah dihapus. Pulau async terpisah
+ * di dalam `Suspense` supaya hero dan seksi statis tidak tertahan
+ * menunggu query ulasan.
+ */
+async function CommunityStories() {
+  const stories = await getLatestCommunityReviews(3);
+  if (!stories.length) {
+    return <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm leading-6 text-[#636c62]">Belum ada cerita dari pengunjung. Setelah mencoba racikan, bagikan pengalamanmu lewat halaman resepnya — ceritamu tampil di sini dan membantu pemancing lain.</div>;
+  }
+  return <div className="grid gap-4 lg:grid-cols-3">{stories.map((review) => <ReviewCard key={`${review.id ?? review.name}-${review.recipeSlug}`} review={review} />)}</div>;
+}
+
+/** Penampung cerita pemancing selama ulasan aslinya dimuat. */
+function CommunityStoriesSkeleton() {
+  return (
+    <div aria-hidden="true" className="grid gap-4 lg:grid-cols-3">
+      {[0, 1, 2].map((item) => <div key={item} className="h-[190px] animate-pulse rounded-2xl bg-[#edf1eb]" />)}
+    </div>
+  );
+}
+
+/** Grid kartu cuaca dengan hitungan dari daftar resep publik yang sama dengan katalog. */
+async function WeatherCardsGrid() {
+  const publicRecipes = await getPublicRecipes();
+  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{weatherStyles.map((item, index) => <WeatherCard key={item.slug} index={index} count={jumlahRacikanUntuk(item, publicRecipes)} />)}</div>;
+}
+
 /** Penampung grid provinsi selama label populernya dimuat. */
 function ProvinceGridSkeleton() {
   return (
@@ -128,7 +157,7 @@ export default function HomePage() {
           <Suspense fallback={<RatedSectionsSkeleton />}><RatedRecipeSections /></Suspense>
           <section>
             <SectionHeader eyebrow="Baca situasinya" title="Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((index) => <WeatherCard key={index} index={index} />)}</div>
+            <Suspense fallback={<div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="min-h-[220px] animate-pulse rounded-[22px] bg-[#edf1eb]" />)}</div>}><WeatherCardsGrid /></Suspense>
           </section>
           <section>
             <SectionHeader eyebrow="Dari berbagai daerah" title="Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
@@ -137,7 +166,7 @@ export default function HomePage() {
           </section>
           <section>
             <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/katalog?tab=komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
-            <div className="grid gap-4 lg:grid-cols-3">{fishingReports.slice(0, 3).map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} />)}</div>
+            <Suspense fallback={<CommunityStoriesSkeleton />}><CommunityStories /></Suspense>
             <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div><p className="text-sm font-extrabold text-[#2c3f30]">Punya racikan yang sering bikin strike?</p><p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6d60]">Ceritakan bahan dan cara meraciknya — racikanmu langsung tayang dan bisa jadi andalan pemancing lain.</p></div>
               <Link href="/bagikan" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]">Bagikan Racikan Andalanmu <ArrowRight size={15} /></Link>

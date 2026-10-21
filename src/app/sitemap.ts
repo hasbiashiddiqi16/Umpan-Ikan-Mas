@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 import { db } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { provinces } from "@/data/provinces";
-import { recipes } from "@/data/recipes";
 import { absoluteUrl, siteOrigin } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +40,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     addPath(`/provinsi/${province.slug}`, { changeFrequency: "monthly", priority: 0.6 });
   }
 
-  // Resep CMS yang sudah dipublikasikan ikut masuk; draft dan arsip tidak.
-  // Jika database belum tersedia, sitemap tetap berisi halaman dari katalog lokal.
+  // Hanya resep basis data yang sudah dipublikasikan yang masuk;
+  // draft dan arsip tidak. Jika basis data belum tersedia, sitemap
+  // tetap berisi halaman statis dan provinsi.
   let managedRecipes: Array<{ slug: string; status: string; updatedAt: Date }> | undefined;
   try {
     managedRecipes = await db
@@ -50,17 +50,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from(cmsRecipes);
   } catch {
     managedRecipes = undefined;
-  }
-
-  const managedBySlug = new Map((managedRecipes ?? []).map((recipe) => [recipe.slug, recipe]));
-  for (const recipe of recipes) {
-    const managedRecipe = managedBySlug.get(recipe.slug);
-    if (managedRecipe && managedRecipe.status !== "published") continue;
-    addPath(`/resep/${recipe.slug}`, {
-      changeFrequency: "monthly",
-      priority: 0.6,
-      ...(managedRecipe ? { lastModified: managedRecipe.updatedAt } : {}),
-    });
   }
 
   for (const recipe of managedRecipes ?? []) {

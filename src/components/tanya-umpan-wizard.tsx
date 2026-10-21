@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Bot, Check, Cloud, CloudRain, CloudSun, Droplets, Fish, Flame, MapPin, RotateCcw, Sparkles, Sun, Target, Trophy, Wallet, Waves } from "lucide-react";
-import { defaultPreferences, normalizeFishingType, recipes, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
+import { defaultPreferences, normalizeFishingType, type FishingType, type Recipe, type Weather, type WaterCondition } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
-import { reviews, type RecipeReview } from "@/data/reviews";
+import type { RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
-import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
+import { cmsRecipeToRecipe } from "@/lib/cms";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
 import { rankPakarRecipes } from "@/lib/pakar-umpan";
 import { RecommendationCard } from "@/components/cards";
@@ -59,7 +59,6 @@ export function TanyaUmpanWizard({ initialRecipes, initialManagedSlugs }: { init
   const [showResult, setShowResult] = useState(false);
   const [memberReviews, setMemberReviews] = useState<RecipeReview[]>([]);
   const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>(() => initialRecipes ?? []);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>(() => initialManagedSlugs ?? []);
   const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
   const { place: detectedPlace, markTouched: markLocationTouched } = useLocationAutofill((place) => {
     setPreferences((current) => ({ ...current, province: place.province }));
@@ -73,7 +72,6 @@ export function TanyaUmpanWizard({ initialRecipes, initialManagedSlugs }: { init
       .then(async (response) => response.ok ? response.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] })
       .then((body) => {
         setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record)));
-        setShadowedSlugs(body.shadowedSlugs ?? []);
       })
       .catch(() => undefined);
     void fetch("/api/public/reviews", { cache: "no-store", signal: controller.signal })
@@ -114,10 +112,9 @@ export function TanyaUmpanWizard({ initialRecipes, initialManagedSlugs }: { init
   }, [markLocationTouched]);
 
   const extraReviews = useMemo(() => approvedReviews.filter((remote) => !memberReviews.some((local) => local.name === remote.name && local.comment === remote.comment)), [approvedReviews, memberReviews]);
-  const recommendationRecipes = useMemo(() => {
-    const hidden = new Set(shadowedSlugs);
-    return mergeRecipesBySlug(recipes.filter((recipe) => !hidden.has(recipe.slug)), publishedRecipes);
-  }, [publishedRecipes, shadowedSlugs]);
+  // Satu-satunya sumber daftar: resep basis data berstatus terbit
+  // dari API publik (data contoh statis sudah dihapus).
+  const recommendationRecipes = publishedRecipes;
   const pakarResults = useMemo(
     // Ulasan contoh tidak dipakai sebagai bukti; hanya ulasan pengunjung asli.
     () => rankPakarRecipes(preferences, [], [...memberReviews, ...extraReviews], recommendationRecipes),

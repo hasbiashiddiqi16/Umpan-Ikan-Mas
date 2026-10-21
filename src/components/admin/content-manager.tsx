@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Database, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
-import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, recipes as seedRecipes, type FishingType, type Ingredient } from "@/data/recipes";
+import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, type FishingType, type Ingredient } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { hargaAcuanDariLabel, slugify } from "@/lib/utils";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
@@ -579,7 +579,6 @@ export function ContentManager() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<number | null>(null);
-  const [importingSeeds, setImportingSeeds] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const [excelFailures, setExcelFailures] = useState<{ baris: number; judul: string; pesan: string }[]>([]);
@@ -617,19 +616,6 @@ export function ContentManager() {
     return hasil;
   }, [items, filter, query, urut, rankerRating, ulasan.ratings]);
   const counts = useMemo(() => ({ all: items.length, published: items.filter((item) => item.status === "published").length, draft: items.filter((item) => item.status === "draft").length, archived: items.filter((item) => item.status === "archived").length }), [items]);
-  const missingSeeds = useMemo(() => seedRecipes.filter((seed) => !items.some((item) => item.slug === seed.slug)).length, [items]);
-
-  async function importStarterRecipes() {
-    setImportingSeeds(true); setError(""); setNotice("");
-    try {
-      const response = await fetch("/api/admin/recipes/import", { method: "POST" });
-      const body = await response.json() as { error?: string; imported?: number; updated?: number };
-      if (!response.ok) throw new Error(body.error ?? "Sinkronisasi gagal.");
-      setNotice(`Sinkronisasi selesai: ${body.imported ?? 0} resep baru, ${body.updated ?? 0} diperbarui.`);
-      await load();
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Sinkronisasi gagal."); }
-    finally { setImportingSeeds(false); }
-  }
 
   async function importExcel(file: File) {
     setImportingExcel(true); setError(""); setNotice(""); setExcelFailures([]);
@@ -688,7 +674,6 @@ export function ContentManager() {
           <p className="mt-2 text-sm text-[#626c62] (4.69:1 terburuk)">Susun, tinjau, dan publikasikan racikan umpan ikan mas.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          <button type="button" onClick={() => void importStarterRecipes()} disabled={importingSeeds} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-3.5 text-[11px] font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-60"><Database size={15} />{importingSeeds ? "Menyinkronkan…" : missingSeeds > 0 ? `Sinkronkan katalog · ${missingSeeds} resep baru` : "Sinkronkan katalog + contoh ulasan"}</button>
           <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]"><Plus size={16} /> Tulis resep</button>
         </div>
       </div>

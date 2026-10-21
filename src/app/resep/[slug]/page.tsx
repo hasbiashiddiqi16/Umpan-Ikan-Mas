@@ -12,8 +12,6 @@ import { LiveRecipeRating, RecipeReviewSection } from "@/components/recipe-revie
 import { MatchOrPopularBox, MatchOrPopularChip } from "@/components/match-or-popular";
 import { recipeBadge } from "@/lib/recipe-badge";
 import { RecipeCard } from "@/components/recipe-card";
-import { recipes } from "@/data/recipes";
-import { reviews } from "@/data/reviews";
 import { db, isDatabaseConfigured } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -63,11 +61,8 @@ const findRecipe = cache(async (slug: string) => {
     // server, bukan ditelan menjadi 404 yang menyesatkan.
     return cmsRecipeToRecipe(record);
   }
-  // Resep katalog bawaan tetap tersedia saat basis data tak terjangkau.
-  const seed = recipes.find((item) => item.slug === slug);
-  if (seed) return seed;
   if (databaseFailed) {
-    // Gagal dua kali dan resepnya bukan katalog bawaan: lempar agar
+    // Gagal dua kali dan resepnya tidak ditemukan: lempar agar
     // render ini TIDAK disimpan ke cache ISR. Bila dikembalikan sebagai
     // 404, ISR menyimpannya sampai satu jam dan menimpa halaman sehat —
     // persis kejadian resep terbit yang tiba-tiba 404 padahal datanya
@@ -95,8 +90,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   });
 }
 
-export function generateStaticParams() {
-  return recipes.map((recipe) => ({ slug: recipe.slug }));
+export async function generateStaticParams() {
+  const publicRecipes = await getPublicRecipes().catch(() => []);
+  return publicRecipes.map((recipe) => ({ slug: recipe.slug }));
 }
 
 export default async function RecipeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -105,14 +101,12 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   if (!recipe) notFound();
   // Bagian terkait tidak boleh menumbangkan halaman yang resep
   // utamanya sudah ketemu: saat daftar publik gagal dibaca (basis data
-  // gangguan), tampilkan katalog bawaan sebagai cadangan bagian ini.
-  const relatedRecipes = await getPublicRecipes().catch(() => [...recipes]);
+  // gangguan), bagian ini cukup kosong.
+  const relatedRecipes = await getPublicRecipes().catch(() => []);
   // Rating awal dari server agar kepala halaman langsung menampilkan angka
   // ulasan yang benar (bukan "Belum ada ulasan" sesaat). Kegagalan membaca
   // ringkasan tidak menggagalkan halaman: klien akan memuatnya sendiri.
   const serverRatings = await getRecipeRatings().catch(() => undefined);
-  // Hanya contoh ulasan berlabel yang dikirim ke halaman: bukan bukti komunitas.
-  const sampleReviews = reviews.filter((review) => review.recipeSlug === recipe.slug && review.sample);
   const recipeUrl = absoluteUrl(`/resep/${recipe.slug}`);
   const homeUrl = absoluteUrl("/");
   const catalogUrl = absoluteUrl("/katalog");
@@ -195,7 +189,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <section id="bahan" className="scroll-mt-24"><SectionHeader eyebrow="Siapkan sebelum berangkat" title="Bahan yang dibutuhkan" subtitle="Takaran untuk satu sesi. Sesuaikan kelembapan adonan sedikit demi sedikit." /><IngredientTable ingredients={recipe.ingredients} /></section>
             <section><SectionHeader eyebrow="Ikuti langkahnya" title="Cara meracik" subtitle="Persiapan sekitar 25 menit, termasuk waktu mengukus bila dibutuhkan." /><PreparationSteps steps={recipe.steps} /></section>
             <section><SectionHeader eyebrow="Catatan kondisi" title="Cocok untuk kondisi apa?" subtitle="Gunakan ini sebagai titik awal dan sesuaikan dengan karakter kolammu." /><ConditionTags suitable={recipe.suitable} notSuitable={recipe.notSuitable} /></section>
-            <RecipeReviewSection recipe={recipe} sampleReviews={sampleReviews} initialRating={serverRatings?.[recipe.slug]} />
+            <RecipeReviewSection recipe={recipe} initialRating={serverRatings?.[recipe.slug]} />
           </div>
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-24 lg:self-start">
             <div className="min-w-0 rounded-[22px] border border-[#e1e8dd] bg-[#f4f8f1] p-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e6efe1] text-[#49694b]"><Sparkles size={19} /></span><h2 className="mt-4 text-lg font-extrabold text-[#304333]">Kenapa direkomendasikan?</h2><p className="mt-2 text-sm leading-6 text-[#616e62] (4.60:1 terburuk)">Skor kecocokan hanya menghitung kondisi yang kamu isi sendiri: air, cuaca, jenis pemancingan, provinsi, dan musim. Tanpa isian, tidak ada persentase yang ditampilkan. Ini panduan awal, bukan jaminan hasil.</p><div className="mt-4"><MatchOrPopularBox recipe={recipe} /></div></div>

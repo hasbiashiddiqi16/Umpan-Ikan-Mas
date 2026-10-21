@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Check, Heart, LoaderCircle, LogOut, MessageSquareText, Pencil, Plus, Save, Trash2, UserRound } from "lucide-react";
-import { recipes } from "@/data/recipes";
-import { cmsRecipeToRecipe, mergeRecipesBySlug, type CmsRecipeRecord } from "@/lib/cms";
+import { cmsRecipeToRecipe, type CmsRecipeRecord } from "@/lib/cms";
 import { createClient } from "@/utils/supabase/client";
 import { supabasePublicConfig } from "@/utils/supabase/env";
 import { readLocalFavorites, syncFavoritesWithAccount, writeLocalFavorites, FAVORITES_EVENT } from "@/lib/favorites-client";
@@ -45,7 +44,6 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
   const [favoritAkunSiap, setFavoritAkunSiap] = useState(false);
   const [resepPublikSiap, setResepPublikSiap] = useState(false);
   const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>([]);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>([]);
 
   const muatAkun = useCallback(async () => {
     setMemuat(true);
@@ -86,16 +84,14 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
     const controller = new AbortController();
     void fetch("/api/public/recipes", { cache: "no-store", signal: controller.signal })
       .then(async (r) => { if (r.ok) setResepPublikSiap(true); return r.ok ? r.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] }; })
-      .then((body) => { setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record))); setShadowedSlugs(body.shadowedSlugs ?? []); })
+      .then((body) => { setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record))); })
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
 
   const savedRecipes = useMemo(() => {
-    const managed = new Set(shadowedSlugs);
-    const all = mergeRecipesBySlug(recipes.filter((r) => !managed.has(r.slug)), publishedRecipes);
-    return all.filter((r) => favoriteSlugs.includes(r.slug));
-  }, [favoriteSlugs, publishedRecipes, shadowedSlugs]);
+    return publishedRecipes.filter((r) => favoriteSlugs.includes(r.slug));
+  }, [favoriteSlugs, publishedRecipes]);
 
   // Slug favorit yang resepnya sudah tidak tampil publik (dihapus atau
   // diarsipkan) dibersihkan dari akun dan perangkat, agar hitungan tab

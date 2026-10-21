@@ -1,18 +1,17 @@
 import Image from "next/image";
-import { describeCatchSummary } from "@/lib/catch-details";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check, Cloud, CloudRain, CloudSun, MapPin, Medal, Sun, Users } from "lucide-react";
-import { recipes, type Recipe } from "@/data/recipes";
+import type { Recipe } from "@/data/recipes";
 import type { Province } from "@/data/provinces";
-import type { FishingReport } from "@/data/fishingReports";
-import { Badge, cardMetaBadgeClass, FishingTypeIcon, Rating, RecipeRating, WaterIcon, WeatherIcon } from "@/components/shared";
+import { Badge, RecipeRating } from "@/components/shared";
 import { describeRating } from "@/lib/rating-utils";
 import { fishingTypeTag, recipeBadge } from "@/lib/recipe-badge";
 import { formatCount } from "@/lib/utils";
 
 /**
- * Jumlah "N racikan" di kartu cuaca **dihitung dari katalog**, bukan ditulis
- * manual: satu sumber dengan hasil penyaringan di halaman cuaca.
+ * Jumlah "N racikan" di kartu cuaca **dihitung dari daftar resep publik**
+ * yang dioper pemanggil, bukan ditulis manual: satu sumber dengan hasil
+ * penyaringan di halaman cuaca.
  * "Musim Hujan"/"Musim Panas" adalah nama musim, "Mendung"/"Cerah" nama cuaca.
  */
 export const weatherStyles = [
@@ -22,13 +21,13 @@ export const weatherStyles = [
   { name: "Cerah", slug: "cerah", icon: CloudSun, color: "bg-[#f5f0e1] text-[#7d6737] (4.66:1 terburuk)", description: "Racikan natural untuk visibilitas air yang cenderung lebih baik.", musim: [], cuaca: ["Cerah", "Panas"] },
 ];
 
-export function jumlahRacikanUntuk(item: (typeof weatherStyles)[number]) {
-  return recipes.filter(
+export function jumlahRacikanUntuk(item: (typeof weatherStyles)[number], publicRecipes: readonly Recipe[]) {
+  return publicRecipes.filter(
     (recipe) => recipe.seasons.some((musim) => item.musim.includes(musim)) || recipe.weather.some((cuaca) => item.cuaca.includes(cuaca)),
   ).length;
 }
 
-export function WeatherCard({ index = 0 }: { index?: number }) {
+export function WeatherCard({ index = 0, count = 0 }: { index?: number; count?: number }) {
   const item = weatherStyles[index % weatherStyles.length];
   const Icon = item.icon;
   return (
@@ -41,7 +40,7 @@ export function WeatherCard({ index = 0 }: { index?: number }) {
         <p className="mt-2 min-h-12 text-sm leading-5 text-[#646d64] (4.60:1 terburuk)">{item.description}</p>
       </div>
       <div className="mt-5 flex items-center justify-between border-t border-[#edf0eb] pt-4">
-        <span className="text-xs font-semibold text-[#676d66] (4.55:1 terburuk)" title="Jumlah racikan katalog yang cocok dengan cuaca atau musim ini">{jumlahRacikanUntuk(item)} racikan</span>
+        <span className="text-xs font-semibold text-[#676d66] (4.55:1 terburuk)" title="Jumlah racikan katalog yang cocok dengan cuaca atau musim ini">{count} racikan</span>
         <span className="inline-flex items-center gap-1 text-xs font-bold text-[#375e3d]">Lihat umpan <ArrowRight size={14} className="transition group-hover:translate-x-1" /></span>
       </div>
     </Link>
@@ -59,33 +58,6 @@ export function ProvinceCard({ province, compact = false, popularRecipe }: { pro
       {!compact && <div className="relative mt-4 flex items-center gap-1.5 text-[11px] text-[#676d66] (4.55:1 terburuk)"><MapPin size={12} /> {popularRecipe ? <>Populer: <span className="truncate font-semibold text-[#536252]">{popularRecipe}</span></> : <span className="font-semibold text-[#626c62] (4.69:1 terburuk)">Belum ada ulasan pengunjung</span>}</div>}
       {compact && <p className="relative mt-3 truncate text-[11px] font-semibold text-[#626c62] (4.69:1 terburuk)">{popularRecipe ? `Populer: ${popularRecipe}` : "Belum ada ulasan pengunjung"}</p>}
     </Link>
-  );
-}
-
-export function CommunityCard({ report, showPhoto = false }: { report: FishingReport; showPhoto?: boolean }) {
-  // Ulasan pengunjung tidak punya unggahan foto, jadi yang tampil adalah foto
-  // racikan katalog resep yang dicoba — diberi label ilustrasi, bukan foto kiriman.
-  const resepDicoba = recipes.find((recipe) => recipe.slug === report.recipeSlug);
-  const photo = resepDicoba?.image ?? "/images/recipe-putih.jpg";
-  const photoAlt = resepDicoba ? `${resepDicoba.imageAlt} (ilustrasi racikan katalog)` : `Adonan ${report.recipe} (ilustrasi racikan katalog)`;
-  return (
-    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e6eae3] bg-white shadow-[0_8px_26px_rgba(41,55,43,.04)]">
-      {showPhoto && <div className="relative h-48 shrink-0 overflow-hidden bg-[#e9e6da]"><Image src={photo} alt={photoAlt} fill sizes="(max-width: 768px) 90vw, (max-width: 1280px) 45vw, 33vw" className="object-cover" /><span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">Ilustrasi racikan</span></div>}
-      <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-bold text-[#405543]" style={{ backgroundColor: report.color }}>{report.initials}</span>
-          <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><h3 className="text-sm font-extrabold text-[#2b3b2d]">{report.name}</h3><Badge tone="cream">Data contoh</Badge></div><p className="mt-1 flex items-center gap-1 text-xs text-[#666d66] (4.57:1 terburuk)"><MapPin size={12} />{report.location}</p></div><span className="shrink-0 text-[11px] text-[#a0a69d]">{report.date}</span></div></div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-3">
-          <Badge className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.weather}><WeatherIcon weather={report.weather} className="shrink-0" /> {report.weather}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.water}><WaterIcon className="shrink-0" /> {report.water}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={report.fishingType}><FishingTypeIcon className="shrink-0" /> {report.fishingType}</span></Badge>
-        </div>
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f8f4] px-3.5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">Racikan dicoba</p><Link href={`/resep/${report.recipeSlug}`} className="mt-0.5 block text-sm font-bold text-[#35573a] hover:underline">{report.recipe}</Link></div><div className="text-right"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#666d65] (4.57:1 terburuk)">Hasil sesi</p><p className="mt-0.5 text-sm font-extrabold text-[#2b3b2d]">{describeCatchSummary(report)}</p></div></div>
-        <p className="mt-4 flex-1 text-sm leading-6 text-[#646d64] (4.60:1 terburuk)">“{report.comment}”</p>
-        <div className="mt-4 flex items-center justify-between border-t border-[#edf0eb] pt-3"><Rating value={report.rating} compact /><Link href={`/resep/${report.recipeSlug}`} className="text-xs font-bold text-[#35573a] hover:underline">Lihat detail <ArrowRight size={13} className="ml-1 inline" /></Link></div>
-      </div>
-    </article>
   );
 }
 
