@@ -134,12 +134,6 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   return { data: { slug, title, summary, category, status, image, price, priceValue: Math.round(priceValue), difficulty, weather, water, waterBodies, fishingTypes, provinces, seasons, ingredients, steps, suitable, notSuitable, author, rating, popularity } };
 }
 
-export function mergeRecipesBySlug(seedRecipes: Recipe[], managedRecipes: Recipe[]): Recipe[] {
-  const merged = new Map<string, Recipe>(seedRecipes.map((recipe) => [recipe.slug, recipe]));
-  managedRecipes.forEach((recipe) => merged.set(recipe.slug, recipe));
-  return [...merged.values()];
-}
-
 /**
  * Menyeragamkan sebutan jenis kolam pada baris yang dibaca dari basis data.
  * Data lama bisa masih berisi "Galat"; dibaca sebagai "Galatama" supaya

@@ -1,4 +1,4 @@
-import { and, count, eq, gte, isNull } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsReviewReports, cmsReviews } from "@/db/schema";
 import { databaseErrorResponse } from "@/lib/database-status";
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const [review] = await db
       .select({ id: cmsReviews.id, status: cmsReviews.status })
       .from(cmsReviews)
-      .where(and(eq(cmsReviews.id, reviewId), isNull(cmsReviews.seedKey), eq(cmsReviews.status, "approved")))
+      .where(and(eq(cmsReviews.id, reviewId), eq(cmsReviews.status, "approved")))
       .limit(1);
     if (!review) return Response.json({ error: "Ulasan tidak ditemukan atau belum tampil publik." }, { status: 404 });
 

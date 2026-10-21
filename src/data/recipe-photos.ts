@@ -1,25 +1,10 @@
 /**
- * Foto adonan per resep.
+ * Alt text foto adonan per resep.
  *
- * Katalog kini hanya berisi tiga resep DKI Jakarta, dan masing-masing
- * punya berkas fotonya sendiri:
- *
- * - Umpan Putih Kroto memakai berkas klasik `/images/recipe-putih.jpg`
- *   yang memang cocok dengan adonannya.
- * - Vanila Telur Bebek dan Roti Tawar Kroto Lomba memakai berkas
- *   tersendiri di `public/images/recipes/<slug>.jpg`.
- *
- * Foto dari pengirim ulasan **tidak** dikarang: ulasan pengunjung saat ini
- * tidak punya unggahan foto, jadi kartu komunitas memakai foto racikan
- * katalog resep yang dicoba dan diberi label "Ilustrasi racikan".
+ * Foto resep sendiri datang dari data CMS (`image`), sedangkan berkas ini
+ * hanya menurunkan deskripsi warna adonan dari nama resep. Tidak ada lagi
+ * pemetaan foto yang dikunci ke slug resep tertentu.
  */
-
-/** Foto tersendiri untuk resep yang dipertahankan, dikunci dari slug-nya. */
-export const CORE_RECIPE_PHOTOS: Record<string, string> = {
-  "umpan-putih-kroto": "/images/recipe-putih.jpg",
-  "vanila-telur-bebek": "/images/recipes/vanila-telur-bebek.jpg",
-  "roti-tawar-kroto-lomba": "/images/recipes/roti-tawar-kroto-lomba.jpg",
-};
 
 /**
  * Keluarga tampilan adonan berdasarkan kata kunci nama resep. Dipakai untuk

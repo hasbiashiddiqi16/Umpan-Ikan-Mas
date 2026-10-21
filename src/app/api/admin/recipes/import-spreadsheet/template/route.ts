@@ -4,7 +4,7 @@ import { buildRecipeTemplateWorkbook } from "@/lib/recipe-spreadsheet";
 export const dynamic = "force-dynamic";
 
 /**
- * Unduh template Excel impor resep: lembar "Resep" berisi dua baris contoh
+ * Unduh template Excel impor resep: lembar "Resep" hanya berisi judul kolom
  * dan lembar "Petunjuk" berisi cara mengisi beserta daftar nilai yang sah
  * untuk setiap kolom pilihan (diambil dari daftar resmi yang sama dengan
  * formulir, jadi selalu mutakhir).

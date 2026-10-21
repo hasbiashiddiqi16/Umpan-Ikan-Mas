@@ -296,7 +296,6 @@ function useCommunityReviews(slug: string) {
 
 /**
  * Ringkasan rating dari ulasan asli saja (kiriman pengunjung + hasil moderasi).
- * Ulasan contoh tidak pernah ikut dihitung.
  */
 function summarizeReviews(memberReviews: MemberReview[], remoteReviews: RecipeReview[]) {
   // Ulasan lokal yang masih ditahan tidak ikut dihitung, sama seperti di server.
@@ -328,8 +327,7 @@ export function LiveRecipeRating({ recipe, initialRating }: { recipe: Recipe; in
 export function RecipeReviewSection({ recipe, initialRating }: { recipe: Recipe; initialRating?: { count: number; average: number } }) {
   const { memberReviews, approvedReviews, reviewsLoaded, refresh } = useCommunityReviews(recipe.slug);
 
-  // Hanya ulasan asli (kiriman pengunjung + hasil moderasi) yang tampil
-  // dan dihitung; data ulasan contoh sudah dihapus dari situs.
+  // Hanya ulasan asli (kiriman pengunjung + hasil moderasi) yang tampil dan dihitung.
   const remoteReviews = useMemo(
     () => approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment)),
     [approvedReviews, memberReviews],

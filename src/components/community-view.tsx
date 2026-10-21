@@ -32,6 +32,8 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [reviewLimit, setReviewLimit] = useState(reviewsPerPage);
   const [communityRecipes, setCommunityRecipes] = useState<ResepKomunitas[]>([]);
+  const [publishedSlugs, setPublishedSlugs] = useState<string[]>([]);
+  const [recipesLoaded, setRecipesLoaded] = useState(false);
   useEffect(() => {
     const sync = () => setMemberReviews(readCommunityReviews());
     sync();
@@ -43,8 +45,9 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
       .finally(() => setReviewsLoaded(true));
     void fetch("/api/public/recipes", { cache: "no-store", signal: controller.signal })
       .then(async (response) => response.ok ? response.json() as Promise<{ recipes?: ResepKomunitas[] }> : { recipes: [] })
-      .then((body) => setCommunityRecipes((body.recipes ?? []).filter((resep) => resep.dariKomunitas)))
-      .catch(() => undefined);
+      .then((body) => { const recipes = body.recipes ?? []; setPublishedSlugs(recipes.map((resep) => resep.slug)); setCommunityRecipes(recipes.filter((resep) => resep.dariKomunitas)); })
+      .catch(() => undefined)
+      .finally(() => setRecipesLoaded(true));
     window.addEventListener(COMMUNITY_REVIEWS_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -56,7 +59,9 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   // Salinan lokal yang sudah punya versi server digantikan versi server
   // (sumber kebenaran status); yang belum ada di server berarti kiriman
   // pengirim sendiri yang masih ditahan, tampil berlabel menunggu.
-  const memberOnlyReviews = useMemo(() => memberReviews.filter((local) => !approvedReviews.some((remote) => remote.name === local.name && remote.comment === local.comment)), [approvedReviews, memberReviews]);
+  // Salinan lokal hanya tampil bila resepnya masih terbit. Salinan untuk resep
+  // yang sudah dihapus tidak boleh hidup lagi sebagai cerita komunitas.
+  const memberOnlyReviews = useMemo(() => memberReviews.filter((local) => recipesLoaded && publishedSlugs.includes(local.recipeSlug) && !approvedReviews.some((remote) => remote.name === local.name && remote.comment === local.comment)), [approvedReviews, memberReviews, publishedSlugs, recipesLoaded]);
   // Angka dan daftar ulasan hanya dari kiriman pengunjung asli.
   const allReviews = useMemo(() => [...memberOnlyReviews.map(sebagaiUlasanPublik), ...approvedReviews], [memberOnlyReviews, approvedReviews]);
   const visibleReviews = useMemo(() => allReviews.slice(0, reviewLimit), [allReviews, reviewLimit]);

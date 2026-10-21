@@ -127,12 +127,12 @@ export function ratingScoreRanker(
  * yang mencoba racikan tersebut, jadi "pemancing mencoba" tidak pernah lebih
  * besar dari jumlah ulasan.
  */
-export function describeRating(rating?: RecipeRating, sampleCount = 0) {
+export function describeRating(rating?: RecipeRating) {
   if (!rating || rating.count === 0) {
-    return "Belum ada ulasan pengunjung. Contoh ulasan berlabel tidak ikut dihitung.";
+    return "Belum ada ulasan pengunjung.";
   }
   const jumlah = `${new Intl.NumberFormat("id-ID").format(rating.count)} ulasan pengunjung yang disetujui`;
-  return `${jumlah} — satu ulasan berarti satu pemancing yang mencoba.${sampleCount ? " Ulasan contoh berlabel tidak dihitung." : ""}`;
+  return `${jumlah} — satu ulasan berarti satu pemancing yang mencoba.`;
 }
 
 /** Rangkuman kondisi yang dipilih pengunjung, untuk menjelaskan asal skor kecocokan. */

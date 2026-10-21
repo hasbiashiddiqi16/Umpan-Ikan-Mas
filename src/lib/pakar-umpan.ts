@@ -79,8 +79,7 @@ function getCommunityFit(recipe: Recipe, preferences: UserPreferences, community
 export function rankPakarRecipes(
   preferences: UserPreferences,
   selectedIds: string[] = [],
-  // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
-  // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
+  // Tanpa argumen, tidak ada ulasan yang dianggap bukti komunitas.
   communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = [],
 ): PakarRecipeResult[] {
@@ -146,8 +145,7 @@ export function getPakarDominantConditions(recipeMatches: PakarRecipeResult[]): 
 
 export function buildPakarBlend(
   selectedIds: string[],
-  // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
-  // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
+  // Tanpa argumen, tidak ada ulasan yang dianggap bukti komunitas.
   communityReviews: RecipeReview[] = [],
   sourceRecipes: Recipe[] = [],
 ): PakarBlendResult | null {
@@ -206,8 +204,7 @@ export function buildPakarBlend(
 
 /**
  * Statistik basis pengetahuan. Angka ulasan **hanya** dari ulasan asli
- * pengunjung (lokal + hasil moderasi); ulasan contoh tidak dihitung supaya
- * tidak ada angka komunitas yang mengarang.
+ * pengunjung (lokal + hasil moderasi), supaya tidak ada angka komunitas yang mengarang.
  */
 export function getPakarKnowledgeStats(localReviewCount = 0, activeRecipeCount = 0, approvedReviewCount = 0) {
   return {

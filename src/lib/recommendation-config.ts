@@ -106,7 +106,7 @@ export const TUNING_TARGET = {
   highCatchMin: 5,
   /** Di bawah jumlah ini, hasil tuning tidak layak dipercaya — laporan hanya menampilkan keadaan. */
   minStrictReviewsForTuning: 30,
-  /** Sampel minimum untuk hit-rate@3 versi longgar (hanya rating). */
+  /** Jumlah ulasan minimum untuk hit-rate@3 versi longgar (hanya rating). */
   minRatingOnlyReviewsForTuning: 60,
 } as const;
 

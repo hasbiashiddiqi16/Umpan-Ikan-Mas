@@ -1,21 +1,10 @@
 /**
  * Tipe ulasan resep yang dipakai di seluruh situs.
  *
- * Data ulasan contoh yang dulu dibuat statis di berkas ini sudah dihapus:
- * ulasan yang tampil dan dihitung hanya kiriman pengunjung asli dari basis
- * data (`cms_reviews` tanpa `seed_key`) dan salinan lokal milik pengirim
- * sendiri. Field `seedKey`/`sample` dipertahankan pada tipe hanya agar
- * data lama yang terlanjur tersimpan tetap terbaca dengan aman.
+ * Ulasan yang tampil dan dihitung hanya kiriman pengunjung asli dari basis
+ * data (`cms_reviews`) dan salinan lokal milik pengirim sendiri.
  */
 export type RecipeReview = {
-  /** Kunci stabil untuk sinkronisasi ulasan contoh ke CMS tanpa duplikasi. */
-  seedKey?: string;
-  /**
-   * `true` untuk ulasan contoh yang dibuat redaksi. Ulasan contoh **tidak boleh**
-   * dihitung sebagai rating, jumlah ulasan, atau bukti komunitas — hanya boleh
-   * tampil dengan label "Data contoh".
-   */
-  sample?: boolean;
   /**
    * Status moderasi untuk salinan lokal milik pengirim. Hanya "pending"
    * yang ditampilkan berlabel "Menunggu pemeriksaan"; ulasan dari server

@@ -15,7 +15,7 @@ export type RecommendationEvalPayload = {
   highCatchMin: number;
   minStrictReviewsForTuning: number;
   criteria: { minRating: number; highCatchPerHourMin: number; minSessionMinutesForRate: number; highCatchMin: number };
-  sample: {
+  ringkasan: {
     approvedRealReviews: number;
     withCatchCount: number;
     withSessionMinutes: number;
@@ -84,13 +84,13 @@ export function RecommendationEvalPanel() {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Hit-rate@3 (ketat)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.strict)}</p><p className="mt-1 text-[10px] text-[#666d65] (4.57:1 terburuk)">{data.current.strict.evaluable ? `${data.current.strict.hits} dari ${data.current.strict.evaluable} ulasan berhasil` : "Belum ada ulasan yang bisa dinilai"}</p></div>
             <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Hit-rate@3 (rating saja)</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{loading ? "—" : formatHitRate(data.current.ratingOnly)}</p><p className="mt-1 text-[10px] text-[#666d65] (4.57:1 terburuk)">{data.current.ratingOnly.evaluable ? `${data.current.ratingOnly.hits} dari ${data.current.ratingOnly.evaluable} ulasan` : "Belum ada ulasan rating ≥ 4"}</p></div>
-            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Sampel ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.sample.approvedRealReviews}</p><p className="mt-1 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">{data.sample.withCatchCount} menyertakan angka tangkapan · {data.sample.withSessionMinutes} menyebut durasi · {data.sample.withRodCount} menyebut jumlah joran · {data.sample.strictSuccess} dinilai berhasil</p></div>
+            <div className="rounded-xl bg-[#f5f7f3] p-3.5"><p className="text-[10px] font-bold text-[#666d64] (4.58:1 terburuk)">Ringkasan ulasan nyata</p><p className="mt-1 text-2xl font-black text-[#2d402f]">{data.ringkasan.approvedRealReviews}</p><p className="mt-1 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">{data.ringkasan.withCatchCount} menyertakan angka tangkapan · {data.ringkasan.withSessionMinutes} menyebut durasi · {data.ringkasan.withRodCount} menyebut jumlah joran · {data.ringkasan.strictSuccess} dinilai berhasil</p></div>
           </div>
 
           <div className={`mt-4 flex items-start gap-2 rounded-xl border px-4 py-3 text-[11px] leading-5 ${data.recommendation.dapatDituning ? "border-[#cfe0cb] bg-[#f1f7ef] text-[#43603f]" : "border-[#eadfc2] bg-[#fbf7ec] text-[#776a45]"}`}>
             {data.recommendation.dapatDituning ? <CheckCircle2 size={14} className="mt-0.5 shrink-0" /> : <AlertTriangle size={14} className="mt-0.5 shrink-0" />}
             <span>
-              <strong className="font-extrabold">{data.recommendation.dapatDituning ? `Sampel sudah cukup: kandidat “${data.recommendation.namaTerbaik}” terbaik` : "Bobot belum bisa dituning"}</strong> — {data.recommendation.alasan}
+              <strong className="font-extrabold">{data.recommendation.dapatDituning ? `Ringkasan sudah cukup: kandidat “${data.recommendation.namaTerbaik}” terbaik` : "Bobot belum bisa dituning"}</strong> — {data.recommendation.alasan}
             </span>
           </div>
 
@@ -107,7 +107,7 @@ export function RecommendationEvalPanel() {
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {data.candidates.map((kandidat) => <li key={kandidat.nama} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="min-w-0 truncate font-semibold text-[#4b5b4d]">{kandidat.nama}</span><span className="shrink-0 font-black tabular-nums text-[#31593a]">{formatHitRate(kandidat.strict)}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.sample.skippedUnknownRecipe ? `${data.sample.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.sample.strictAbsoluteOnly ? ` — ada ${data.sample.strictAbsoluteOnly} ulasan seperti itu` : ""}. Semuanya tetap ikut hit-rate versi longgar (rating saja).</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.ringkasan.skippedUnknownRecipe ? `${data.ringkasan.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.ringkasan.strictAbsoluteOnly ? ` — ada ${data.ringkasan.strictAbsoluteOnly} ulasan seperti itu` : ""}. Semuanya tetap ikut hit-rate versi longgar (rating saja).</p>
             </div>
           </div>
         </>

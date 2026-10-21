@@ -131,12 +131,11 @@ export function ConditionTags({ suitable, notSuitable }: { suitable: string[]; n
 
 export function ReviewCard({ review }: { review: RecipeReview }) {
   const idLaporan = typeof review.id === "number" ? review.id : (review as { serverId?: number }).serverId;
-  // Ulasan contoh wajib berlabel supaya tidak tertukar dengan kiriman pengunjung.
   return (
     <article className="flex h-full min-w-0 flex-col rounded-2xl border border-[#e7eae4] bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5"><h3 className="break-words text-sm font-bold text-[#304033]">{review.name}</h3>{review.sample && <Badge tone="cream">Data contoh</Badge>}{review.status === "pending" && <Badge tone="gold">Menunggu pemeriksaan</Badge>}</div>
+          <div className="flex flex-wrap items-center gap-1.5"><h3 className="break-words text-sm font-bold text-[#304033]">{review.name}</h3>{review.status === "pending" && <Badge tone="gold">Menunggu pemeriksaan</Badge>}</div>
           <p className="mt-1 break-words text-xs text-[#676d66] (4.55:1 terburuk)">{review.location} · {review.date}</p>
         </div>
         <Rating value={review.rating} compact />
@@ -149,7 +148,7 @@ export function ReviewCard({ review }: { review: RecipeReview }) {
         {catchBadges(review).map((badge) => <Badge key={badge.label} tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={badge.label}><CatchIcon icon={badge.icon} className="shrink-0" /> {badge.label}</span></Badge>)}
       </div>
       <p className="mt-4 break-words text-sm leading-6 text-[#626e62] (4.59:1 terburuk)">“{review.comment}”</p>
-      {idLaporan && !review.sample && review.status !== "pending" ? <ReviewReportButton reviewId={idLaporan} /> : null}
+      {idLaporan && review.status !== "pending" ? <ReviewReportButton reviewId={idLaporan} /> : null}
     </article>
   );
 }

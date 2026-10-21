@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import type { Recipe } from "@/data/recipes";
-import { cmsRecipeToRecipe, mergeRecipesBySlug, normalizeCmsRecipeRecord, type CmsRecipeRecord } from "@/lib/cms";
+import { cmsRecipeToRecipe, normalizeCmsRecipeRecord, type CmsRecipeRecord } from "@/lib/cms";
 import { bacaDenganCobaUlang, sedangPrerenderBuild } from "@/lib/db-retry";
 
 export type PublicRecipeData = {
@@ -17,14 +17,13 @@ export type PublicRecipeData = {
 /**
  * Satu sumber kebenaran daftar resep publik.
  *
- * Data contoh statis sudah dihapus dari kode, jadi satu-satunya sumber
- * resep publik adalah basis data: resep dari dashboard maupun kiriman
+ * Satu-satunya sumber resep publik adalah basis data: resep dari dashboard maupun kiriman
  * pengguna yang berstatus `published`. Semua permukaan publik memakai
  * daftar ini supaya jumlah resep selalu sesuai dengan dashboard.
  *
  * - Bila basis data memang tidak terkonfigurasi (pengembangan lokal
  *   tanpa basis data) atau saat build, daftar dikembalikan kosong —
- *   halaman menampilkan keadaan kosong yang jujur, bukan data contoh.
+ *   halaman menampilkan keadaan kosong yang jujur.
  * - Bila basis data terkonfigurasi tetapi gagal dibaca saat runtime,
  *   bacaannya dicoba ulang lewat `bacaDenganCobaUlang` lalu DILEMPAR
  *   sebagai galat. Alasannya: halaman-halaman pemakai daftar ini
@@ -43,7 +42,7 @@ async function bacaDariBasisData(): Promise<PublicRecipeData> {
   ]);
   const managed = publishedRows.map((row) => cmsRecipeToRecipe(normalizeCmsRecipeRecord(row as unknown as CmsRecipeRecord)));
   return {
-    recipes: mergeRecipesBySlug([], managed),
+    recipes: managed,
     managedSlugs: managedRows.map((row) => row.slug),
   };
 }
