@@ -1,7 +1,6 @@
-import { fishingReports } from "@/data/fishingReports";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
 import { SESI_GRAM, formatRupiah, wilayahUntukProvinsi, type BlendCost, type Wilayah } from "@/data/ingredient-prices";
-import { normalizeFishingType, recipes, type Recipe } from "@/data/recipes";
+import { normalizeFishingType, type Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import { BLEND_ROLE_RULES, balanceBlend, type BlendHemat, type BlendItem, type BlendSuggestion, type RoleShare } from "@/lib/blend-rules";
 import { calculateMatchScore, filterRecipesByBudget, type UserPreferences } from "@/lib/recommendation";
@@ -83,7 +82,7 @@ export function rankPakarRecipes(
   // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
   // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
   communityReviews: RecipeReview[] = [],
-  sourceRecipes: Recipe[] = recipes,
+  sourceRecipes: Recipe[] = [],
 ): PakarRecipeResult[] {
   const inBudget = filterRecipesByBudget(sourceRecipes, preferences.budget);
   const candidateRecipes = inBudget.length ? inBudget : sourceRecipes;
@@ -150,7 +149,7 @@ export function buildPakarBlend(
   // Tanpa argumen, tidak ada ulasan yang dianggap bukti — ulasan contoh
   // (@/data/reviews) sengaja tidak dipakai sebagai data komunitas.
   communityReviews: RecipeReview[] = [],
-  sourceRecipes: Recipe[] = recipes,
+  sourceRecipes: Recipe[] = [],
 ): PakarBlendResult | null {
   const uniqueIds = [...new Set(selectedIds)];
   const selected = uniqueIds.map((id) => ingredientKnowledge.find((item) => item.id === id)).filter((item): item is IngredientKnowledge => Boolean(item));
@@ -210,17 +209,16 @@ export function buildPakarBlend(
  * pengunjung (lokal + hasil moderasi); ulasan contoh tidak dihitung supaya
  * tidak ada angka komunitas yang mengarang.
  */
-export function getPakarKnowledgeStats(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0) {
+export function getPakarKnowledgeStats(localReviewCount = 0, activeRecipeCount = 0, approvedReviewCount = 0) {
   return {
     recipes: activeRecipeCount,
     ingredients: ingredientKnowledge.length,
     reviews: localReviewCount + approvedReviewCount,
-    reports: fishingReports.length,
     sources: 3,
   };
 }
 
-export function getPakarKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = recipes.length, approvedReviewCount = 0): string {
+export function getPakarKnowledgeEvidenceDescription(localReviewCount = 0, activeRecipeCount = 0, approvedReviewCount = 0): string {
   const total = localReviewCount + approvedReviewCount;
-  return `${activeRecipeCount} resep terkurasi, ${total} ulasan pengunjung, ${fishingReports.length} contoh laporan mancing, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
+  return `${activeRecipeCount} resep terkurasi, ${total} ulasan pengunjung, serta ${ingredientKnowledge.length} bahan dengan peran yang dipetakan.`;
 }

@@ -325,11 +325,11 @@ export function LiveRecipeRating({ recipe, initialRating }: { recipe: Recipe; in
   );
 }
 
-export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating }: { recipe: Recipe; sampleReviews?: RecipeReview[]; initialRating?: { count: number; average: number } }) {
+export function RecipeReviewSection({ recipe, initialRating }: { recipe: Recipe; initialRating?: { count: number; average: number } }) {
   const { memberReviews, approvedReviews, reviewsLoaded, refresh } = useCommunityReviews(recipe.slug);
 
-  // Ulasan asli (kiriman pengunjung + hasil moderasi) dan ulasan contoh dipisah:
-  // contoh tidak pernah bercampur dengan kiriman pengunjung dan tidak dihitung.
+  // Hanya ulasan asli (kiriman pengunjung + hasil moderasi) yang tampil
+  // dan dihitung; data ulasan contoh sudah dihapus dari situs.
   const remoteReviews = useMemo(
     () => approvedReviews.filter((review) => !memberReviews.some((local) => local.name === review.name && local.comment === review.comment)),
     [approvedReviews, memberReviews],
@@ -340,7 +340,6 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
   // supaya tidak berkedip "Belum ada ulasan" sesaat di halaman yang sudah
   // punya ulasan disetujui. Daftar ulasannya sendiri tetap dari klien.
   const agregatTampil = !reviewsLoaded && aggregate.count === 0 && initialRating?.count ? initialRating : aggregate;
-  const examples = useMemo(() => sampleReviews.filter((review) => review.sample !== false), [sampleReviews]);
 
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
@@ -357,13 +356,6 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
       <RecipeReviewForm recipe={recipe} onSubmitted={() => refresh()} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4"><h3 className="text-sm font-extrabold text-[#394a3b]">Pengalaman pengunjung</h3><span className="text-xs text-[#656d65] (4.59:1 terburuk)">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</span></div>
       {visitorReviews.length ? <div className="grid gap-3 sm:grid-cols-2">{visitorReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.date}-${index}`} review={review} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung untuk racikan ini. Jadilah pemancing pertama yang berbagi pengalaman.</div>}
-      {reviewsLoaded && visitorReviews.length === 0 && examples.length > 0 && (
-        <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div>
-          <p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{examples.length} contoh di bawah dibuat tim redaksi sebagai gambaran format ulasan. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan. Begitu ada ulasan pengunjung untuk racikan ini, contoh ini tidak lagi ditampilkan.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((review, index) => <ReviewCard key={`contoh-${review.seedKey ?? index}`} review={review} />)}</div>
-        </div>
-      )}
     </section>
   );
 }

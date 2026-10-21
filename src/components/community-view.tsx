@@ -4,10 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, MessageCircle, Trophy, Waves } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { fishingReports } from "@/data/fishingReports";
-import { reviews } from "@/data/reviews";
+import type { RecipeReview } from "@/data/reviews";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
-import { CommunityCard } from "@/components/cards";
 import { Badge } from "@/components/shared";
 import { ReviewCard } from "@/components/recipe-details";
 
@@ -30,7 +28,7 @@ type ResepKomunitas = {
 export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   const [activeTab, setActiveTab] = useState("Semua");
   const [memberReviews, setMemberReviews] = useState<ReturnType<typeof readCommunityReviews>>([]);
-  const [approvedReviews, setApprovedReviews] = useState<typeof reviews>([]);
+  const [approvedReviews, setApprovedReviews] = useState<RecipeReview[]>([]);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [reviewLimit, setReviewLimit] = useState(reviewsPerPage);
   const [communityRecipes, setCommunityRecipes] = useState<ResepKomunitas[]>([]);
@@ -39,7 +37,7 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
     sync();
     const controller = new AbortController();
     void fetch("/api/public/reviews", { cache: "no-store", signal: controller.signal })
-      .then(async (response) => response.ok ? response.json() as Promise<{ reviews?: typeof reviews }> : { reviews: [] })
+      .then(async (response) => response.ok ? response.json() as Promise<{ reviews?: RecipeReview[] }> : { reviews: [] })
       .then((body) => setApprovedReviews(body.reviews ?? []))
       .catch(() => undefined)
       .finally(() => setReviewsLoaded(true));
@@ -59,15 +57,23 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
   // (sumber kebenaran status); yang belum ada di server berarti kiriman
   // pengirim sendiri yang masih ditahan, tampil berlabel menunggu.
   const memberOnlyReviews = useMemo(() => memberReviews.filter((local) => !approvedReviews.some((remote) => remote.name === local.name && remote.comment === local.comment)), [approvedReviews, memberReviews]);
-  // Angka dan daftar ulasan hanya dari kiriman pengunjung; contoh dipisah dan diberi label.
+  // Angka dan daftar ulasan hanya dari kiriman pengunjung asli.
   const allReviews = useMemo(() => [...memberOnlyReviews.map(sebagaiUlasanPublik), ...approvedReviews], [memberOnlyReviews, approvedReviews]);
   const visibleReviews = useMemo(() => allReviews.slice(0, reviewLimit), [allReviews, reviewLimit]);
-  const sampleReviews = useMemo(() => reviews.filter((review) => review.sample), []);
-  const sampleShowcase = useMemo(() => sampleReviews.slice(0, 3), [sampleReviews]);
-  const reportResults = useMemo(() => {
-    if (activeTab === "Racikan") return fishingReports.filter((report) => Boolean(report.recipeSlug));
-    return fishingReports;
-  }, [activeTab]);
+
+  const daftarUlasan = (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-extrabold text-[#394a3b]">Ulasan komunitas</p><p className="text-xs text-[#666d66] (4.57:1 terburuk)">{allReviews.length ? `Menampilkan ${visibleReviews.length} dari ${allReviews.length} ulasan pengunjung` : "Belum ada ulasan pengunjung"}</p></div>
+      {allReviews.length ? <div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visibleReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.recipeSlug}-${review.date}-${index}`} review={review} />)}</div>{visibleReviews.length < allReviews.length && <button type="button" onClick={() => setReviewLimit((current) => current + reviewsPerPage)} className="mx-auto mt-6 flex min-h-11 items-center justify-center rounded-xl border border-[#dce5da] bg-white px-5 text-sm font-bold text-[#31593a] transition hover:bg-[#f2f6f0]">Tampilkan ulasan lainnya</button>}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm leading-6 text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung. Buka halaman resep mana pun untuk membagikan pengalamanmu lebih dulu.</div>}
+    </div>
+  );
+
+  const daftarRacikan = (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-extrabold text-[#394a3b]">Racikan dari komunitas</p><p className="text-xs text-[#666d66] (4.57:1 terburuk)">{communityRecipes.length} racikan dibagikan warga lewat halaman Bagikan</p></div>
+      {communityRecipes.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{communityRecipes.map((resep) => <KartuResepKomunitas key={resep.slug} resep={resep} />)}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm leading-6 text-[#636c62] (4.68:1 terburuk)">Belum ada racikan yang dibagikan pengunjung. Bagikan racikan andalanmu lewat tombol di atas — langsung tayang di katalog dan tampil di sini.</div>}
+    </div>
+  );
 
   return (
     <div>
@@ -77,15 +83,13 @@ export function CommunityView({ embedded = false }: { embedded?: boolean }) {
         <div><p className="text-sm font-extrabold">Punya racikan andalan?</p><p className="mt-0.5 text-xs leading-5 text-white/70">Bagikan racikanmu — langsung tayang di katalog dan tampil di sub-tab Racikan komunitas ini.</p></div>
         <Link href="/bagikan" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-[#294b34] transition hover:bg-[#eef3eb]">Bagikan Racikan Andalanmu <ArrowRight size={16} /></Link>
       </div>
-      {activeTab === "Review" ? <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-extrabold text-[#394a3b]">Ulasan komunitas</p><p className="text-xs text-[#666d66] (4.57:1 terburuk)">{allReviews.length ? `Menampilkan ${visibleReviews.length} dari ${allReviews.length} ulasan pengunjung` : "Belum ada ulasan pengunjung"}</p></div>
-        {allReviews.length ? <div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visibleReviews.map((review, index) => <ReviewCard key={`${review.name}-${review.recipeSlug}-${review.date}-${index}`} review={review} />)}</div>{visibleReviews.length < allReviews.length && <button type="button" onClick={() => setReviewLimit((current) => current + reviewsPerPage)} className="mx-auto mt-6 flex min-h-11 items-center justify-center rounded-xl border border-[#dce5da] bg-white px-5 text-sm font-bold text-[#31593a] transition hover:bg-[#f2f6f0]">Tampilkan ulasan lainnya</button>}</div> : <div className="rounded-2xl border border-dashed border-[#dce4d9] bg-white p-6 text-sm leading-6 text-[#636c62] (4.68:1 terburuk)">Belum ada ulasan dari pengunjung. Buka halaman resep mana pun untuk membagikan pengalamanmu lebih dulu.</div>}
-        {reviewsLoaded && allReviews.length === 0 && sampleShowcase.length > 0 && <div className="mt-6 rounded-2xl border border-[#ede4cc] bg-[#faf7ee] p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><Badge tone="cream">Data contoh</Badge><h3 className="text-sm font-extrabold text-[#6b6146]">Contoh penulisan ulasan</h3></div><p className="mt-2 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">{sampleReviews.length} contoh dibuat tim redaksi sebagai gambaran format ulasan. {sampleShowcase.length} di antaranya ditampilkan di sini. Ini bukan kiriman pengunjung dan tidak dihitung dalam rating maupun jumlah ulasan. Begitu ada ulasan pengunjung, contoh ini tidak lagi ditampilkan.</p><div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{sampleShowcase.map((review, index) => <ReviewCard key={`contoh-${review.recipeSlug}-${index}`} review={review} />)}</div></div>}
-      </div> : activeTab === "Racikan" && communityRecipes.length > 0 ? <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-extrabold text-[#394a3b]">Racikan dari komunitas</p><p className="text-xs text-[#666d66] (4.57:1 terburuk)">{communityRecipes.length} racikan dibagikan warga lewat halaman Bagikan</p></div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{communityRecipes.map((resep) => <KartuResepKomunitas key={resep.slug} resep={resep} />)}</div>
-      </div> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{reportResults.map((report) => <CommunityCard key={`${report.name}-${report.recipeSlug}`} report={report} showPhoto />)}</div>}
-      <div className="mt-8 rounded-2xl border border-[#e5eae2] bg-[#f6f8f4] p-5 text-sm leading-6 text-[#636d62] (4.63:1 terburuk)">Semua kartu bertanda &ldquo;Data contoh&rdquo; dibuat tim redaksi sebagai gambaran format cerita — bukan kiriman pembaca. Hanya ulasan pengunjung yang dihitung sebagai rating komunitas. Keadaan cuaca, air, waktu, dan teknik pemancing tetap berpengaruh pada hasil sebenarnya.</div>
+      {activeTab === "Review" ? daftarUlasan : activeTab === "Racikan" ? daftarRacikan : (
+        <div className="space-y-10">
+          {communityRecipes.length > 0 && daftarRacikan}
+          {(!reviewsLoaded || allReviews.length > 0 || communityRecipes.length === 0) && daftarUlasan}
+        </div>
+      )}
+      <div className="mt-8 rounded-2xl border border-[#e5eae2] bg-[#f6f8f4] p-5 text-sm leading-6 text-[#636d62] (4.63:1 terburuk)">Semua racikan dan ulasan di halaman ini adalah kiriman pengunjung. Hanya ulasan pengunjung yang dihitung sebagai rating komunitas. Keadaan cuaca, air, waktu, dan teknik pemancing tetap berpengaruh pada hasil sebenarnya.</div>
     </div>
   );
 }
@@ -100,7 +104,7 @@ function KartuResepKomunitas({ resep }: { resep: ResepKomunitas }) {
         <Image src={resep.image || "/images/pond-hero.jpg"} alt={`Foto racikan ${resep.title}`} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-300 group-hover:scale-[1.03]" />
       </div>
       <div className="p-4">
-        <div className="flex flex-wrap items-center gap-1.5"><Badge tone="dark">Racikan komunitas</Badge>{chips.map((chip) => <Badge key={chip}>{chip}</Badge>)}</div>
+        <div className="flex flex-wrap gap-1.5"><Badge tone="dark">Racikan komunitas</Badge>{chips.map((chip) => <Badge key={chip}>{chip}</Badge>)}</div>
         <h3 className="mt-2 text-base font-extrabold text-[#2b3b2d]">{resep.title}</h3>
         <p className="mt-1 text-xs text-[#666d66] (4.57:1 terburuk)">oleh {resep.author || "Pemancing UMPAN MAS"}{tanggalLabel ? ` · ${tanggalLabel}` : ""}</p>
         {resep.summary && <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#57614f]">{resep.summary}</p>}

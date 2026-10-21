@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart, SlidersHorizontal } from "lucide-react";
-import { FISHING_TYPES, defaultPreferences, normalizeFishingType, recipes } from "@/data/recipes";
+import { FISHING_TYPES, defaultPreferences, normalizeFishingType } from "@/data/recipes";
 import type { CmsRecipeRecord } from "@/lib/cms";
-import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
+import { cmsRecipeToRecipe } from "@/lib/cms";
 import { SearchInput, EmptyState } from "@/components/shared";
 import { RecipeCard } from "@/components/recipe-card";
 import { CommunityView } from "@/components/community-view";
@@ -58,7 +58,6 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
   // hitungan katalog benar sejak tampil pertama; pengambilan di bawah ini
   // tetap menyegarkannya selama halaman dibuka.
   const [publishedRecipes, setPublishedRecipes] = useState<ReturnType<typeof cmsRecipeToRecipe>[]>(() => initialRecipes ?? []);
-  const [shadowedSlugs, setShadowedSlugs] = useState<string[]>(() => initialManagedSlugs ?? []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,7 +65,6 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
       .then(async (response) => response.ok ? response.json() as Promise<{ recipes?: CmsRecipeRecord[]; shadowedSlugs?: string[] }> : { recipes: [], shadowedSlugs: [] })
       .then((body) => {
         setPublishedRecipes((body.recipes ?? []).map((record) => cmsRecipeToRecipe(record)));
-        setShadowedSlugs(body.shadowedSlugs ?? []);
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -94,9 +92,9 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
   }, []);
 
   const filteredRecipes = useMemo(() => {
-    const managedSlugs = new Set(shadowedSlugs);
-    const visibleSeedRecipes = recipes.filter((recipe) => !managedSlugs.has(recipe.slug));
-    const allRecipes = mergeRecipesBySlug(visibleSeedRecipes, publishedRecipes);
+    // Satu-satunya sumber daftar: resep basis data berstatus terbit
+    // (data awal server + penyegaran dari API publik di atas).
+    const allRecipes = publishedRecipes;
     let result = searchRecipes(allRecipes, query);
     if (filters.category !== "Semua") {
       const dipilihCepat = normalizeFishingType(filters.category);
@@ -132,7 +130,7 @@ export function CatalogView({ initialRecipes, initialManagedSlugs }: { initialRe
       fishingType: filters.fishingType === "Semua jenis" ? defaultPreferences.fishingType : filters.fishingType,
       season: filters.season === "Semua musim" ? defaultPreferences.season : filters.season,
     });
-  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, shadowedSlugs, ratings, rankerRating]);
+  }, [query, filters, favoritesOnly, favoriteSlugs, publishedRecipes, ratings, rankerRating]);
 
   function pilihTabUtama(tab: "resep" | "komunitas") {
     setTabUtama(tab);
