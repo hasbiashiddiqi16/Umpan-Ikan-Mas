@@ -5,13 +5,13 @@ import Link from "next/link";
 import { ArrowRight, Beaker, BookOpenCheck, BrainCircuit, Bug, Check, Croissant, Droplets, Egg, Fish, FlaskConical, Info, Leaf, Medal, MessageSquareText, MessagesSquare, Milk, Nut, Soup, Sparkles, Sprout, Waves, Wheat } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
-import { PRICE_NOTE, PRICE_UPDATED_AT, SESI_NOTE, WILAYAH_FACTOR, formatRupiah, tabelHarga, wilayahUntukProvinsi } from "@/data/ingredient-prices";
+import { SESI_NOTE, formatRupiah } from "@/data/ingredient-prices";
 import { recipes, type Recipe } from "@/data/recipes";
 import type { RecipeReview } from "@/data/reviews";
 import type { CmsRecipeRecord } from "@/lib/cms";
 import { cmsRecipeToRecipe, mergeRecipesBySlug } from "@/lib/cms";
 import { COMMUNITY_REVIEWS_EVENT, readCommunityReviews, sebagaiUlasanPublik } from "@/lib/community-storage";
-import { BLEND_LIMITS_SUMMARY, BLEND_ROLE_RULES, BLEND_RULES_SUMMARY, MAX_BLEND_INGREDIENTS, MIN_BLEND_INGREDIENTS, MIN_INGREDIENT_PERCENT, namaBahan, ruleRangeLabel, type BlendSuggestion, type RoleShareStatus } from "@/lib/blend-rules";
+import { BLEND_LIMITS_SUMMARY, BLEND_ROLE_RULES, MAX_BLEND_INGREDIENTS, MIN_BLEND_INGREDIENTS, namaBahan, ruleRangeLabel, type BlendSuggestion, type RoleShareStatus } from "@/lib/blend-rules";
 import { buildPakarBlend, getPakarKnowledgeStats, getPakarKnowledgeEvidenceDescription } from "@/lib/pakar-umpan";
 import { Badge, SectionHeader } from "@/components/shared";
 
@@ -100,9 +100,6 @@ export function PakarUmpan({ initialRecipes, initialManagedSlugs }: { initialRec
   // ulasan contoh tidak ikut analisis, hanya tampil sebagai contoh berlabel.
   const allReviews = useMemo(() => [...localReviews.map(sebagaiUlasanPublik), ...serverOnlyReviews], [localReviews, serverOnlyReviews]);
   const result = useMemo(() => buildPakarBlend(selectedIds, allReviews, allRecipes), [selectedIds, allReviews, allRecipes]);
-  // Harga memakai dasar nasional karena provinsi tidak lagi ditanyakan.
-  const wilayah = wilayahUntukProvinsi();
-  const hargaTabel = tabelHarga(wilayah);
   const stats = getPakarKnowledgeStats(localReviews.length, allRecipes.length, serverOnlyReviews.length);
 
   function toggleIngredient(id: string) {
@@ -166,29 +163,6 @@ export function PakarUmpan({ initialRecipes, initialManagedSlugs }: { initialRec
               );
             })}
           </div>
-          <details className="mt-5 rounded-2xl border border-[#e6eae3] bg-[#fbfcf9] px-4 py-3">
-            <summary className="cursor-pointer text-xs font-extrabold text-[#405341]">Aturan rasio per peran &amp; batas pilihan bahan</summary>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[430px] border-collapse text-left text-[11px]">
-                <thead><tr className="text-[10px] uppercase tracking-[.08em] text-[#666d65] (4.57:1 terburuk)"><th className="pb-1.5 pr-2 font-bold">Peran</th><th className="pb-1.5 pr-2 font-bold">Rasio</th><th className="pb-1.5 font-bold">Alasannya</th></tr></thead>
-                <tbody>{BLEND_ROLE_RULES.map((rule) => <tr key={rule.role} className="border-t border-[#ecefe9] align-top"><td className="py-2 pr-2 font-extrabold text-[#405341]">{rule.role}</td><td className="py-2 pr-2 font-bold text-[#567256] (4.58:1 terburuk)">{rule.minPercent}–{rule.maxPercent}%</td><td className="py-2 text-[#636d63] (4.62:1 terburuk)">{rule.alasan}</td></tr>)}</tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-[10px] leading-5 text-[#626c62] (4.69:1 terburuk)">{BLEND_RULES_SUMMARY}</p>
-            <p className="mt-2 text-[10px] leading-5 text-[#626c62] (4.69:1 terburuk)">Batas pilihan: {MIN_BLEND_INGREDIENTS}–{MAX_BLEND_INGREDIENTS} bahan dari {ingredientKnowledge.length} bahan yang tersedia, satu bahan minimal {MIN_INGREDIENT_PERCENT}% supaya berpengaruh nyata. Sistem mengelompokkan bahan per peran, bukan menjumlahkan persentase satu per satu.</p>
-          </details>
-          <details className="mt-3 rounded-2xl border border-[#e6eae3] bg-[#fbfcf9] px-4 py-3">
-            <summary className="cursor-pointer text-xs font-extrabold text-[#405341]">Perkiraan harga bahan (dasar nasional)</summary>
-            <p className="mt-2 text-[11px] leading-5 text-[#626c62] (4.69:1 terburuk)">Estimasi biaya di panel hasil dihitung dari komposisi memakai harga dasar nasional pada tabel ini ({PRICE_UPDATED_AT}). Provinsi tidak lagi ditanyakan di Pakar Umpan, jadi tidak ada faktor wilayah yang dipilih pengunjung.</p>
-            <p className="mt-2 text-[11px] font-bold text-[#405341]">Nasional (harga dasar) · faktor harga {WILAYAH_FACTOR[wilayah].toFixed(2)}×</p>
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full min-w-[430px] border-collapse text-left text-[11px]">
-                <thead><tr className="text-[10px] uppercase tracking-[.08em] text-[#666d65] (4.57:1 terburuk)"><th className="pb-1.5 pr-2 font-bold">Bahan</th><th className="pb-1.5 pr-2 font-bold">Satuan</th><th className="pb-1.5 pr-2 font-bold">Dasar (nasional)</th><th className="pb-1.5 font-bold">Yang dipakai</th></tr></thead>
-                <tbody>{hargaTabel.map((baris) => <tr key={baris.id} className="border-t border-[#ecefe9]"><td className="py-1.5 pr-2 font-bold text-[#405341]">{namaBahan(baris.id)}</td><td className="py-1.5 pr-2 text-[#626c62] (4.69:1 terburuk)">{baris.satuan}</td><td className="py-1.5 pr-2 text-[#636d63] (4.62:1 terburuk)">{formatRupiah(baris.nasional)}</td><td className="py-1.5 font-bold text-[#567256] (4.58:1 terburuk)">{formatRupiah(baris.wilayah)}</td></tr>)}</tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-[10px] leading-5 text-[#726952] (4.67:1 terburuk)">{PRICE_NOTE}</p>
-          </details>
           <button type="button" onClick={analyze} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-extrabold text-white transition hover:bg-[#203d29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#294b34]"><Sparkles size={16} /> Analisis racikan saya</button>
           {notice && <p role="status" className="mt-3 rounded-xl bg-[#f1f5ee] px-3.5 py-2.5 text-xs font-semibold text-[#506a50]">{notice}{analysisCount > 0 && selectedIds.length >= 2 ? ` · Analisis ${analysisCount}` : ""}</p>}
           <p className="mt-3 text-[10px] leading-5 text-[#9aa197]">Rasio adalah titik awal untuk uji kecil, bukan formula universal. Cairan ditambahkan perlahan sampai tekstur sesuai.</p>
