@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Camera, LoaderCircle, Plus, Send, Trash2 } from "lucide-react";
+import { Camera, CheckCircle2, Circle, Eye, LoaderCircle, Plus, Send, Trash2 } from "lucide-react";
 import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import type { CmsRecipeRecord } from "@/lib/cms";
@@ -95,6 +95,18 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
 
   const barisTeks = (teks: string) => teks.split("\n").map((b) => b.trim()).filter(Boolean);
 
+  const bahanTerisi = ingredients.filter((b) => b.name.trim() || b.brand.trim() || b.amount.trim());
+  const bahanLengkap = bahanTerisi.filter((b) => b.name.trim() && b.brand.trim() && b.amount.trim());
+  const langkahTerisi = steps.map((s) => s.trim()).filter(Boolean);
+  const fotoPratinjau = fotoUrl || image || "/images/recipe-putih.jpg";
+  const statusIsi = [
+    { label: "Judul minimal 3 karakter", selesai: title.trim().length >= 3 },
+    { label: "Ringkasan minimal 15 karakter", selesai: summary.trim().length >= 15 },
+    { label: "Minimal satu jenis kolam dipilih", selesai: fishingTypes.length > 0 },
+    { label: "Bahan terisi lengkap dengan merek dan takaran", selesai: bahanTerisi.length > 0 && bahanLengkap.length === bahanTerisi.length },
+    { label: "Minimal satu langkah meracik", selesai: langkahTerisi.length > 0 },
+  ];
+
   async function kirim(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -145,7 +157,8 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
   if (memuat) return <p className="inline-flex items-center gap-2 text-sm text-[#636d63]"><LoaderCircle size={17} className="animate-spin" /> Memuat resepmu…</p>;
 
   return (
-    <form onSubmit={kirim} className="space-y-6 rounded-[28px] border border-[#e6eae3] bg-white p-6 shadow-[0_18px_50px_rgba(38,55,40,.06)] sm:p-8">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_370px]">
+      <form onSubmit={kirim} className="min-w-0 space-y-6 rounded-[28px] border border-[#e6eae3] bg-white p-6 shadow-[0_18px_50px_rgba(38,55,40,.06)] sm:p-8">
       <label className="block"><span className={labelClass}>Judul racikan</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} placeholder="Mis. Umpan Jagung Kukus Andalan" className={inputClass} /></label>
 
@@ -224,6 +237,79 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
         {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <Send size={17} />} {sunting ? "Simpan perubahan" : "Bagikan & tayangkan resep"}
       </button>
       <p className="text-xs leading-5 text-[#7c857c]">Resepmu langsung tayang di katalog atas nama {sunting ? "kamu" : "akunmu"}. Mohon isi bahan dan langkah dengan jujur sesuai pengalamanmu. Admin dapat mengarsipkan resep yang menyesatkan.</p>
-    </form>
+      </form>
+
+      <aside className="mx-auto w-full min-w-0 max-w-4xl xl:mx-0 xl:max-w-none xl:sticky xl:top-24" aria-labelledby="pratinjau-resep-title">
+        <section className="rounded-[28px] border border-[#e6eae3] bg-[#f8faf6] p-4 shadow-[0_18px_50px_rgba(38,55,40,.05)] sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f0e3] text-[#41663f]"><Eye size={19} /></span>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#7a8577]">Pratinjau langsung</p>
+              <h2 id="pratinjau-resep-title" className="mt-0.5 text-base font-extrabold text-[#2d4032]">Tampilan resepmu</h2>
+            </div>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-[#687466]">Perubahan pada formulir langsung tercermin di sini. Gunakan pratinjau ini untuk memeriksa judul, foto, dan ringkasan sebelum resep diterbitkan.</p>
+
+          <article className="mt-4 overflow-hidden rounded-[22px] border border-[#e5eae2] bg-white shadow-[0_10px_30px_rgba(41,55,43,.07)]">
+            <div className="relative h-44 overflow-hidden bg-[#e8e6d9]">
+              <Image src={fotoPratinjau} alt={title.trim() ? `Foto pratinjau ${title.trim()}` : "Foto pratinjau resep"} fill sizes="(max-width: 1279px) 100vw, 370px" unoptimized={Boolean(fotoUrl)} className="object-cover" />
+              <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/55 via-transparent to-transparent" />
+              <span className="absolute left-3.5 top-3.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-[#3a513d] backdrop-blur-sm">Racikan komunitas</span>
+              <div className="absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan komunitas</p><p className="text-xs font-bold">Ikan mas</p></div>
+            </div>
+            <div className="p-4 sm:p-5">
+              <h3 className="line-clamp-2 text-[17px] font-extrabold tracking-tight text-[#223528]">{title.trim() || "Judul racikanmu akan tampil di sini"}</h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#626d63]">{summary.trim() || "Ringkasan resep akan tampil di sini. Ceritakan keunggulan racikan dan kondisi yang paling cocok untuk mencobanya."}</p>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                <span className="rounded-full bg-[#eef3ea] px-2.5 py-1.5 text-[11px] font-bold text-[#40513f]">{fishingTypes[0] ?? "Jenis kolam belum dipilih"}</span>
+                <span className="rounded-full bg-[#fbf3df] px-2.5 py-1.5 text-[11px] font-bold text-[#6c5a2e]">{weather[0] ?? "Cuaca belum dipilih"}</span>
+                <span className="rounded-full bg-[#eef3ea] px-2.5 py-1.5 text-[11px] font-bold text-[#40513f]">{water[0] ?? "Kondisi air belum dipilih"}</span>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-[#edf0eb] pt-3.5">
+                <div><dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Estimasi biaya</dt><dd className="mt-0.5 text-sm font-extrabold text-[#26382b]">{price.trim() || "Rp15.000–30.000"}</dd></div>
+                <div className="text-right"><dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#9aa098]">Kesulitan</dt><dd className="mt-0.5 text-xs font-semibold text-[#59675a]">{difficulty}</dd></div>
+              </dl>
+            </div>
+          </article>
+
+          <section className="mt-5" aria-labelledby="kelengkapan-resep-title">
+            <h3 id="kelengkapan-resep-title" className="text-sm font-extrabold text-[#344638]">Kelengkapan resep</h3>
+            <ul className="mt-3 space-y-2.5">
+              {statusIsi.map((item) => (
+                <li key={item.label} className="flex items-start gap-2 text-xs leading-5 text-[#5c685c]">
+                  {item.selesai ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#4f7a4c]" /> : <Circle size={16} className="mt-0.5 shrink-0 text-[#a3aa9f]" />}
+                  <span>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="mt-5 border-t border-[#e7ebe4] pt-4" aria-labelledby="bahan-pratinjau-title">
+            <div className="flex items-center justify-between gap-3"><h3 id="bahan-pratinjau-title" className="text-sm font-extrabold text-[#344638]">Bahan terisi</h3><span className="text-[11px] font-bold text-[#7a8577]">{bahanLengkap.length} lengkap</span></div>
+            {bahanTerisi.length ? (
+              <>
+                <ul className="mt-3 space-y-2">
+                  {bahanTerisi.slice(0, 4).map((bahan, index) => (
+                    <li key={`${bahan.name}-${index}`} className="flex items-start justify-between gap-3 text-xs leading-5 text-[#5c685c]"><span className="min-w-0"><span className="font-bold text-[#3c4c3e]">{bahan.name.trim() || "Bahan belum dinamai"}</span>{bahan.brand.trim() ? <span className="text-[#7a8577]"> · {bahan.brand.trim()}</span> : null}</span><span className="shrink-0 font-semibold text-[#445445]">{bahan.amount.trim() || "Takaran kosong"}</span></li>
+                  ))}
+                </ul>
+                {bahanTerisi.length > 4 ? <p className="mt-2 text-[11px] font-semibold text-[#7a8577]">dan {bahanTerisi.length - 4} bahan lainnya</p> : null}
+              </>
+            ) : <p className="mt-2 text-xs leading-5 text-[#7a8577]">Bahan yang kamu tulis akan diringkas di sini.</p>}
+          </section>
+
+          <section className="mt-5 border-t border-[#e7ebe4] pt-4" aria-labelledby="langkah-pratinjau-title">
+            <h3 id="langkah-pratinjau-title" className="text-sm font-extrabold text-[#344638]">Langkah awal</h3>
+            {langkahTerisi.length ? (
+              <ol className="mt-3 space-y-2.5">
+                {langkahTerisi.slice(0, 3).map((langkah, index) => (
+                  <li key={`${langkah}-${index}`} className="flex items-start gap-2 text-xs leading-5 text-[#5c685c]"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#e8f0e3] text-[10px] font-black text-[#41663f]">{index + 1}</span><span className="line-clamp-2">{langkah}</span></li>
+                ))}
+              </ol>
+            ) : <p className="mt-2 text-xs leading-5 text-[#7a8577]">Tiga langkah pertama akan tampil sebagai ringkasan di sini.</p>}
+          </section>
+        </section>
+      </aside>
+    </div>
   );
 }
