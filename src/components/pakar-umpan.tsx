@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Beaker, BookOpenCheck, BrainCircuit, Bug, Check, Croissant, Droplets, Egg, Fish, FlaskConical, Info, Leaf, Medal, MessageSquareText, MessagesSquare, Milk, Nut, Soup, Sparkles, Sprout, Waves, Wheat } from "lucide-react";
+import { ArrowRight, Beaker, BookOpenCheck, BrainCircuit, Bug, Check, Construction, Croissant, Droplets, Egg, Fish, FlaskConical, Info, Leaf, Medal, MessageSquareText, MessagesSquare, Milk, Nut, Soup, Sparkles, Sprout, Waves, Wheat } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ingredientKnowledge, type IngredientKnowledge } from "@/data/ingredient-knowledge";
 import { formatRupiah } from "@/data/ingredient-prices";
@@ -35,6 +35,9 @@ function IngredientIcon({ id, size = 16, className = "" }: { id: string; size?: 
 }
 
 const ratioColors = ["bg-[#315b3c]", "bg-[#638363]", "bg-[#a7b78d]", "bg-[#d3b45f]", "bg-[#9a7449]", "bg-[#839d9a]"];
+
+/** Pakar Umpan ditahan sementara: tampilkan UI lama di balik overlay pengembangan. */
+const PAKAR_UMPAN_IN_DEVELOPMENT = true;
 
 function IngredientOption({ item, selected, disabled = false, onClick }: { item: IngredientKnowledge; selected: boolean; disabled?: boolean; onClick: () => void }) {
   return (
@@ -143,7 +146,8 @@ export function PakarUmpan({ initialRecipes, initialManagedSlugs }: { initialRec
   }
 
   return (
-    <div>
+    <div className="relative">
+      <div inert={PAKAR_UMPAN_IN_DEVELOPMENT} aria-hidden={PAKAR_UMPAN_IN_DEVELOPMENT || undefined}>
       <section className="relative isolate mb-8 overflow-hidden rounded-[28px] bg-[#1e3d2b] px-6 py-8 text-white sm:px-10 sm:py-11 lg:px-14"><div className="absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-[40px] border-white/[.045]" /><div className="absolute -bottom-32 right-1/3 -z-10 h-52 w-52 rounded-full border-[30px] border-[#dfbd6e]/[.08]" /><span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-[#e2d2a5]"><BrainCircuit size={15} /> Pakar Umpan berbasis aturan & bukti</span><h1 className="mt-4 max-w-3xl text-4xl font-black tracking-[-.045em] sm:text-5xl">Racik umpan dengan lebih terarah.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">Pilih bahan yang ada di rumah, lalu lihat contoh komposisi 150 g, kondisi dominan dari resep terdekat, dan resep yang paling mendekati pilihanmu — semuanya dijelaskan asalnya.</p><div className="mt-6 flex flex-wrap gap-2"><span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs"><Beaker size={13} aria-hidden="true" /> Komposisi 150 g</span><span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs"><FlaskConical size={13} aria-hidden="true" /> Fungsi bahan</span><span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs"><MessagesSquare size={13} aria-hidden="true" /> Bukti komunitas</span></div></section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(350px,.82fr)]">
@@ -190,6 +194,19 @@ export function PakarUmpan({ initialRecipes, initialManagedSlugs }: { initialRec
         <div className="rounded-[24px] bg-[#203e2c] p-5 text-white sm:p-6"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-[#e0d09f]"><BrainCircuit size={20} /></span><h2 className="mt-4 text-base font-extrabold">Pengetahuan bertambah dari masukan</h2><p className="mt-2 text-xs leading-6 text-white/70">Resep katalog, fungsi bahan, laporan mancing, dan ulasan pengunjung menjadi basis aturan. Ulasan yang sudah disetujui editor ikut memperbarui urutan rekomendasi.</p><p className="mt-3 rounded-xl bg-white/[.08] px-3 py-2.5 text-[10px] leading-5 text-white/60">Ulasan kiriman pengunjung tersimpan di server dan tampil setelah disetujui. Ulasan contoh berlabel tidak ikut dihitung. Tidak ada pelatihan model otomatis atau klaim hasil tangkapan.</p><Link href="/katalog?tab=komunitas" className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#e6d6a9] hover:underline">Jelajahi cerita pemancing <ArrowRight size={13} /></Link></div>
       </section>
       <div className="mt-6 rounded-xl border border-[#e7eae3] bg-[#f7f8f5] px-4 py-3 text-[11px] leading-5 text-[#646d63] (4.61:1 terburuk)">Saran bahan adalah ilustrasi edukatif untuk umpan ikan mas, bukan formula baku. Sesuaikan takaran, patuhi aturan kolam, dan uji dalam porsi kecil karena respons ikan berbeda.</div>
+      </div>
+
+      {PAKAR_UMPAN_IN_DEVELOPMENT && (
+        <div className="absolute inset-0 z-30 flex items-start justify-center bg-[#10251a]/45 px-4 py-8 sm:px-6" role="dialog" aria-modal="true" aria-labelledby="pakar-umpan-development-title" aria-describedby="pakar-umpan-development-description">
+          <div className="sticky top-24 w-full max-w-xl rounded-[26px] border border-white/60 bg-white/95 p-6 text-center shadow-[0_28px_80px_rgba(10,30,18,.35)] backdrop-blur-md sm:p-8">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#eef3e9] text-[#49684c]"><Construction size={27} aria-hidden="true" /></span>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[.16em] text-[#687464]">Pakar Umpan</p>
+            <h2 id="pakar-umpan-development-title" className="mt-2 text-2xl font-black tracking-tight text-[#263d2b] sm:text-3xl">Sedang dalam tahap pengembangan</h2>
+            <p id="pakar-umpan-development-description" className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#5f6d60]">Halaman ini belum dapat digunakan untuk sementara. Tampilan dan struktur Pakar Umpan tetap dipertahankan di balik pemberitahuan ini agar proses penyempurnaannya dapat ditinjau.</p>
+            <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#f3f6f0] px-3.5 py-2 text-xs font-bold text-[#526650]"><span className="h-2 w-2 rounded-full bg-[#c49a3a]" aria-hidden="true" /> Interaksi halaman dinonaktifkan sementara</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
