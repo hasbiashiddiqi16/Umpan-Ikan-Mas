@@ -74,5 +74,5 @@ export function buildRecipeImageAlt(recipe: {
   const bahan = bahanInti.length ? bahanInti.join(", ") : "bahan racikan pilihan";
   const jenis = recipe.fishingTypes[0] ?? "Harian";
   const air = recipe.water[0]?.toLocaleLowerCase("id-ID") ?? "keruh";
-  return `Adonan ${recipe.name} berwarna ${recipePhotoWarna(recipe.name)}, berbahan ${bahan}; racikan ikan mas untuk ${jenis} di air ${air}`;
+  return `Adonan ${recipe.name} berwarna ${recipePhotoWarna(recipe.name)}, berbahan ${bahan}. Racikan ikan mas untuk ${jenis} di air ${air}`;
 }

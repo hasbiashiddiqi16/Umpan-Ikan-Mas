@@ -345,7 +345,7 @@ export function RecipeReviewSection({ recipe, sampleReviews = [], initialRating 
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Ulasan tampil begitu lolos pemeriksaan otomatis; yang mencurigakan ditinjau editor lebih dulu." />
+        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Ulasan tampil begitu lolos pemeriksaan otomatis. Yang mencurigakan ditinjau editor lebih dulu." />
         <div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3">
           {agregatTampil.count ? (
             <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{agregatTampil.average.toFixed(1)}</span><div><Rating value={agregatTampil.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</p></div></div>

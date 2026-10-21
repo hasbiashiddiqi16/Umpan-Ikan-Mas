@@ -110,7 +110,7 @@ async function ProvinceRecipesSection({ province, regionalRecipes }: { province:
   return (
     <>
       {structuredData && <JsonLd data={structuredData} />}
-      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum; karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
+      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada sampel racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum. Karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
     </>
   );
 }
@@ -168,10 +168,10 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
           <div className="absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-[40px] border-white/[.045]" />
           <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#d5c38f]"><MapPin size={14} /> Racikan & pengalaman lokal</span>
           <h1 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">Umpan Ikan Mas di {province.name}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan katalog untuk {province.name}. Provinsi adalah salah satu indikator; karakter air setiap kolam tetap bisa berbeda.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan katalog untuk {province.name}. Provinsi adalah salah satu indikator. Karakter air setiap kolam tetap bisa berbeda.</p>
           <Suspense fallback={<ProvinceStatsSkeleton />}><ProvinceStats province={province} regionalRecipes={regionalRecipes} /></Suspense>
         </section>
-        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan dihitung hanya dari ulasan pengunjung yang sudah disetujui; ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
+        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan hanya menghitung ulasan pengunjung yang sudah disetujui. Ulasan contoh berlabel tidak ikut dihitung. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
         <Suspense fallback={<ProvinceRecipesSkeleton />}><ProvinceRecipesSection province={province} regionalRecipes={regionalRecipes} /></Suspense>
       </main>
       <Footer />

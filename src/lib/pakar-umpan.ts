@@ -173,13 +173,13 @@ export function buildPakarBlend(
   const reasoning: string[] = [
     `Basis racikan memakai ${selected.filter((item) => item.role === "Dasar").map((item) => item.name.toLowerCase()).join(" dan ") || "bahan pilihanmu"}.`,
     `Porsi antar peran dibagi ulang agar masuk aturan (${BLEND_ROLE_RULES.map((rule) => `${rule.role} ${rule.minPercent}–${rule.maxPercent}%`).join(", ")}), jadi satu fungsi tidak bisa mendominasi adonan.`,
-    roles.has("Pengikat") ? "Bahan pengikat sudah dipilih; uleni perlahan dan sesuaikan kelembapan." : "Kombinasi belum memiliki pengikat, jadi tekstur mungkin lebih mudah lepas.",
-    "Modul ini tidak lagi meminta kondisi kolam; peringkat resep terdekat dihitung dari kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%).",
+    roles.has("Pengikat") ? "Bahan pengikat sudah dipilih. Uleni perlahan dan sesuaikan kelembapan." : "Kombinasi belum memiliki pengikat, jadi tekstur mungkin lebih mudah lepas.",
+    "Modul ini tidak lagi meminta kondisi kolam. Peringkat resep terdekat dihitung dari kecocokan bahan inti (75%) dan bukti rating ulasan pengunjung (25%).",
     dominantConditions.length
       ? `Kondisi yang paling sering muncul pada ${recipeMatches.length} resep terdekat: ${dominantConditions.map((condition) => `${condition.label.toLowerCase()} ${condition.value} (${condition.count} dari ${condition.total})`).join(", ")}. Ini rangkuman metadata resep terdekat, bukan isian kondisi pengunjung dan bukan janji hasil.`
       : "Resep-resep terdekat tidak menunjukkan satu kondisi yang muncul pada lebih dari separuh resep, jadi sistem tidak memaksakan satu kondisi dominan.",
     `Perkiraan biaya bahan dihitung dari komposisi memakai harga dasar nasional: ${formatRupiah(balance.cost100g.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`,
-    "Budget tidak lagi ditanyakan di modul ini; komposisi dinilai dari aturan peran, kecocokan bahan, bukti ulasan, dan saran pengganti saja.",
+    "Budget tidak lagi ditanyakan di modul ini. Komposisi dinilai dari aturan peran, kecocokan bahan, bukti ulasan, dan saran pengganti saja.",
   ];
   const aroma = selected.find((item) => item.role === "Aroma" || item.role === "Protein");
   const base = selected.find((item) => item.role === "Dasar");
