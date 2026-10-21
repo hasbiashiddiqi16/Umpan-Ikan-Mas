@@ -27,7 +27,7 @@ export type PakarBlendResult = {
   roleShares: RoleShare[];
   suggestions: BlendSuggestion[];
   hemat: BlendHemat | null;
-  cost100g: BlendCost;
+  costBasis: BlendCost;
   costSesi: BlendCost;
   wilayah: Wilayah;
   wilayahLabel: string;
@@ -178,7 +178,7 @@ export function buildPakarBlend(
     dominantConditions.length
       ? `Kondisi yang paling sering muncul pada ${recipeMatches.length} resep terdekat: ${dominantConditions.map((condition) => `${condition.label.toLowerCase()} ${condition.value} (${condition.count} dari ${condition.total})`).join(", ")}. Ini rangkuman metadata resep terdekat, bukan isian kondisi pengunjung dan bukan janji hasil.`
       : "Resep-resep terdekat tidak menunjukkan satu kondisi yang muncul pada lebih dari separuh resep, jadi sistem tidak memaksakan satu kondisi dominan.",
-    `Perkiraan biaya bahan dihitung dari komposisi memakai harga dasar nasional: ${formatRupiah(balance.cost100g.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`,
+    `Perkiraan biaya bahan dihitung dari komposisi memakai harga dasar nasional: ${formatRupiah(balance.costBasis.total)} per ${balance.basisGram} g adonan, sekitar ${formatRupiah(balance.costSesi.total)} per sesi (± ${SESI_GRAM} g).`,
     "Budget tidak lagi ditanyakan di modul ini. Komposisi dinilai dari aturan peran, kecocokan bahan, bukti ulasan, dan saran pengganti saja.",
   ];
   const aroma = selected.find((item) => item.role === "Aroma" || item.role === "Protein");
@@ -195,7 +195,7 @@ export function buildPakarBlend(
     roleShares: balance.roleShares,
     suggestions: balance.suggestions,
     hemat: balance.hemat,
-    cost100g: balance.cost100g,
+    costBasis: balance.costBasis,
     costSesi: balance.costSesi,
     wilayah,
     wilayahLabel: labelWilayah,
