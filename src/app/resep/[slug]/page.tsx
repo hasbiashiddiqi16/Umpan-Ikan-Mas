@@ -1,6 +1,5 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, CloudRain, Droplets, Fish, Gauge, MapPin, PenLine, Sparkles, Wallet, Waves } from "lucide-react";
@@ -12,6 +11,7 @@ import { LiveRecipeRating, RecipeReviewSection } from "@/components/recipe-revie
 import { MatchOrPopularBox, MatchOrPopularChip } from "@/components/match-or-popular";
 import { recipeBadge } from "@/lib/recipe-badge";
 import { RecipeCard } from "@/components/recipe-card";
+import { RecipeGallery } from "@/components/recipe-gallery";
 import { db, isDatabaseConfigured } from "@/db";
 import { cmsRecipes } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -111,6 +111,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const homeUrl = absoluteUrl("/");
   const catalogUrl = absoluteUrl("/katalog");
   const recipeImageUrl = absoluteUrl(recipe.image);
+  const recipeGalleryUrls = recipe.images.map((url) => absoluteUrl(url)).filter((url): url is string => Boolean(url));
   const breadcrumbStructuredData = recipeUrl && homeUrl && catalogUrl
     ? {
         "@context": "https://schema.org",
@@ -128,7 +129,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
         "@type": "Recipe",
         name: recipe.name,
         description: recipe.summary,
-        image: [recipeImageUrl],
+        image: recipeGalleryUrls.length ? recipeGalleryUrls : [recipeImageUrl],
         url: recipeUrl,
         recipeCuisine: "Indonesia",
         recipeCategory: recipe.category,
@@ -171,7 +172,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
         </nav>
         <section className="min-w-0 overflow-hidden rounded-[28px] border border-[#e5e9e2] bg-white shadow-[0_12px_38px_rgba(38,55,40,.07)]">
           <div className="grid lg:grid-cols-[.95fr_1.05fr]">
-            <div className="relative min-h-[270px] overflow-hidden bg-[#e4e3d6] sm:min-h-[380px] lg:min-h-[440px]"><Image src={recipe.image} alt={recipe.imageAlt} fill sizes="(max-width: 1023px) 100vw, 48vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#1b3022]/35 via-transparent to-transparent" /><span title={recipeBadge(recipe).title} className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] break-words rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#3a513d] backdrop-blur-sm">{recipeBadge(recipe).label} · Ikan mas</span></div>
+            <RecipeGallery name={recipe.name} image={recipe.image} images={recipe.images} imageAlt={recipe.imageAlt} badgeLabel={recipeBadge(recipe).label} badgeTitle={recipeBadge(recipe).title} />
             <div className="min-w-0 flex flex-col justify-center p-5 sm:p-8 lg:p-10">
               <div className="flex flex-wrap items-center gap-2"><span title="Resep dari katalog UMPAN MAS yang dikurasi redaksi — bukan kiriman pengunjung" className="rounded-full bg-[#f6efdb] px-3 py-1.5 text-xs font-bold text-[#846621] (4.62:1 terburuk)">Racikan katalog</span><MatchOrPopularChip recipe={recipe} /></div>
               <h1 className="mt-4 break-words text-3xl font-black tracking-[-.04em] text-[#213426] sm:text-4xl lg:text-[2.75rem]">{recipe.name}</h1>

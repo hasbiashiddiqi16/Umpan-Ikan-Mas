@@ -5,6 +5,7 @@ import { requireAdminApi } from "@/lib/admin-auth";
 import { revalidateRecipePages } from "@/lib/revalidate-recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { parseRecipeSpreadsheet, readSpreadsheetRows } from "@/lib/recipe-spreadsheet";
+import { cleanupRecipePhotos } from "@/lib/appearance-server";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
         category: sql`excluded.category`,
         status: sql`excluded.status`,
         image: sql`excluded.image`,
+        images: sql`excluded.images`,
         price: sql`excluded.price`,
         priceValue: sql`excluded.price_value`,
         difficulty: sql`excluded.difficulty`,
@@ -94,6 +96,7 @@ export async function POST(request: Request) {
         updatedAt: now,
       },
     });
+    for (const recipe of parsed.recipes) await cleanupRecipePhotos([recipe.slug], recipe.images);
     revalidateRecipePages(slugs, parsed.recipes.flatMap((recipe) => recipe.provinces));
     return Response.json({
       created: slugs.length - existingSlugs.size,

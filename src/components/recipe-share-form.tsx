@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Camera, CheckCircle2, Circle, Eye, LoaderCircle, Plus, Send, Trash2 } from "lucide-react";
+import { Camera, Check, CheckCircle2, Circle, Eye, LoaderCircle, Plus, Send, Trash2 } from "lucide-react";
 import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import type { CmsRecipeRecord } from "@/lib/cms";
@@ -64,8 +64,10 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
   const [suitable, setSuitable] = useState("");
   const [notSuitable, setNotSuitable] = useState("");
   const [image, setImage] = useState("");
-  const [foto, setFoto] = useState<File | null>(null);
-  const [fotoUrl, setFotoUrl] = useState("");
+  const [galeri, setGaleri] = useState<string[]>([]);
+  const [fotoBaru, setFotoBaru] = useState<{ file: File; url: string }[]>([]);
+  const [thumbnailBaru, setThumbnailBaru] = useState<number | null>(null);
+  const fotoBaruUrls = useRef<string[]>([]);
   const [error, setError] = useState("");
   const [sibuk, setSibuk] = useState(false);
 
@@ -85,20 +87,44 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
         setSteps(resep.steps?.length ? resep.steps : [""]);
         setSuitable((resep.suitable ?? []).join("\n")); setNotSuitable((resep.notSuitable ?? []).join("\n"));
         setImage(resep.image ?? "");
+        setGaleri(resep.images?.length ? resep.images : (resep.image && resep.image !== "/images/recipe-putih.jpg" ? [resep.image] : []));
         setMemuat(false);
       })
       .catch(() => { if (aktif) { setError("Resep belum dapat dimuat. Coba muat ulang halaman."); setMemuat(false); } });
     return () => { aktif = false; };
   }, [recipeId, sunting]);
 
-  useEffect(() => () => { if (fotoUrl) URL.revokeObjectURL(fotoUrl); }, [fotoUrl]);
+  useEffect(() => () => { fotoBaruUrls.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
 
   const barisTeks = (teks: string) => teks.split("\n").map((b) => b.trim()).filter(Boolean);
 
   const bahanTerisi = ingredients.filter((b) => b.name.trim() || b.brand.trim() || b.amount.trim());
   const bahanLengkap = bahanTerisi.filter((b) => b.name.trim() && b.brand.trim() && b.amount.trim());
   const langkahTerisi = steps.map((s) => s.trim()).filter(Boolean);
-  const fotoPratinjau = fotoUrl || image || "/images/recipe-putih.jpg";
+  const fotoPratinjau = (thumbnailBaru !== null && fotoBaru[thumbnailBaru]?.url) || image || galeri[0] || fotoBaru[0]?.url || "/images/recipe-putih.jpg";
+  const pratinjauLokal = thumbnailBaru !== null || (!image && fotoBaru.length > 0);
+  const totalFoto = galeri.length + fotoBaru.length;
+
+  function tambahFotoBaru(files: FileList) {
+    const dipilih = [...files].slice(0, Math.max(0, 5 - totalFoto));
+    if (dipilih.length < files.length) setError("Satu resep maksimal 5 foto. Hapus foto lain dulu.");
+    const baru = dipilih.map((file) => ({ file, url: URL.createObjectURL(file) }));
+    baru.forEach((item) => fotoBaruUrls.current.push(item.url));
+    if (baru.length) setFotoBaru((cur) => [...cur, ...baru]);
+  }
+
+  function hapusFotoTersimpan(url: string) {
+    const berikut = galeri.filter((item) => item !== url);
+    setGaleri(berikut);
+    if (image === url) setImage(berikut[0] ?? "");
+  }
+
+  function hapusFotoBaru(indeks: number) {
+    const item = fotoBaru[indeks];
+    if (item) { URL.revokeObjectURL(item.url); fotoBaruUrls.current = fotoBaruUrls.current.filter((url) => url !== item.url); }
+    setFotoBaru((cur) => cur.filter((_, i) => i !== indeks));
+    setThumbnailBaru((cur) => (cur === null || cur < indeks ? cur : cur === indeks ? null : cur - 1));
+  }
   const statusIsi = [
     { label: "Judul minimal 3 karakter", selesai: title.trim().length >= 3 },
     { label: "Ringkasan minimal 15 karakter", selesai: summary.trim().length >= 15 },
@@ -123,7 +149,7 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
       weather, water, waterBodies, fishingTypes, provinces: provinsiDipilih, seasons,
       ingredients: bahanBersih, steps: langkahBersih,
       suitable: barisTeks(suitable), notSuitable: barisTeks(notSuitable),
-      ...(sunting && image ? { image } : {}),
+      ...(sunting ? { image: image || "/images/recipe-putih.jpg", images: galeri } : {}),
     };
     setSibuk(true);
     try {
@@ -134,9 +160,10 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
       });
       const data = (await respons.json().catch(() => ({}))) as { recipe?: CmsRecipeRecord; error?: string };
       if (!respons.ok || !data.recipe) { setSibuk(false); setError(data.error ?? "Resep gagal disimpan. Periksa isian lalu coba lagi."); return; }
-      if (foto) {
+      for (const [indeks, item] of fotoBaru.entries()) {
         const form = new FormData();
-        form.append("file", foto);
+        form.append("file", item.file);
+        if (thumbnailBaru === indeks) form.append("thumbnail", "1");
         const unggah = await fetch(`/api/user/recipes/${data.recipe.id}/photo`, { method: "POST", body: form });
         if (!unggah.ok) {
           const gagal = (await unggah.json().catch(() => ({}))) as { error?: string };
@@ -175,14 +202,37 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
       </div>
 
       <div>
-        <span className={labelClass}>Foto hasil racikan (opsional)</span>
+        <span className={labelClass}>Foto hasil racikan (opsional, maks 5 · persegi 1:1)</span>
+        {(galeri.length > 0 || fotoBaru.length > 0) && (
+          <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {galeri.map((url) => (
+              <div key={url} className={`relative aspect-square overflow-hidden rounded-xl bg-[#eef3ea] ${thumbnailBaru === null && url === image ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                <Image src={url} alt="" fill sizes="120px" className="object-cover" />
+                {thumbnailBaru === null && url === image && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+                  <button type="button" disabled={thumbnailBaru === null && url === image} onClick={() => { setImage(url); setThumbnailBaru(null); }} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60"><Check size={11} /> Utama</button>
+                  <button type="button" onClick={() => hapusFotoTersimpan(url)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white"><Trash2 size={12} /></button>
+                </span>
+              </div>
+            ))}
+            {fotoBaru.map((item, indeks) => (
+              <div key={item.url} className={`relative aspect-square overflow-hidden rounded-xl bg-[#eef3ea] ${thumbnailBaru === indeks ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                <Image src={item.url} alt="" fill sizes="120px" unoptimized className="object-cover" />
+                {thumbnailBaru === indeks && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+                  <button type="button" disabled={thumbnailBaru === indeks} onClick={() => setThumbnailBaru(indeks)} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60"><Check size={11} /> Utama</button>
+                  <button type="button" onClick={() => hapusFotoBaru(indeks)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white"><Trash2 size={12} /></button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-4">
-          {(fotoUrl || image) ? <Image src={fotoUrl || image} alt="Pratinjau foto resep" width={160} height={110} unoptimized={Boolean(fotoUrl)} className="h-28 w-40 rounded-xl object-cover" /> : null}
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#eef3ea] px-4 text-sm font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf]">
-            <Camera size={17} /> {foto || image ? "Ganti foto" : "Pilih foto"}
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFoto(f); setFotoUrl(f ? URL.createObjectURL(f) : ""); }} />
+          <label className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#eef3ea] px-4 text-sm font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf] ${totalFoto >= 5 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+            <Camera size={17} /> {totalFoto ? "Tambah foto" : "Pilih foto"}
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => { const files = e.target.files; e.target.value = ""; if (files?.length) tambahFotoBaru(files); }} />
           </label>
-          <span className="text-xs text-[#7c857c]">PNG, JPEG, atau WebP, maks 3 MB.</span>
+          <span className="text-xs text-[#7c857c]">PNG, JPEG, atau WebP, maks 3 MB per foto · {totalFoto}/5 foto.</span>
         </div>
       </div>
 
@@ -251,8 +301,8 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
           <p className="mt-3 text-xs leading-5 text-[#687466]">Perubahan pada formulir langsung tercermin di sini. Gunakan pratinjau ini untuk memeriksa judul, foto, dan ringkasan sebelum resep diterbitkan.</p>
 
           <article className="mt-4 overflow-hidden rounded-[22px] border border-[#e5eae2] bg-white shadow-[0_10px_30px_rgba(41,55,43,.07)]">
-            <div className="relative h-44 overflow-hidden bg-[#e8e6d9]">
-              <Image src={fotoPratinjau} alt={title.trim() ? `Foto pratinjau ${title.trim()}` : "Foto pratinjau resep"} fill sizes="(max-width: 1279px) 100vw, 370px" unoptimized={Boolean(fotoUrl)} className="object-cover" />
+            <div className="relative aspect-square w-full overflow-hidden bg-[#e8e6d9]">
+              <Image src={fotoPratinjau} alt={title.trim() ? `Foto pratinjau ${title.trim()}` : "Foto pratinjau resep"} fill sizes="(max-width: 1279px) 100vw, 370px" unoptimized={pratinjauLokal} className="object-cover" />
               <span className="absolute inset-0 bg-gradient-to-t from-[#172b20]/55 via-transparent to-transparent" />
               <span className="absolute left-3.5 top-3.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-[#3a513d] backdrop-blur-sm">Racikan komunitas</span>
               <div className="absolute bottom-3.5 left-4 text-white"><p className="text-[11px] font-medium text-white/80">Racikan komunitas</p><p className="text-xs font-bold">Ikan mas</p></div>

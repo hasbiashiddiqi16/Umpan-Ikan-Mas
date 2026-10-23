@@ -48,6 +48,12 @@ export function isMediaKey(value: string): value is MediaKey {
 /** Batas ukuran foto racikan unggahan dashboard (sama seperti poster popup). */
 export const RECIPE_PHOTO_MAX_BYTES = 3_000_000;
 
+/** Batas jumlah foto dalam galeri satu resep. */
+export const RECIPE_PHOTO_MAX_COUNT = 5;
+
+/** Foto bawaan saat resep belum memiliki foto unggahan. */
+export const DEFAULT_RECIPE_IMAGE = "/images/recipe-putih.jpg";
+
 /**
  * Foto racikan unggahan disimpan di tabel media yang sama dengan aset
  * tampilan, dengan kunci dinamis per resep. Berbeda dengan logo/hero yang
@@ -82,6 +88,13 @@ export function isRecipePhotoKeyForSlug(key: string, slug: string): boolean {
 /** Apakah kunci media ini foto racikan unggahan (`recipe-<slug>`)? */
 export function isRecipePhotoKey(value: string): boolean {
   return /^recipe-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+}
+
+/** Kunci media dari alamat foto resep (`/api/media/<kunci>`), atau null. */
+export function recipePhotoKeyFromUrl(url: string): string | null {
+  const cocok = /^\/api\/media\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(url);
+  if (!cocok) return null;
+  return isRecipePhotoKey(cocok[1]) ? cocok[1] : null;
 }
 
 /**

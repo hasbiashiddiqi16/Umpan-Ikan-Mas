@@ -105,7 +105,7 @@ function KartuResepKomunitas({ resep }: { resep: ResepKomunitas }) {
   const chips = [resep.fishingTypes?.[0], resep.weather?.[0], resep.water?.[0]].filter(Boolean) as string[];
   return (
     <Link href={`/resep/${resep.slug}`} className="group overflow-hidden rounded-[22px] border border-[#e7ebe5] bg-white shadow-[0_8px_28px_rgba(39,56,41,.04)] transition hover:shadow-[0_12px_32px_rgba(39,56,41,.09)]">
-      <div className="relative h-40 w-full overflow-hidden bg-[#eef3eb]">
+      <div className="relative aspect-square w-full overflow-hidden bg-[#eef3eb]">
         <Image src={resep.image || "/images/pond-hero.jpg"} alt={`Foto racikan ${resep.title}`} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-300 group-hover:scale-[1.03]" />
       </div>
       <div className="p-4">
