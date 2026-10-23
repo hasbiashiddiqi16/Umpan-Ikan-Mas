@@ -355,14 +355,14 @@ function RecipePreview({ form }: { form: RecipeForm }) {
       </p>
       <section className="overflow-hidden rounded-[22px] border border-[#e5e9e2] bg-white">
         <div className="relative aspect-square w-full bg-[#e4e3d6]">
-          {form.image && <Image src={form.image} alt="" fill sizes="640px" className="object-cover" />}
+          {form.image && <Image src={form.image} alt="" fill sizes="640px" unoptimized={form.image.startsWith("blob:")} className="object-cover" />}
           <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{kategori} · Ikan mas</span>
         </div>
         {listFrom(form.images).length > 1 && (
           <div className="flex gap-2 overflow-x-auto border-b border-[#eef0ec] p-3">
             {listFrom(form.images).map((url) => (
               <span key={url} className={`relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea] ${url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : "opacity-75"}`}>
-                <Image src={url} alt="" fill sizes="56px" className="object-cover" />
+                <Image src={url} alt="" fill sizes="56px" unoptimized={url.startsWith("blob:")} className="object-cover" />
               </span>
             ))}
           </div>
@@ -395,14 +395,22 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
   const [error, setError] = useState("");
   const update = (key: keyof RecipeForm, value: string) => setForm((current) => ({ ...current, [key]: value, ...(key === "title" && !recipe ? { slug: slugify(value) } : {}) }));
 
-  // Foto racikan diunggah sebagai berkas (bukan dipilih dari daftar aset):
-  // setiap berkas langsung tersimpan per slug resep, lalu alamatnya masuk
-  // daftar galeri formulir. `image` tetap menjadi thumbnail pilihan.
+  // Foto racikan ditahan lokal dulu (berkas + pratinjau objek di browser),
+  // sama seperti form Bagikan: berkas baru BARU diunggah ke basis data saat
+  // resep disimpan (lihat `siapkanPayload`). Menekan Batal karenanya tidak
+  // menyimpan apa pun — tidak ada lagi foto yatim dari form yang dibatalkan.
+  // Foto yang sudah tersimpan di server tetap berupa alamat di `images`,
+  // dan `image` tetap menjadi thumbnail pilihannya.
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [fotoBaru, setFotoBaru] = useState<{ file: File; url: string }[]>([]);
+  const [thumbnailBaru, setThumbnailBaru] = useState<number | null>(null);
+  const fotoBaruUrls = useRef<string[]>([]);
   const galeri = listFrom(form.images);
-  const fotoUnggahan = galeri.length > 0;
+  const totalFoto = galeri.length + fotoBaru.length;
+
+  useEffect(() => () => { fotoBaruUrls.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
 
   function aturGaleri(urls: string[], thumbnail?: string) {
     setForm((current) => ({
@@ -414,35 +422,66 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
 
   // `files` wajib sudah berupa salinan array: FileList dari input bersifat
   // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
-  async function uploadPhotos(files: File[]) {
-    const slug = form.slug.trim() || slugify(form.title);
-    if (!slug) { setPhotoError("Isi judul resep dulu, lalu unggah fotonya."); return; }
-    const daftar = [...galeri];
-    setPhotoBusy(true); setPhotoError("");
-    try {
-      for (const file of [...files]) {
-        if (daftar.length >= 5) { setPhotoError("Satu resep maksimal 5 foto. Hapus foto lain dulu."); break; }
-        const body = new FormData();
-        body.append("file", file);
-        body.append("slug", slug);
-        const response = await fetch("/api/admin/recipes/photo", { method: "POST", body });
-        const result = await response.json().catch(() => ({})) as { error?: string; url?: string };
-        if (!response.ok || !result.url) throw new Error(result.error ?? "Foto gagal diunggah.");
-        daftar.push(result.url);
-      }
-      if (daftar.length !== galeri.length) {
-        aturGaleri(daftar, fotoUnggahan || (form.image && form.image !== "/images/recipe-putih.jpg") ? form.image : daftar[galeri.length]);
-      }
-    } catch (caught) {
-      setPhotoError(caught instanceof Error ? caught.message : "Foto gagal diunggah.");
-      if (daftar.length !== galeri.length) aturGaleri(daftar);
-    } finally { setPhotoBusy(false); }
+  function tambahFotoBaru(files: File[]) {
+    const dipilih = files.slice(0, Math.max(0, 5 - totalFoto));
+    setPhotoError(dipilih.length < files.length ? "Satu resep maksimal 5 foto. Hapus foto lain dulu." : "");
+    const baru = dipilih.map((file) => ({ file, url: URL.createObjectURL(file) }));
+    baru.forEach((item) => fotoBaruUrls.current.push(item.url));
+    if (baru.length) setFotoBaru((cur) => [...cur, ...baru]);
   }
 
   function hapusFoto(url: string) {
     const berikut = galeri.filter((item) => item !== url);
     aturGaleri(berikut, form.image === url ? (berikut[0] ?? "/images/recipe-putih.jpg") : form.image);
   }
+
+  function hapusFotoBaru(indeks: number) {
+    const item = fotoBaru[indeks];
+    if (item) { URL.revokeObjectURL(item.url); fotoBaruUrls.current = fotoBaruUrls.current.filter((url) => url !== item.url); }
+    setFotoBaru((cur) => cur.filter((_, i) => i !== indeks));
+    setThumbnailBaru((cur) => (cur === null || cur < indeks ? cur : cur === indeks ? null : cur - 1));
+  }
+
+  function pakaiFotoBawaan() {
+    fotoBaru.forEach((item) => URL.revokeObjectURL(item.url));
+    fotoBaruUrls.current = fotoBaruUrls.current.filter((url) => !fotoBaru.some((item) => item.url === url));
+    setFotoBaru([]); setThumbnailBaru(null); setPhotoError("");
+    aturGaleri([], "/images/recipe-putih.jpg");
+  }
+
+  /**
+   * Unggah semua foto lokal ke basis data lalu susun payload akhir.
+   * Tanpa foto lokal, payload langsung dari form. Bila satu unggahan gagal,
+   * penyimpanan resep dibatalkan agar tidak ada resep setengah jadi.
+   */
+  async function siapkanPayload(status = form.status) {
+    if (!fotoBaru.length) return toPayload(form, status);
+    const slug = form.slug.trim() || slugify(form.title);
+    if (!slug) throw new Error("Isi judul resep dulu agar fotonya bisa disimpan.");
+    setPhotoBusy(true);
+    try {
+      const terunggah: string[] = [];
+      for (const item of fotoBaru) {
+        const body = new FormData();
+        body.append("file", item.file);
+        body.append("slug", slug);
+        const response = await fetch("/api/admin/recipes/photo", { method: "POST", body });
+        const result = await response.json().catch(() => ({})) as { error?: string; url?: string };
+        if (!response.ok || !result.url) throw new Error(result.error ?? "Foto gagal diunggah.");
+        terunggah.push(result.url);
+      }
+      const semua = [...galeri, ...terunggah];
+      const thumbnail = thumbnailBaru !== null && terunggah[thumbnailBaru] ? terunggah[thumbnailBaru] : (semua.includes(form.image) ? form.image : semua[0]);
+      return toPayload({ ...form, images: semua.join("\n"), image: thumbnail }, status);
+    } finally { setPhotoBusy(false); }
+  }
+
+  // Bentuk form untuk pratinjau: foto lokal ikut tampil dari pratinjau objeknya.
+  const formPratinjau: RecipeForm = {
+    ...form,
+    image: thumbnailBaru !== null && fotoBaru[thumbnailBaru] ? fotoBaru[thumbnailBaru].url : form.image,
+    images: [...galeri, ...fotoBaru.map((item) => item.url)].join("\n"),
+  };
 
   const ingredients = filledIngredients(form.ingredients);
   const optionalCount = ingredients.filter((item) => item.optional).length;
@@ -453,7 +492,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
     if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
     if (listFrom(form.steps).length === 0) { setError("Tambahkan setidaknya satu langkah persiapan."); return; }
     setBusy(true);
-    try { await onSave(toPayload(form), recipe?.id); }
+    try { await onSave(await siapkanPayload(), recipe?.id); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Konten gagal disimpan."); }
     finally { setBusy(false); }
   }
@@ -464,7 +503,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
     if (listFrom(form.fishingTypes).length === 0) { setError("Pilih minimal satu jenis kolam untuk resep ini."); return; }
     if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
     setBusy(true);
-    try { await onSave(toPayload(form, status), recipe?.id); }
+    try { await onSave(await siapkanPayload(status), recipe?.id); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Konten gagal disimpan."); }
     finally { setBusy(false); }
   }
@@ -505,18 +544,33 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                 <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
                 <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
                 <div className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) sm:col-span-2">
-                  <span>Foto racikan <span className="font-semibold text-[#959c93]">({galeri.length}/5 foto · tampilan persegi 1:1)</span></span>
-                  {galeri.length > 0 && (
+                  <span>Foto racikan <span className="font-semibold text-[#959c93]">({totalFoto}/5 foto · tampilan persegi 1:1)</span></span>
+                  {totalFoto > 0 && (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                       {galeri.map((url) => (
-                        <div key={url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                        <div key={url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${thumbnailBaru === null && url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
                           <Image src={url} alt="" fill sizes="120px" unoptimized={url.startsWith("/api/media/")} className="object-cover" />
-                          {url === form.image && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                          {thumbnailBaru === null && url === form.image && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
                           <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
-                            <button type="button" disabled={photoBusy || url === form.image} onClick={() => aturGaleri(galeri, url)} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
+                            <button type="button" disabled={photoBusy || (thumbnailBaru === null && url === form.image)} onClick={() => { aturGaleri(galeri, url); setThumbnailBaru(null); }} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
                               <Check size={11} /> Utama
                             </button>
                             <button type="button" disabled={photoBusy} onClick={() => hapusFoto(url)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
+                              <Trash2 size={12} />
+                            </button>
+                          </span>
+                        </div>
+                      ))}
+                      {fotoBaru.map((item, indeks) => (
+                        <div key={item.url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${thumbnailBaru === indeks ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                          <Image src={item.url} alt="" fill sizes="120px" unoptimized className="object-cover" />
+                          <span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#5c6a5c]">Baru</span>
+                          {thumbnailBaru === indeks && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                          <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+                            <button type="button" disabled={photoBusy || thumbnailBaru === indeks} onClick={() => setThumbnailBaru(indeks)} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
+                              <Check size={11} /> Utama
+                            </button>
+                            <button type="button" disabled={photoBusy} onClick={() => hapusFotoBaru(indeks)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
                               <Trash2 size={12} />
                             </button>
                           </span>
@@ -526,17 +580,17 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                   )}
                   <div className="flex flex-wrap gap-2">
                     <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" aria-label="Pilih berkas foto racikan"
-                      onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) void uploadPhotos(files); }} />
-                    <button type="button" disabled={photoBusy || galeri.length >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                      {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {galeri.length ? "Tambah foto" : "Unggah foto"}
+                      onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) tambahFotoBaru(files); }} />
+                    <button type="button" disabled={photoBusy || totalFoto >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                      {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {totalFoto ? "Tambah foto" : "Pilih foto"}
                     </button>
-                    {galeri.length > 0 && (
-                      <button type="button" disabled={photoBusy} onClick={() => aturGaleri([], "/images/recipe-putih.jpg")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                    {totalFoto > 0 && (
+                      <button type="button" disabled={photoBusy} onClick={pakaiFotoBawaan} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                         <RotateCcw size={14} /> Pakai foto bawaan
                       </button>
                     )}
                   </div>
-                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">{galeri.length ? `${galeri.length} foto tersimpan di galeri. Foto bertanda Thumbnail yang tampil di kartu dan hasil berbagi.` : "Belum ada foto unggahan — halaman publik memakai foto bawaan."} Unggah berkas PNG, JPEG, atau WebP (maks 3 MB per foto, maksimal 5 foto). Foto tersimpan begitu dipilih; penghapusan berlaku setelah resep disimpan.</p>
+                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail yang tampil di kartu dan hasil berbagi. Berkas PNG, JPEG, atau WebP (maks 3 MB per foto, maksimal 5 foto). <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong> — membatalkan form tidak menyimpan apa pun ke basis data. Penghapusan foto lama berlaku setelah resep disimpan.</p>
                   {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
                 </div>
                 <Field label="Penulis"><input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} /></Field>
@@ -582,7 +636,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
           {tab === "pratinjau" && (
             <div className="space-y-4 p-4 sm:p-6">
               <p className="flex items-center gap-2 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-[11px] font-semibold text-[#436444]"><Eye size={14} /> Mode pratinjau — perubahan belum disimpan sampai Anda menekan “Simpan perubahan”.</p>
-              <RecipePreview form={form} />
+              <RecipePreview form={formPratinjau} />
             </div>
           )}
           {error && <p role="alert" className="mx-4 mb-2 rounded-xl border border-[#efdcd5] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold leading-5 text-[#9c513e] sm:mx-6">{error}</p>}
