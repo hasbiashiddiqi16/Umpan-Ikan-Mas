@@ -105,7 +105,9 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
   const pratinjauLokal = thumbnailBaru !== null || (!image && fotoBaru.length > 0);
   const totalFoto = galeri.length + fotoBaru.length;
 
-  function tambahFotoBaru(files: FileList) {
+  // `files` wajib sudah berupa salinan array: FileList dari input bersifat
+  // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
+  function tambahFotoBaru(files: File[]) {
     const dipilih = [...files].slice(0, Math.max(0, 5 - totalFoto));
     if (dipilih.length < files.length) setError("Satu resep maksimal 5 foto. Hapus foto lain dulu.");
     const baru = dipilih.map((file) => ({ file, url: URL.createObjectURL(file) }));
@@ -230,7 +232,7 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
         <div className="flex flex-wrap items-center gap-4">
           <label className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#eef3ea] px-4 text-sm font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf] ${totalFoto >= 5 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             <Camera size={17} /> {totalFoto ? "Tambah foto" : "Pilih foto"}
-            <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => { const files = e.target.files; e.target.value = ""; if (files?.length) tambahFotoBaru(files); }} />
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => { const files = e.target.files ? [...e.target.files] : []; e.target.value = ""; if (files.length) tambahFotoBaru(files); }} />
           </label>
           <span className="text-xs text-[#7c857c]">PNG, JPEG, atau WebP, maks 3 MB per foto · {totalFoto}/5 foto.</span>
         </div>
