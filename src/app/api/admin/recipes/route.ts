@@ -6,6 +6,7 @@ import { requireAdminApi } from "@/lib/admin-auth";
 import { revalidateRecipePages } from "@/lib/revalidate-recipes";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { getRatingSummary } from "@/lib/review-summary";
+import { cleanupRecipePhotos } from "@/lib/appearance-server";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     const parsed = validateCmsRecipeInput(body);
     if (!parsed.data) return Response.json({ error: parsed.error ?? "Data konten tidak valid." }, { status: 400 });
     const [created] = await db.insert(cmsRecipes).values(parsed.data).returning();
+    await cleanupRecipePhotos([created.slug], Array.isArray(created.images) ? created.images : []);
     revalidateRecipePages([created.slug], Array.isArray(created.provinces) ? created.provinces : []);
     return Response.json({ recipe: created }, { status: 201 });
   } catch (error) {

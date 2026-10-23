@@ -16,6 +16,7 @@ import {
 import type { CmsIngredient } from "@/db/schema";
 import { slugify } from "@/lib/utils";
 import { buildRecipeImageAlt } from "@/data/recipe-photos";
+import { DEFAULT_RECIPE_IMAGE, RECIPE_PHOTO_MAX_COUNT } from "@/lib/appearance";
 
 export type CmsRecipeStatus = "draft" | "published" | "archived";
 
@@ -27,6 +28,8 @@ export type CmsRecipeRecord = {
   category: string;
   status: string;
   image: string;
+  /** Seluruh foto galeri (terurut); `image` adalah thumbnail pilihannya. */
+  images: string[];
   price: string;
   priceValue: number;
   difficulty: string;
@@ -84,6 +87,32 @@ function ingredientArray(value: unknown): CmsIngredient[] | null {
   return result;
 }
 
+
+/**
+ * Daftar foto galeri dari masukan mentah: hanya alamat internal yang masuk
+ * akal, tanpa duplikat, dan dibatasi jumlah maksimal per resep.
+ */
+function photoList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > RECIPE_PHOTO_MAX_COUNT) return null;
+  const hasil: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    const url = item.trim();
+    if (!url.startsWith("/") || url.length > 500) return null;
+    if (!hasil.includes(url)) hasil.push(url);
+  }
+  return hasil;
+}
+
+/** Galeri efektif sebuah baris: daftar tersimpan, atau foto tunggal lamanya. */
+export function recipeGallery(record: Pick<CmsRecipeRecord, "image" | "images">): string[] {
+  const tersimpan = Array.isArray(record.images)
+    ? record.images.filter((url): url is string => typeof url === "string" && url.startsWith("/")).slice(0, RECIPE_PHOTO_MAX_COUNT)
+    : [];
+  if (tersimpan.length) return [...new Set(tersimpan)];
+  return record.image && record.image !== DEFAULT_RECIPE_IMAGE ? [record.image] : [];
+}
+
 export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput; error?: string } {
   if (!value || typeof value !== "object") return { error: "Data konten tidak valid." };
   const item = value as Record<string, unknown>;
@@ -126,12 +155,17 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const priceValue = Number(item.priceValue);
   if (!Number.isFinite(priceValue) || priceValue < 0 || priceValue > 100_000_000) return { error: "Estimasi harga tidak valid." };
   const price = typeof item.price === "string" && item.price.trim().length <= 80 ? item.price.trim() : "Rp15.000–30.000";
-  const image = typeof item.image === "string" && item.image.startsWith("/") && item.image.length <= 500 ? item.image : "/images/recipe-putih.jpg";
+  // Foto: `image` adalah thumbnail, `images` seluruh galeri. Masukan lama
+  // yang hanya membawa `image` otomatis menjadi galeri satu foto.
+  const imageMentah = typeof item.image === "string" && item.image.startsWith("/") && item.image.length <= 500 ? item.image : DEFAULT_RECIPE_IMAGE;
+  const images = item.images === undefined ? (imageMentah !== DEFAULT_RECIPE_IMAGE ? [imageMentah] : []) : photoList(item.images);
+  if (!images) return { error: `Daftar foto tidak valid (maksimal ${RECIPE_PHOTO_MAX_COUNT} foto per resep).` };
+  const image = images.length ? (images.includes(imageMentah) ? imageMentah : images[0]) : imageMentah;
   const author = typeof item.author === "string" && item.author.trim() ? item.author.trim().slice(0, 100) : "Tim UMPAN MAS";
   const rating = typeof item.rating === "number" && item.rating >= 0 && item.rating <= 5 ? Math.round(item.rating * 10) : undefined;
   const popularity = typeof item.popularity === "number" && item.popularity >= 0 && item.popularity <= 100 ? Math.round(item.popularity) : undefined;
 
-  return { data: { slug, title, summary, category, status, image, price, priceValue: Math.round(priceValue), difficulty, weather, water, waterBodies, fishingTypes, provinces, seasons, ingredients, steps, suitable, notSuitable, author, rating, popularity } };
+  return { data: { slug, title, summary, category, status, image, images, price, priceValue: Math.round(priceValue), difficulty, weather, water, waterBodies, fishingTypes, provinces, seasons, ingredients, steps, suitable, notSuitable, author, rating, popularity } };
 }
 
 /**
@@ -140,12 +174,14 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
  * antarmuka dan penyimpanan berikutnya memakai satu sebutan saja.
  */
 export function normalizeCmsRecipeRecord<T extends CmsRecipeRecord>(record: T): T {
+  const images = recipeGallery(record);
   // Baris lama bisa menyimpan kategori manual (mis. "Premium") yang tidak lagi
   // dikenal: kategori dan urutan jenis dihitung ulang dari satu tempat yang sama
   // dengan halaman publik, jadi badge selalu sama dengan tag kondisi.
   const fishingTypes = orderFishingTypes(record.title, record.fishingTypes);
   return {
     ...record,
+    images,
     category: fishingTypes[0],
     fishingTypes,
     summary: normalizeFishingText(record.summary),
@@ -179,6 +215,7 @@ export function cmsRecipeToRecipe(record: CmsRecipeRecord): Recipe {
     priceValue: record.priceValue,
     difficulty: record.difficulty as Recipe["difficulty"],
     image: record.image,
+    images: recipeGallery(record),
     imageAlt: buildRecipeImageAlt({
       name: record.title,
       ingredients: record.ingredients,

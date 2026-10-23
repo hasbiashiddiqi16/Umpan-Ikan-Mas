@@ -12,6 +12,8 @@ export const cmsRecipes = pgTable("cms_recipes", {
   category: varchar("category", { length: 40 }).notNull().default("Harian"),
   status: varchar("status", { length: 20 }).notNull().default("draft"),
   image: text("image").notNull().default("/images/recipe-putih.jpg"),
+  /** Seluruh foto resep (terurut); `image` di atas adalah thumbnail pilihannya. */
+  images: jsonb("images").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   price: varchar("price", { length: 80 }).notNull().default("Rp15.000–30.000"),
   priceValue: integer("price_value").notNull().default(20000),
   difficulty: varchar("difficulty", { length: 40 }).notNull().default("Mudah"),

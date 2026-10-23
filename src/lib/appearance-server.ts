@@ -9,6 +9,7 @@ import {
   isRecipePhotoKeyForSlug,
   mediaUrl,
   recipePhotoKey,
+  recipePhotoKeyFromUrl,
   versionedRecipePhotoKey,
   resolvePopupSettings,
   type AppearanceState,
@@ -89,24 +90,43 @@ export async function saveMediaFile(key: string, mimeType: string, bytes: Buffer
 }
 
 /**
- * Menyimpan foto racikan baru dengan kunci berversi lalu menghapus kunci
- * lama milik resep yang sama: alamat foto publik selalu berubah setiap
- * foto diganti (cache pengoptimal gambar/CDN tidak menyajikan foto lama)
- * dan tabel media tidak menumpuk. Kegagalan membersihkan kunci lama
- * tidak menggagalkan unggahan — kuncinya hanya jadi yatim tak terpakai.
+ * Menyimpan satu foto racikan baru dengan kunci berversi. Berbeda dengan
+ * perilaku lama, foto lain milik resep yang sama **tidak** dihapus: satu
+ * resep kini dapat memiliki galeri beberapa foto, dan alamat berversi
+ * membuat cache pengoptimal gambar/CDN selalu menyajikan berkas yang benar.
  */
-export async function replaceRecipePhoto(slug: string, mimeType: string, bytes: Buffer): Promise<string> {
+export async function addRecipePhoto(slug: string, mimeType: string, bytes: Buffer): Promise<string> {
   const version = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   const key = versionedRecipePhotoKey(slug, version);
   await saveMediaFile(key, mimeType, bytes);
-  try {
-    const rows = await db.select({ key: cmsMedia.key }).from(cmsMedia).where(like(cmsMedia.key, `${recipePhotoKey(slug)}%`));
-    const stale = rows.map((row) => row.key).filter((candidate) => candidate !== key && isRecipePhotoKeyForSlug(candidate, slug));
-    if (stale.length) await db.delete(cmsMedia).where(inArray(cmsMedia.key, stale));
-  } catch {
-    // Pembersihan kunci lama bersifat pemeliharaan; abaikan bila gagal.
-  }
   return key;
+}
+
+/**
+ * Menghapus berkas foto racikan yang tidak lagi dirujuk daftar foto resep:
+ * kunci yang disebut `extraUrls` (mis. daftar lama sebelum slug berubah)
+ * dan kunci berawalan slug resep yang tidak ada di `keepUrls`. Dipakai
+ * setelah resep disimpan/dihapus agar tabel media tidak menumpuk foto
+ * yatim. Kegagalan pembersihan tidak menggagalkan penyimpanan resep.
+ */
+export async function cleanupRecipePhotos(slugs: string[], keepUrls: string[], extraUrls: string[] = []): Promise<void> {
+  try {
+    const keepKeys = new Set(keepUrls.map((url) => recipePhotoKeyFromUrl(url)).filter((key): key is string => Boolean(key)));
+    const hapus = new Set<string>();
+    for (const url of extraUrls) {
+      const key = recipePhotoKeyFromUrl(url);
+      if (key && !keepKeys.has(key)) hapus.add(key);
+    }
+    for (const slug of [...new Set(slugs.filter(Boolean))]) {
+      const rows = await db.select({ key: cmsMedia.key }).from(cmsMedia).where(like(cmsMedia.key, `${recipePhotoKey(slug)}%`));
+      for (const row of rows) {
+        if (isRecipePhotoKeyForSlug(row.key, slug) && !keepKeys.has(row.key)) hapus.add(row.key);
+      }
+    }
+    if (hapus.size) await db.delete(cmsMedia).where(inArray(cmsMedia.key, [...hapus]));
+  } catch {
+    // Pembersihan foto bersifat pemeliharaan; abaikan bila gagal.
+  }
 }
 
 export async function deleteMediaFile(key: string): Promise<void> {

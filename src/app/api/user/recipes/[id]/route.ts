@@ -1,8 +1,8 @@
-import { eq, inArray, like } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { cmsMedia, cmsRecipes } from "@/db/schema";
+import { cmsRecipes } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-user";
-import { isRecipePhotoKeyForSlug, recipePhotoKey } from "@/lib/appearance";
+import { cleanupRecipePhotos } from "@/lib/appearance-server";
 import { normalizeCmsRecipeRecord, validateCmsRecipeInput } from "@/lib/cms";
 import { databaseErrorResponse } from "@/lib/database-status";
 import { revalidateRecipePages } from "@/lib/revalidate-recipes";
@@ -47,6 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       .set({ ...parsed.data, slug: row.slug, updatedAt: new Date() })
       .where(eq(cmsRecipes.id, row.id))
       .returning();
+    await cleanupRecipePhotos([row.slug], Array.isArray(updated.images) ? updated.images : [], Array.isArray(row.images) ? row.images : []);
     const provinsiLama = Array.isArray(row.provinces) ? row.provinces : [];
     const provinsiBaru = Array.isArray(updated.provinces) ? updated.provinces : [];
     revalidateRecipePages([row.slug], [...provinsiLama, ...provinsiBaru]);
@@ -65,13 +66,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const row = await resepMilik(id, user.id);
     if (!row) return tidakKetemu();
     await db.delete(cmsRecipes).where(eq(cmsRecipes.id, row.id));
-    try {
-      const media = await db.select({ key: cmsMedia.key }).from(cmsMedia).where(like(cmsMedia.key, `${recipePhotoKey(row.slug)}%`));
-      const milik = media.map((item) => item.key).filter((key) => isRecipePhotoKeyForSlug(key, row.slug));
-      if (milik.length) await db.delete(cmsMedia).where(inArray(cmsMedia.key, milik));
-    } catch {
-      // Pembersihan foto bersifat pemeliharaan; abaikan bila gagal.
-    }
+    await cleanupRecipePhotos([row.slug], [], Array.isArray(row.images) ? row.images : []);
     revalidateRecipePages([row.slug], Array.isArray(row.provinces) ? row.provinces : []);
     return Response.json({ ok: true });
   } catch (error) {

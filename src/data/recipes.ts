@@ -148,6 +148,8 @@ export type Recipe = {
   priceValue: number;
   difficulty: "Mudah" | "Menengah" | "Tingkat lanjut";
   image: string;
+  /** Seluruh foto galeri terurut; `image` adalah thumbnail pilihannya. */
+  images: string[];
   /** Alt text unik per resep, diturunkan dari nama, warna adonan, dan bahan inti. */
   imageAlt: string;
   weather: Weather[];
