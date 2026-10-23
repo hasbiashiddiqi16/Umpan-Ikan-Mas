@@ -412,7 +412,9 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
     }));
   }
 
-  async function uploadPhotos(files: FileList) {
+  // `files` wajib sudah berupa salinan array: FileList dari input bersifat
+  // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
+  async function uploadPhotos(files: File[]) {
     const slug = form.slug.trim() || slugify(form.title);
     if (!slug) { setPhotoError("Isi judul resep dulu, lalu unggah fotonya."); return; }
     const daftar = [...galeri];
@@ -524,7 +526,7 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
                   )}
                   <div className="flex flex-wrap gap-2">
                     <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" aria-label="Pilih berkas foto racikan"
-                      onChange={(event) => { const files = event.target.files; event.target.value = ""; if (files?.length) void uploadPhotos(files); }} />
+                      onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) void uploadPhotos(files); }} />
                     <button type="button" disabled={photoBusy || galeri.length >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                       {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {galeri.length ? "Tambah foto" : "Unggah foto"}
                     </button>
