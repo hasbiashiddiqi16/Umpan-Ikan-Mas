@@ -38,7 +38,9 @@ export async function POST(request: Request) {
 
     const key = await addRecipePhoto(slug, mimeType, bytes);
     return Response.json({ notice: "Foto tersimpan.", url: `/api/media/${key}` });
-  } catch {
+  } catch (error) {
+    // Catat penyebab aslinya di log server; pesan ke pengguna tetap umum.
+    console.error("Foto resep gagal disimpan:", error);
     return Response.json({ error: "Foto gagal disimpan. Coba lagi." }, { status: 500 });
   }
 }
