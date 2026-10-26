@@ -116,7 +116,7 @@ export function RecommendationEvalPanel() {
       {!data && !error && <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#666d64] (4.58:1 terburuk)"><FlaskConical size={14} /> Menghitung hit-rate@3 dari ulasan nyata…</div>}
 
       <p className="mt-4 rounded-xl bg-[#f6f8f4] px-3.5 py-3 text-[10px] leading-5 text-[#646d63] (4.61:1 terburuk)">
-        Angka ini dihitung dari ulasan nyata yang sudah disetujui, dan ulasan yang sedang diuji selalu dikeluarkan dari bukti pemutus seri. Laporan teks untuk tuning: <code className="rounded bg-white px-1">npm run eval:rekomendasi</code> (bisa diarahkan ke server lain dengan <code className="rounded bg-white px-1">BASE_URL</code>).
+        Angka ini dihitung dari ulasan nyata yang sudah disetujui, dan ulasan yang sedang diuji selalu dikeluarkan dari bukti pemutus seri.
       </p>
     </section>
   );
