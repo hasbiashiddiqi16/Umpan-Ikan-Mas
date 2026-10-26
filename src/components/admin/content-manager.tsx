@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { adminCan, useAdminMe } from "@/components/admin/use-admin-me";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
 import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, type FishingType, type Ingredient } from "@/data/recipes";
@@ -388,7 +389,7 @@ function RecipePreview({ form }: { form: RecipeForm }) {
   );
 }
 
-function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onClose: () => void; onSave: (payload: ReturnType<typeof toPayload>, id?: number) => Promise<void> }) {
+function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: ManagedRecipe; onClose: () => void; onSave: (payload: ReturnType<typeof toPayload>, id?: number) => Promise<void>; readOnly?: boolean }) {
   const [form, setForm] = useState<RecipeForm>(recipe ? formFromRecipe(recipe) : blankForm);
   const [tab, setTab] = useState<"formulir" | "pratinjau">("formulir");
   const [busy, setBusy] = useState(false);
@@ -535,6 +536,9 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
           footer tetap bekerja tanpa kehilangan data yang sudah diisi.
         */}
         <form onSubmit={submit} noValidate={tab !== "formulir"}>
+          {/* Peran tanpa izin konten: seluruh isian formulir nonaktif (fieldset),
+              tombol Batal/tutup di luar fieldset tetap bisa dipakai keluar. */}
+          <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
           <div className={tab === "pratinjau" ? "hidden" : "space-y-5 p-4 sm:p-6"}>
             <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
               <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Informasi utama</h3>
@@ -640,12 +644,13 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
             </div>
           )}
           {error && <p role="alert" className="mx-4 mb-2 rounded-xl border border-[#efdcd5] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold leading-5 text-[#9c513e] sm:mx-6">{error}</p>}
+          </fieldset>
           <div className="sticky bottom-0 flex flex-col-reverse justify-between gap-2 border-t border-[#e6eae4] bg-[#f9faf8]/95 px-4 py-3 backdrop-blur sm:flex-row sm:px-6">
             <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk)">Batal</button>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button type="button" onClick={() => setTab(tab === "pratinjau" ? "formulir" : "pratinjau")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0]"><Eye size={14} /> {tab === "pratinjau" ? "Kembali ke formulir" : "Lihat pratinjau"}</button>
-              <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : "Simpan perubahan"}</button>
-              <button type="button" disabled={busy} onClick={() => void publish("published")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-bold text-white hover:bg-[#203d29] disabled:opacity-60"><Send size={14} /> Publikasikan</button>
+              <button type="submit" disabled={busy || readOnly} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : "Simpan perubahan"}</button>
+              <button type="button" disabled={busy || readOnly} onClick={() => void publish("published")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-bold text-white hover:bg-[#203d29] disabled:opacity-60"><Send size={14} /> Publikasikan</button>
             </div>
           </div>
         </form>
@@ -655,6 +660,10 @@ function RecipeEditor({ recipe, onClose, onSave }: { recipe?: ManagedRecipe; onC
 }
 
 export function ContentManager() {
+  const me = useAdminMe();
+  // Peran tanpa kapabilitas konten (mis. Hanya-lihat/Moderator): semua kontrol
+  // ubah dinonaktifkan dan editor tidak dibuka. Server tetap penegak utama.
+  const readOnly = !adminCan(me, "konten");
   const router = useRouter();
   const [items, setItems] = useState<ManagedRecipe[]>([]);
   const [filter, setFilter] = useState("Semua");
@@ -767,9 +776,13 @@ export function ContentManager() {
           <p className="mt-2 text-sm text-[#626c62] (4.69:1 terburuk)">Susun, tinjau, dan publikasikan racikan umpan ikan mas.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29]"><Plus size={16} /> Tulis resep</button>
+          <button type="button" disabled={readOnly} title={readOnly ? "Peran Anda hanya dapat melihat menu ini" : undefined} onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:cursor-not-allowed disabled:opacity-50"><Plus size={16} /> Tulis resep</button>
         </div>
       </div>
+
+      {readOnly && me && (
+        <p role="status" className="mb-5 flex items-start gap-2 rounded-xl border border-[#e9e4cf] bg-[#fbf7e8] px-4 py-3 text-xs leading-5 text-[#7a6535]"><Eye size={15} className="mt-0.5 shrink-0" /><span><strong>Mode hanya-lihat.</strong> Peran Anda ({me.roleLabel}) dapat melihat isi menu ini, tetapi tidak dapat mengubah apa pun — tombol tambah, edit, dan hapus dinonaktifkan.</span></p>
+      )}
 
       <section aria-label="Impor resep dari Excel" className="mb-5 rounded-[20px] border border-[#d8e4d2] bg-[#f3f7f0] p-4 shadow-[0_5px_20px_rgba(36,53,39,.03)] sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -786,7 +799,7 @@ export function ContentManager() {
           <div className="flex flex-wrap gap-2 lg:shrink-0">
             {/* Unduhan berkas dari API (bukan navigasi halaman), jadi <a download> memang yang tepat. */}
             <a href="/api/admin/recipes/import-spreadsheet/template" download className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#203d29]"><FileDown size={16} aria-hidden="true" /> Download Template Excel</a>
-            <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d8c5] bg-white px-5 text-xs font-extrabold text-[#3c5a41] transition hover:bg-[#eef4ea] disabled:opacity-60"><FileSpreadsheet size={16} aria-hidden="true" />{importingExcel ? "Mengimpor…" : "Upload Excel"}</button>
+            <button type="button" onClick={() => excelInputRef.current?.click()} disabled={importingExcel || readOnly} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d8c5] bg-white px-5 text-xs font-extrabold text-[#3c5a41] transition hover:bg-[#eef4ea] disabled:opacity-60"><FileSpreadsheet size={16} aria-hidden="true" />{importingExcel ? "Mengimpor…" : "Upload Excel"}</button>
           </div>
         </div>
         <input ref={excelInputRef} type="file" accept=".xlsx,.csv" className="hidden" aria-label="Pilih berkas Excel atau CSV berisi resep" onChange={(event) => { const berkas = event.target.files?.[0]; event.target.value = ""; if (berkas) void importExcel(berkas); }} />
@@ -871,13 +884,13 @@ export function ContentManager() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/dashboard/konten?edit=${item.id}`} aria-label={`Buka detail ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#5f6f5e] (4.59:1 terburuk) hover:bg-[#edf3e9] hover:text-[#345b3a]"><Eye size={14} /></Link>
-                        <button type="button" onClick={() => { setEditing(item); setEditorOpen(true); }} aria-label={`Edit ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#5f6f5e] (4.59:1 terburuk) hover:bg-[#edf3e9] hover:text-[#345b3a]"><FilePenLine size={14} /></button>
+                        <button type="button" disabled={readOnly} title={readOnly ? "Mode hanya-lihat" : undefined} onClick={() => { setEditing(item); setEditorOpen(true); }} aria-label={`Edit ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#5f6f5e] (4.59:1 terburuk) hover:bg-[#edf3e9] hover:text-[#345b3a] disabled:cursor-not-allowed disabled:opacity-40"><FilePenLine size={14} /></button>
                         {item.status !== "published" ? (
-                          <button type="button" onClick={() => void changeStatus(item, "published")} disabled={pending === item.id} aria-label={`Publikasikan ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#517250] (4.65:1 terburuk) hover:bg-[#edf3e9] disabled:opacity-40"><Globe2 size={14} /></button>
+                          <button type="button" onClick={() => void changeStatus(item, "published")} disabled={pending === item.id || readOnly} aria-label={`Publikasikan ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#517250] (4.65:1 terburuk) hover:bg-[#edf3e9] disabled:opacity-40"><Globe2 size={14} /></button>
                         ) : (
-                          <button type="button" onClick={() => void changeStatus(item, "draft")} disabled={pending === item.id} aria-label={`Jadikan ${item.title} draft`} className="grid h-8 w-8 place-items-center rounded-lg text-[#7b693f] (4.58:1 terburuk) hover:bg-[#f8f4e9] disabled:opacity-40"><FilePenLine size={14} /></button>
+                          <button type="button" onClick={() => void changeStatus(item, "draft")} disabled={pending === item.id || readOnly} aria-label={`Jadikan ${item.title} draft`} className="grid h-8 w-8 place-items-center rounded-lg text-[#7b693f] (4.58:1 terburuk) hover:bg-[#f8f4e9] disabled:opacity-40"><FilePenLine size={14} /></button>
                         )}
-                        <button type="button" onClick={() => void remove(item)} disabled={pending === item.id} aria-label={`Hapus ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#905f50] (4.57:1 terburuk) hover:bg-[#fbefec] disabled:opacity-40"><Trash2 size={14} /></button>
+                        <button type="button" onClick={() => void remove(item)} disabled={pending === item.id || readOnly} aria-label={`Hapus ${item.title}`} className="grid h-8 w-8 place-items-center rounded-lg text-[#905f50] (4.57:1 terburuk) hover:bg-[#fbefec] disabled:opacity-40"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -891,7 +904,7 @@ export function ContentManager() {
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#eef3e9] text-[#597157] (4.59:1 terburuk)"><CirclePlus size={21} /></span>
               <h3 className="mt-4 text-sm font-extrabold text-[#3b4b3d]">{query || filter !== "Semua" ? "Konten tidak ditemukan" : "Mulai pustaka racikan"}</h3>
               <p className="mt-1.5 max-w-sm text-xs leading-5 text-[#656d65] (4.59:1 terburuk)">{query || filter !== "Semua" ? "Coba kata kunci atau status yang lain." : "Buat resep, simpan sebagai draft, lalu publikasikan saat siap."}</p>
-              <button type="button" onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-bold text-white"><Plus size={14} /> Buat resep pertama <ArrowRight size={13} /></button>
+              <button type="button" disabled={readOnly} onClick={() => { setEditing(undefined); setEditorOpen(true); }} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Plus size={14} /> Buat resep pertama <ArrowRight size={13} /></button>
             </div>
           </div>
         )}
@@ -904,7 +917,7 @@ export function ContentManager() {
 
       <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#edf2e9] px-4 py-3 text-[10px] leading-5 text-[#626e62] (4.59:1 terburuk)"><Globe2 size={13} className="mt-0.5 shrink-0" />Status <strong>Published</strong> membuat resep tersedia di katalog publik. Draft dan arsip hanya tampil di dashboard.</div>
 
-      {editorOpen && <RecipeEditor key={editing?.id ?? "new"} recipe={editing} onClose={() => { setEditorOpen(false); setEditing(undefined); router.replace("/dashboard/konten"); }} onSave={save} />}
+      {editorOpen && !readOnly && <RecipeEditor key={editing?.id ?? "new"} recipe={editing} readOnly={readOnly} onClose={() => { setEditorOpen(false); setEditing(undefined); router.replace("/dashboard/konten"); }} onSave={save} />}
     </AdminShell>
   );
 }

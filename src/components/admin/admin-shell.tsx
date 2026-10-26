@@ -7,9 +7,8 @@ import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, ChartNoAxesCombined, FilePenLine, LayoutDashboard, LogOut, Menu, MessageSquareText, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users, Waves, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { useAdminMe, type AdminMe } from "@/components/admin/use-admin-me";
 import type { AdminRole } from "@/lib/admin-roles";
-
-type AdminMe = { username: string; role: AdminRole; roleLabel: string; primary: boolean };
 
 // Menu disaring per peran (Task 114). Ini hanya tampilan: penegakan yang
 // menentukan tetap di server lewat requireAdminApi() per kapabilitas.
@@ -29,18 +28,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   // Di layar kecil sidebar berupa drawer dari kiri; di desktop sidebar bisa dilipat.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [me, setMe] = useState<AdminMe | null>(null);
-
   // Identitas + peran sesi saat ini untuk menyaring menu dan label akun.
-  // State hanya berubah di callback jaringan, bukan langsung di badan effect.
-  useEffect(() => {
-    let active = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then(async (response) => (response.ok ? (await response.json()) as AdminMe : null))
-      .then((data) => { if (active) setMe(data); })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, []);
+  const me: AdminMe | null = useAdminMe();
 
   // Saat drawer terbuka: kunci scroll halaman di belakangnya dan izinkan Escape menutup.
   useEffect(() => {
