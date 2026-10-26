@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Activity, ArrowUpRight, ChartNoAxesCombined, FilePenLine, LayoutDashboard, LogOut, Menu, MessageSquareText, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users, Waves, X } from "lucide-react";
+import { ArrowUpRight, ChartNoAxesCombined, FilePenLine, LayoutDashboard, LogOut, Menu, MessageSquareText, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users, Waves, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { useAdminMe, type AdminMe } from "@/components/admin/use-admin-me";
@@ -79,8 +79,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[.12em] text-[#929a91]">Peran: {me.roleLabel}</p>
           </div>
         )}
-        <div className="mt-auto rounded-2xl bg-[#f4f7f2] p-4"><div className="flex items-center gap-2 text-[#547051] (4.72:1 terburuk)"><Activity size={15} /><span className="text-[10px] font-extrabold uppercase tracking-[.12em]">MVP Studio</span></div><p className="mt-2 text-xs leading-5 text-[#626c62] (4.69:1 terburuk)">Konten tersimpan di PostgreSQL. Analitik mengukur kunjungan publik sejak tracking aktif.</p></div>
-        <Link href="/" className="mt-4 flex min-h-10 items-center justify-between rounded-xl px-3 text-xs font-bold text-[#616d60] (4.66:1 terburuk) transition hover:bg-[#f5f7f3]"><span className="inline-flex items-center gap-2"><Waves size={15} /> Lihat situs publik</span><ArrowUpRight size={14} /></Link>
+        <Link href="/" className="mt-auto flex min-h-10 items-center justify-between rounded-xl px-3 pt-2 text-xs font-bold text-[#616d60] (4.66:1 terburuk) transition hover:bg-[#f5f7f3]"><span className="inline-flex items-center gap-2"><Waves size={15} /> Lihat situs publik</span><ArrowUpRight size={14} /></Link>
       </aside>
       {mobileOpen && <button type="button" aria-label="Tutup sidebar" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 cursor-default bg-[#152419]/45 backdrop-blur-[2px] lg:hidden" />}
 

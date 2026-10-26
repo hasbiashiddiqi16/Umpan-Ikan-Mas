@@ -105,7 +105,6 @@ export function AdminLoginForm() {
             className="h-[54px] w-full rounded-2xl border border-[#e1e7de] bg-[#fbfcfa] pl-11 pr-4 text-base text-[#27382b] outline-none transition placeholder:text-[#a2aaa0] focus:border-[#6b8c68] focus:bg-white"
           />
         </div>
-        <p className="mt-2 text-[11px] leading-5 text-[#98a196]">Admin utama cukup isi <strong>admin</strong>; admin tambahan isi username yang dibuatkan Pemilik.</p>
       </div>
       <div>
         <label htmlFor="admin-password" className="mb-2 block text-sm font-semibold text-[#354539]">Password admin</label>
