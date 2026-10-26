@@ -351,7 +351,6 @@ export function AppearanceManager() {
           <div className="grid content-start gap-3">
             <p className={hintClass}>
               Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.hero)}. Disarankan gambar lanskap minimal 1280 px.
-              Bawaan: <code>public/images/pond-hero.jpg</code> ({formatBytes(163_788)}) — bisa ditimpa langsung di GitHub, atau diunggah di sini agar berlaku tanpa deploy ulang.
             </p>
             <p className={hintClass}>Diperbarui: {formatDate(hero?.updatedAt ?? null)}. Gambar baru tampil di beranda dalam ±2 menit (cache gambar), atau langsung setelah muat ulang paksa.</p>
             <div className="flex flex-wrap gap-2">
