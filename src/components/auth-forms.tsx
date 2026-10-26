@@ -8,7 +8,7 @@ import Image from "next/image";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { createClient } from "@/utils/supabase/client";
 import { supabasePublicConfig, SUPABASE_ENV_HINT } from "@/utils/supabase/env";
-import { pesanGalatAuth, tujuanAman } from "@/lib/auth-shared";
+import { PESAN_EMAIL_SUDAH_TERDAFTAR, pesanGalatAuth, tujuanAman } from "@/lib/auth-shared";
 
 const inputClass = "min-h-12 w-full rounded-xl border border-[#e4e9e2] bg-white px-3.5 text-sm text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
 
@@ -178,6 +178,12 @@ export function DaftarForm({ next }: { next?: string }) {
     });
     setSibuk(false);
     if (galat) { setError(pesanGalatAuth(galat.message)); return; }
+    // Supabase tidak selalu menolak email yang sudah terdaftar: demi mencegah
+    // penebakan email, ia bisa menjawab seolah pendaftaran berhasil tetapi
+    // tanpa identitas apa pun pada akun yang dikembalikan. Itu berarti email
+    // sudah memiliki akun (mis. dari masuk lewat Google) dan tidak ada email
+    // konfirmasi yang dikirim — jadi jangan tampilkan pesan sukses semu.
+    if (data.user && data.user.identities?.length === 0) { setError(PESAN_EMAIL_SUDAH_TERDAFTAR); return; }
     if (data.session) { router.replace(tujuan); router.refresh(); return; }
     setInfo("Pendaftaran diterima! Kami mengirim tautan konfirmasi ke emailmu. Klik tautan itu, lalu masuk untuk mulai membagikan resep.");
   }
