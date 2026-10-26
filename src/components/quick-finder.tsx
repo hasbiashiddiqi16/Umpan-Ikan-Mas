@@ -40,11 +40,11 @@ export function QuickFinder() {
     <section id="finder" className="scroll-mt-24">
       <LocationConsentBanner />
       <div className="rounded-[28px] border border-[#e9ece6] bg-white p-5 shadow-[0_18px_55px_rgba(40,57,42,.08)] sm:p-7 lg:p-8">
-        <SectionHeader eyebrow="Mulai dari kondisi hari ini" title="Cari Umpan yang Cocok" subtitle="Ceritakan sedikit tentang spot mancingmu. Aktifkan lokasi agar provinsi terisi otomatis, atau pilih manual." />
+        <SectionHeader eyebrow="Mulai dari kondisi hari ini" title="Cari Umpan yang Cocok" subtitle="Ceritakan kondisi spot mancingmu. Aktifkan lokasi agar provinsi terisi otomatis, atau pilih sendiri." />
         <form onSubmit={submitFinder} className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="md:col-span-2 xl:col-span-5">
             <UseMyLocationButton onPlace={(place) => setProvince(place.province)} label="Isi provinsi dari lokasi saya" />
-            <p className="mt-2 text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Tanpa izin lokasi, kolom provinsi tetap kosong. Kamu bisa memilihnya sendiri kapan saja.</p>
+            <p className="mt-2 text-[11px] leading-5 text-[#656d65] (4.59:1 terburuk)">Tanpa izin lokasi, kolom provinsi tetap kosong dan bisa kamu isi sendiri.</p>
           </div>
           <label className="grid gap-2 text-xs font-bold text-[#626d62] (4.64:1 terburuk)"><span className="inline-flex items-center gap-1.5"><MapPin size={14} /> Provinsi</span><SelectBox><select className={controlClass} value={province} onChange={(event) => { markTouched(); setProvince(event.target.value); }}><option value="">Pilih provinsi</option>{provinces.map((item) => <option key={item.slug}>{item.name}</option>)}</select></SelectBox></label>
           <label className="grid gap-2 text-xs font-bold text-[#626d62] (4.64:1 terburuk)"><span className="inline-flex items-center gap-1.5"><Cloud size={14} /> Cuaca</span><SelectBox><select className={controlClass} value={weather} onChange={(event) => setWeather(event.target.value)}><option>Hujan</option><option>Mendung</option><option>Berawan</option><option>Cerah</option><option>Panas</option></select></SelectBox></label>

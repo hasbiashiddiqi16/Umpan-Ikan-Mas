@@ -99,7 +99,7 @@ export function RegisteredUsersManager() {
         <div className="flex flex-col justify-between gap-3 border-b border-[#eef0ec] p-4 sm:flex-row sm:items-center sm:p-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Semua akun</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Diurutkan dari pendaftaran terbaru. Aktivitas dihitung dari data situs, bukan perkiraan.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Urut dari pendaftaran terbaru. Aktivitas dihitung dari data situs, bukan perkiraan.</p>
           </div>
           <label className="flex min-h-10 items-center gap-2 rounded-xl border border-[#e4e9e2] px-3 sm:w-72">
             <Search size={15} className="text-[#929a91]" />
@@ -141,7 +141,7 @@ export function RegisteredUsersManager() {
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 border-t border-[#eef0ec] bg-[#fafbf9] px-4 py-3 text-[9px] text-[#959c93] sm:px-5"><ShieldCheck size={12} /> Hanya admin yang masuk dashboard yang dapat melihat daftar ini. Halaman ini tidak terhubung ke situs publik.</div>
+        <div className="flex items-center gap-2 border-t border-[#eef0ec] bg-[#fafbf9] px-4 py-3 text-[9px] text-[#959c93] sm:px-5"><ShieldCheck size={12} /> Hanya admin yang masuk dashboard yang bisa melihat daftar ini. Tidak tampil di situs publik.</div>
       </section>
     </AdminShell>
   );

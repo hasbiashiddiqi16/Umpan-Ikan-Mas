@@ -288,7 +288,7 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
       <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60 sm:w-auto sm:min-w-56">
         {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <Send size={17} />} {sunting ? "Simpan perubahan" : "Bagikan & tayangkan resep"}
       </button>
-      <p className="text-xs leading-5 text-[#7c857c]">Resepmu langsung tayang di katalog atas nama {sunting ? "kamu" : "akunmu"}. Mohon isi bahan dan langkah dengan jujur sesuai pengalamanmu. Admin dapat mengarsipkan resep yang menyesatkan.</p>
+      <p className="text-xs leading-5 text-[#7c857c]">Resepmu langsung tayang di katalog atas nama {sunting ? "kamu" : "akunmu"}. Isi bahan dan langkah sejujur pengalamanmu. Admin bisa mengarsipkan resep yang menyesatkan.</p>
       </form>
 
       <aside className="mx-auto w-full min-w-0 max-w-4xl xl:mx-0 xl:max-w-none xl:sticky xl:top-24" aria-labelledby="pratinjau-resep-title">
@@ -300,7 +300,7 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
               <h2 id="pratinjau-resep-title" className="mt-0.5 text-base font-extrabold text-[#2d4032]">Tampilan resepmu</h2>
             </div>
           </div>
-          <p className="mt-3 text-xs leading-5 text-[#687466]">Perubahan pada formulir langsung tercermin di sini. Gunakan pratinjau ini untuk memeriksa judul, foto, dan ringkasan sebelum resep diterbitkan.</p>
+          <p className="mt-3 text-xs leading-5 text-[#687466]">Perubahanmu langsung tampil di sini. Periksa judul, foto, dan ringkasan sebelum menerbitkan.</p>
 
           <article className="mt-4 overflow-hidden rounded-[22px] border border-[#e5eae2] bg-white shadow-[0_10px_30px_rgba(41,55,43,.07)]">
             <div className="relative aspect-square w-full overflow-hidden bg-[#e8e6d9]">

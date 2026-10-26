@@ -37,7 +37,7 @@ export default async function AdminLoginPage() {
           <div className="relative max-w-lg py-12">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#d2dfd0]"><Waves size={13} /> Ruang kerja admin</span>
             <h1 className="mt-7 text-4xl font-semibold leading-[1.12] tracking-[-.04em] xl:text-[46px]">Racikan terbaik dimulai dari pengelolaan yang rapi.</h1>
-            <p className="mt-5 max-w-md text-sm leading-7 text-[#c2d0c3]">Kelola resep, moderasi cerita pemancing, dan pantau performa UMPAN MAS dalam satu ruang kerja.</p>
+            <p className="mt-5 max-w-md text-sm leading-7 text-[#c2d0c3]">Kelola resep, moderasi cerita, dan pantau performa UMPAN MAS di satu tempat.</p>
           </div>
 
           <div className="relative flex items-center gap-3 border-t border-white/10 pt-5 text-xs text-[#cad8ca]">
@@ -56,7 +56,7 @@ export default async function AdminLoginPage() {
             <div className="mb-7 grid h-12 w-12 place-items-center rounded-2xl bg-[#edf3e9] text-[#416347]"><LockKeyhole size={21} /></div>
             <p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#606f5e] (4.58:1 terburuk)">Administrator</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-.035em] text-[#243328] sm:text-[34px]">Selamat datang kembali</h2>
-            <p className="mt-3 text-sm leading-6 text-[#636d63] (4.62:1 terburuk)">Masuk untuk membuka dashboard dan mengelola Content Studio UMPAN MAS.</p>
+            <p className="mt-3 text-sm leading-6 text-[#636d63] (4.62:1 terburuk)">Masuk untuk mengelola Content Studio UMPAN MAS.</p>
 
             <div className="mt-8">
               <AdminLoginForm />
@@ -64,7 +64,7 @@ export default async function AdminLoginPage() {
 
             <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#e7ece4] bg-[#f8faf6] p-4">
               <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#567254] (4.58:1 terburuk)" />
-              <p className="text-xs leading-5 text-[#636d62] (4.63:1 terburuk)">Halaman ini hanya untuk administrator. Jangan bagikan password atau biarkan sesi admin terbuka di perangkat umum.</p>
+              <p className="text-xs leading-5 text-[#636d62] (4.63:1 terburuk)">Khusus administrator. Jangan bagikan password dan jangan biarkan sesi terbuka di perangkat umum.</p>
             </div>
 
             <Link href="/" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#5d6e5d] (4.67:1 terburuk) transition hover:text-[#294a32]"><ArrowLeft size={16} /> Kembali ke situs publik</Link>

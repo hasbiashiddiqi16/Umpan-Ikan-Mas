@@ -42,7 +42,7 @@ export function MatchOrPopularBox({ recipe }: { recipe: Recipe }) {
             <p className="text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">{ringkasan || "Kondisi pilihanmu"}</p>
           </div>
         </div>
-        <p className="mt-2 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">Dihitung dari kondisi yang kamu isi (tipe air, kondisi air, cuaca, jenis pemancingan, provinsi, musim) — bukan dari data katalog.</p>
+        <p className="mt-2 text-[10px] leading-4 text-[#666d65] (4.57:1 terburuk)">Dihitung dari kondisi yang kamu isi: tipe air, kondisi air, cuaca, jenis pemancingan, provinsi, dan musim. Bukan dari data katalog.</p>
       </div>
     );
   }

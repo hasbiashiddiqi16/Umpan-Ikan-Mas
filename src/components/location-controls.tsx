@@ -124,11 +124,11 @@ export function LocationConsentBanner() {
           <div className="max-w-xl">
             <h2 id="location-consent-title" className="text-base font-extrabold text-[#2c3f30] sm:text-lg">Izinkan akses lokasi untuk isi form otomatis?</h2>
             <p className="mt-1.5 text-sm leading-6 text-[#5f6d60]">
-              Dengan izinmu, kolom <strong className="font-bold">provinsi</strong> dan <strong className="font-bold">kota</strong> pada form pencarian, Tanya Umpan, filter katalog, dan form ulasan langsung menyesuaikan lokasi mancingmu.
+              Dengan izinmu, kolom <strong className="font-bold">provinsi</strong> dan <strong className="font-bold">kota</strong> di pencarian, Tanya Umpan, filter katalog, dan form ulasan langsung mengikuti lokasi mancingmu.
             </p>
             <p className="mt-2 inline-flex items-start gap-1.5 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">
               <ShieldCheck size={14} className="mt-0.5 shrink-0" />
-              Lokasi diproses di perangkat ini dan tidak dikirim ke server. Tanpa izin, form dibiarkan kosong dan tetap bisa diisi manual.
+              Lokasi hanya diproses di perangkat ini, tidak dikirim ke server. Tanpa izin, form tetap kosong dan bisa diisi manual.
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export function LocationConsentBanner() {
         </p>
       )}
       {feedback?.tone === "error" && feedback.message === LOCATION_MESSAGES.denied && (
-        <p className="mt-2 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">Kamu bisa mengaktifkan izin lokasi lewat pengaturan browser, lalu tekan tombol “Gunakan lokasi saya” di form.</p>
+        <p className="mt-2 text-[11px] leading-5 text-[#626d62] (4.64:1 terburuk)">Aktifkan izin lokasi lewat pengaturan browser, lalu tekan tombol “Gunakan lokasi saya” di form.</p>
       )}
     </section>
   );

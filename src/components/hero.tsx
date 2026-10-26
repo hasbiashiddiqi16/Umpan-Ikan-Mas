@@ -18,7 +18,7 @@ export function Hero() {
             Temukan Umpan Ikan Mas yang <span className="text-[#e9ca87]">Tepat.</span>
           </h1>
           <p className="mt-5 max-w-[500px] text-base leading-7 text-white/78 sm:text-lg sm:leading-8">
-            Rekomendasi racikan berdasarkan lokasi, cuaca, kondisi air, dan jenis kolam. Biar setiap sesi punya awal yang lebih yakin.
+            Rekomendasi racikan dari lokasi, cuaca, kondisi air, dan jenis kolam. Biar tiap sesi mulai dengan lebih yakin.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="#finder" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e4b75c] px-6 text-sm font-bold text-[#263622] shadow-[0_10px_30px_rgba(213,168,76,.22)] transition hover:-translate-y-0.5 hover:bg-[#efc872] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
