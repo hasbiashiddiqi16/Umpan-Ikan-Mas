@@ -152,7 +152,11 @@ export const analyticsEvents = pgTable("analytics_events", {
  * gambar diganti.
  */
 export const cmsMedia = pgTable("cms_media", {
-  key: varchar("key", { length: 60 }).primaryKey(),
+  // 255 (bukan 60): kunci foto resep berversi berbentuk "recipe-<slug>-v<versi>"
+  // (slug + 23 karakter) dan slug boleh sampai 180 karakter, jadi kuncinya
+  // bisa mencapai 203 karakter. Dulu kolom ini varchar(60) sehingga resep
+  // dengan slug 38+ karakter selalu gagal menyimpan foto.
+  key: varchar("key", { length: 255 }).primaryKey(),
   mimeType: varchar("mime_type", { length: 60 }).notNull(),
   data: text("data").notNull(),
   byteSize: integer("byte_size").notNull().default(0),
