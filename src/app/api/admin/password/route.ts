@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   createAdminSessionToken,
+  getAdminSession,
   isAdminPasswordConfigured,
   matchesAdminPassword,
   requireAdminApi,
@@ -16,7 +17,7 @@ const noStore = { "Cache-Control": "no-store" };
 
 /** Keadaan password dashboard, untuk ditampilkan di kartu Keamanan. */
 export async function GET() {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("keamanan");
   if (unauthorized) return unauthorized;
 
   const state = await readAdminPasswordState();
@@ -30,7 +31,7 @@ export async function GET() {
 
 /** Mengganti password dashboard. */
 export async function POST(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("keamanan");
   if (unauthorized) return unauthorized;
 
   let body: unknown;
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
   if (!await matchesAdminPassword(parsed.data.current)) {
     return NextResponse.json({ error: "Password saat ini tidak sesuai." }, { status: 400, headers: noStore });
   }
+
+  // Identitas pemanggil dipertahankan: cookie baru membawa peran yang sama
+  // (admin tambahan berperan Pemilik tidak berubah menjadi admin utama).
+  const session = await getAdminSession();
 
   let state: AdminPasswordState;
   try {
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
   // Perangkat yang mengganti password tetap masuk: cookie barunya sudah membawa
   // nomor versi terbaru.
   try {
-    setAdminSessionCookie(response, request, await createAdminSessionToken());
+    setAdminSessionCookie(response, request, await createAdminSessionToken(session ?? undefined));
   } catch {
     // Tanpa ADMIN_PASSWORD, cookie sesi tidak bisa dibuat; biarkan perubahan
     // password tetap tersimpan dan pengguna masuk kembali lewat /login.
@@ -78,8 +83,10 @@ export async function POST(request: Request) {
 
 /** Mengembalikan password dashboard ke `ADMIN_PASSWORD` dari environment. */
 export async function DELETE(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("keamanan");
   if (unauthorized) return unauthorized;
+
+  const session = await getAdminSession();
 
   let state: AdminPasswordState;
   try {
@@ -98,7 +105,7 @@ export async function DELETE(request: Request) {
   }, { headers: noStore });
 
   try {
-    setAdminSessionCookie(response, request, await createAdminSessionToken());
+    setAdminSessionCookie(response, request, await createAdminSessionToken(session ?? undefined));
   } catch {
     // Sama seperti di atas: perubahan tetap tersimpan.
   }

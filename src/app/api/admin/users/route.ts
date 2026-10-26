@@ -37,7 +37,7 @@ function pesanSkemaAuth(error: unknown): string | null {
  * dan favorit tersinkronnya (`user_favorites`).
  */
 export async function GET() {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("pengguna");
   if (unauthorized) return unauthorized;
   try {
     const hasil = await db.execute(sql`

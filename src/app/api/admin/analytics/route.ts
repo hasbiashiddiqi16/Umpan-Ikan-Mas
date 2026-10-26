@@ -8,7 +8,7 @@ import { getRatingSummary } from "@/lib/review-summary";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("analitik");
   if (unauthorized) return unauthorized;
 
   try {

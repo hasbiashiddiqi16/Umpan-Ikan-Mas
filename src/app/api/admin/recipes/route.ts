@@ -28,7 +28,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   try {

@@ -16,7 +16,7 @@ const megabytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
  * lagi dirujuk terjadi saat resep disimpan.
  */
 export async function POST(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   try {

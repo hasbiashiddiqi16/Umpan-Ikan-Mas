@@ -154,6 +154,20 @@ export async function checkCustomPassword(candidate: string): Promise<"no-custom
   }
 }
 
+/**
+ * Hash password untuk akun admin tambahan (Task 114). Format dan parameter
+ * sama dengan password dashboard utama (`scrypt$N$r$p$salt$hash`) supaya satu
+ * jalur verifikasi berlaku untuk semua akun admin.
+ */
+export function hashAdminPassword(password: string): Promise<string> {
+  return hashPassword(password);
+}
+
+/** Memeriksa password terhadap hash akun admin tambahan. */
+export function verifyAdminPassword(password: string, stored: string): Promise<boolean> {
+  return matchesHash(password, stored);
+}
+
 /** Menyimpan password baru dan menaikkan nomor versi sesi. */
 export async function saveAdminPassword(password: string): Promise<AdminPasswordState> {
   const current = await readRow();

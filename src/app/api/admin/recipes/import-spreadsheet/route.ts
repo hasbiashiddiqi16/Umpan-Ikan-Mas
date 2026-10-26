@@ -20,7 +20,7 @@ const MAX_FILE_BYTES = 2_000_000;
  * Sinkronkan katalog, jadi mengunggah ulang berkas yang sama aman.
  */
 export async function POST(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   let form: FormData;

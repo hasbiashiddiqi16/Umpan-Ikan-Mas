@@ -10,7 +10,7 @@ const megabytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
 
 /** Mengunggah gambar (logo/poster) menggantikan aset bawaan. */
 export async function POST(request: Request, context: RouteContext) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("tampilan");
   if (unauthorized) return unauthorized;
 
   const { key } = await context.params;
@@ -41,7 +41,7 @@ export async function POST(request: Request, context: RouteContext) {
 
 /** Menghapus unggahan sehingga aset bawaan dipakai kembali. */
 export async function DELETE(_request: Request, context: RouteContext) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("tampilan");
   if (unauthorized) return unauthorized;
 
   const { key } = await context.params;

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import type { AdminRole } from "../src/lib/admin-roles";
 
 /** `optional` menandai tambahan yang boleh dilewati, mis. kroto atau bahan amis. */
 export type CmsIngredient = { name: string; brand: string; amount: string; optional?: boolean };
@@ -166,5 +167,25 @@ export const cmsMedia = pgTable("cms_media", {
 export const cmsSettings = pgTable("cms_settings", {
   key: varchar("key", { length: 60 }).primaryKey(),
   value: jsonb("value").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Akun admin tambahan dashboard (Task 114) dengan username + password sendiri
+ * dan peran siap pakai. Admin utama dari environment (`ADMIN_PASSWORD`) tidak
+ * disimpan di sini dan tetap menjadi cadangan tertinggi. `sessionVersion`
+ * dinaikkan setiap kali peran/password/status berubah supaya sesi lama akun
+ * tersebut langsung gugur.
+ */
+export const adminUsers = pgTable("admin_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  username: varchar("username", { length: 32 }).notNull().unique(),
+  name: varchar("name", { length: 80 }).notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: varchar("role", { length: 20 }).$type<AdminRole>().notNull().default("hanya_lihat"),
+  active: boolean("active").notNull().default(true),
+  sessionVersion: integer("session_version").notNull().default(1),
+  createdBy: varchar("created_by", { length: 80 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

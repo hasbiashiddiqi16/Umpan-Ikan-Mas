@@ -15,7 +15,7 @@ export async function GET() {
 
 /** Menyimpan pengaturan popup sambutan. */
 export async function PUT(request: Request) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("tampilan");
   if (unauthorized) return unauthorized;
 
   try {

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("moderasi");
   if (unauthorized) return unauthorized;
 
   const id = Number((await context.params).id);
