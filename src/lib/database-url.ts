@@ -15,7 +15,7 @@
  * pg-connection-string memetakannya ke `rejectUnauthorized = false` — artinya
  * koneksi tetap terenkripsi TLS, hanya verifikasi sertifikat yang dilewati
  * (sesuai maksud `sslmode=require` di libpq). Untuk host lain dengan CA publik
- * (Neon, Netlify Database), verifikasi tetap penuh.
+ * (mis. Neon), verifikasi tetap penuh.
  *
  * Semua pilihan pengguna dihormati: `sslmode=disable` tidak pernah diubah, dan
  * `sslmode=verify-full`/`verify-ca` dibiarkan apa adanya.

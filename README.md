@@ -6,16 +6,15 @@ Platform rekomendasi racikan umpan ikan mas dengan katalog, komunitas, dan Conte
 
 Aplikasi menggunakan PostgreSQL melalui Drizzle ORM. Impor route API saat build tidak membuka koneksi database.
 
-- **Di Netlify**: koneksi tersedia otomatis lewat `NETLIFY_DB_URL` yang disuntikkan Netlify, jadi tidak ada yang perlu diatur.
-- **Di host lain** (misalnya Vercel): setel `DATABASE_URL` dengan connection string basis data yang sama (salin dari Netlify → Project → Database → Connection string). Tanpa variabel itu, fitur yang memakai database — ulasan, konten resep, analitik, dan unggahan logo/poster — tidak berfungsi, sementara halaman publik tetap tampil dengan data bawaan.
+- **Di Vercel** (produksi maupun lokal): setel `DATABASE_URL` dengan connection string basis data Supabase (Transaction pooler, port 6543 — lihat bagian Supabase di bawah). Tanpa variabel itu, fitur yang memakai database — ulasan, konten resep, analitik, dan unggahan logo/poster — tidak berfungsi, sementara halaman publik tetap tampil dengan data bawaan.
 
-Skema tabel berada di `db/schema.ts`. Migrasi di `netlify/database/migrations` diterapkan otomatis oleh Netlify saat deploy, sebelum aplikasi dipublikasikan. Host lain tidak menerapkannya, jadi jalankan sekali:
+Skema tabel berada di `db/schema.ts`. Migrasi di `db/migrations` diterapkan otomatis setiap deploy lewat skrip `vercel-build` (lihat bagian "Menerapkan migrasi"). Untuk menjalankan manual:
 
 ```bash
 DATABASE_URL="postgres://…" npm run db:migrate
 ```
 
-Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan basis data yang sudah dimigrasi Netlify tetap dikenali. Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`.
+Perintah itu aman diulang: nama migrasi dicatat di tabel `cms_migrations`, dan basis data yang sudah dimigrasi sebelum pelacak `cms_migrations` ada tetap dikenali lewat galat "already exists". Setelah mengubah skema, buat migrasi baru dengan `npx drizzle-kit generate --name nama_perubahan`.
 
 ### Memakai PostgreSQL Supabase sebagai basis data
 
@@ -104,7 +103,7 @@ Buka `/login` untuk masuk ke dashboard. Halaman dashboard dan endpoint `/api/adm
 
 **Pengguna terdaftar di `/dashboard/pengguna`.** Menu ini menampilkan akun yang mendaftar lewat Supabase Auth (nama, email, jalur masuk Google/email, status konfirmasi email, tanggal daftar, terakhir masuk) digabung dengan aktivitasnya di situs: resep yang dibagikan (`cms_recipes.owner_id`), ulasan yang dikirim (`cms_reviews.user_id`), dan favorit tersinkron (`user_favorites`). Datanya dibaca baca-saja dari skema `auth` pada Postgres proyek Supabase yang sama lewat `DATABASE_URL` (`GET /api/admin/users`, khusus sesi admin) — tidak ada kunci service role tambahan. Sifatnya hanya-baca: menghapus atau memblokir akun tetap dilakukan dari dashboard Supabase (Authentication → Users). Bila `DATABASE_URL` tidak menunjuk proyek Supabase yang sama, halaman menampilkan penjelasan, bukan galat.
 
-Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalankan aplikasi atau deploy. Untuk pengembangan lokal, salin `.env.example` menjadi `.env.local` lalu isi password yang diinginkan. Di Netlify, tambahkan `ADMIN_PASSWORD` pada environment variables dengan scope yang mencakup deploy production. Jangan gunakan awalan `NEXT_PUBLIC_` dan jangan commit file `.env.local`.
+Atur `ADMIN_PASSWORD` sebagai environment variable server-side sebelum menjalankan aplikasi atau deploy. Untuk pengembangan lokal, salin `.env.example` menjadi `.env.local` lalu isi password yang diinginkan. Di Vercel, tambahkan `ADMIN_PASSWORD` lewat Settings → Environment Variables (Production), lalu deploy ulang. Jangan gunakan awalan `NEXT_PUBLIC_` dan jangan commit file `.env.local`.
 
 `ADMIN_SESSION_SECRET` opsional; jika tidak diatur, password admin digunakan untuk menandatangani sesi. Gunakan password yang panjang dan unik untuk deployment publik.
 
@@ -124,7 +123,7 @@ Sebutan lama tetap **dibaca** agar data yang sudah tersimpan (resep CMS dan ulas
 
 - `normalizeFishingType` / `normalizeFishingTypes` di `src/data/recipes.ts` mengubah "Galat" menjadi "Galatama" saat data dibaca; `normalizeFishingText` melakukan hal yang sama untuk kalimat seperti "Kolam galat".
 - Validasi penyimpanan (`src/lib/cms.ts`, API ulasan) masih menerima "Galat" dari formulir/tautan lama, tetapi selalu menuliskan "Galatama".
-- Migrasi `netlify/database/migrations/20261014060000_rename_galat_to_galatama` merapikan nilai yang sudah ada di basis data (kategori, larik jenis, teks syarat, ringkasan resep, dan jenis ulasan). Migrasi ini aman dijalankan berulang karena hanya mengganti kata "Galat" utuh, bukan bagian dari "Galatama".
+- Migrasi `db/migrations/20261014060000_rename_galat_to_galatama` merapikan nilai yang sudah ada di basis data (kategori, larik jenis, teks syarat, ringkasan resep, dan jenis ulasan). Migrasi ini aman dijalankan berulang karena hanya mengganti kata "Galat" utuh, bukan bagian dari "Galatama".
 
 ## Takaran kroto dan bahan amis
 
@@ -190,7 +189,7 @@ Ulasan pengunjung **disimpan di PostgreSQL** (tabel `cms_reviews`) dan dibagikan
 - **Antrean moderasi.** `GET /api/admin/reviews` dan `PATCH /api/admin/reviews/[id]` tetap satu-satunya jalan menyetujui/menolak; keduanya butuh sesi admin. Status moderasi hanya bisa diperiksa pemilik kiriman lewat `POST /api/public/reviews/status` (perangkat lain, termasuk yang menebak ID baris, mendapat `missing`).
 - **Tombol Laporkan untuk pengunjung.** Ulasan yang sudah tampil punya tombol **Laporkan** (alasan: spam, kasar, tidak relevan, lainnya) lewat `POST /api/public/reviews/report` ke tabel `cms_review_reports` (migrasi `20261017170000_add_review_reports`): satu laporan per perangkat per ulasan, maks. 10 laporan per perangkat per hari. Laporan terbuka tampil bagi admin sebagai penghitung `laporanTerbuka` dan tab **Dilaporkan** di Studio → Moderasi Ulasan; admin bisa **Abaikan laporan** (status `diabaikan`) atau memutuskan ulasannya (laporan otomatis `selesai`). Tiga pelapor berbeda menahan ulasan itu otomatis (`pending`, alasan “Dilaporkan N pengunjung”) sampai admin memutuskan.
 - **Pengali batas tanpa ubah kode.** `REVIEW_PER_RECIPE_PER_DEVICE_LIMIT`, `REVIEW_PER_DEVICE_DAILY_LIMIT`, dan `REVIEW_IP_DAILY_LIMIT` (nilai `0` mematikan batas yang bersangkutan). Semuanya opsional; lihat `.env.example`.
-- Migrasi `netlify/database/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
+- Migrasi `db/migrations/20261014120000_add_review_rate_limits` menambahkan kolom `device`, `ip_hash`, dan `payload_hash` beserta indeksnya. Basis data gratis (mis. Supabase) sudah cukup — tidak ada layanan tambahan yang perlu dibayar.
 - **Hasil tangkapan tidak berdiri sendiri.** Formulir ulasan meminta tiga hal sekaligus (semuanya opsional): **jumlah ikan**, **durasi sesi**, dan **jumlah joran**. Angka "8 ekor" tanpa durasi tidak bisa dibandingkan — 8 ekor dalam 8 jam berbeda artinya dari 8 ekor dalam 2 jam. Karena itu laju (`ekor/jam`) **hanya** dihitung kalau durasinya diisi (`src/lib/catch-details.ts`), dan badge di kartu ulasan menampilkan rinciannya apa adanya: `🐟 8 ekor · ⏱️ 2 jam · 🎣 2 joran · 📈 4 ekor/jam`. Tanpa durasi, yang tampil hanya angkanya — tidak ada laju yang dikarang. Batas server: durasi 30 menit–24 jam (`session_minutes`), joran 1–10 (`rod_count`), keduanya divalidasi di API. Migrasi `20261014190000_add_review_session_details` menambahkan kedua kolom itu. Ulasan pengunjung asli di tab komunitas katalog memakai format yang sama supaya jelas cara membacanya.
 - **Catatan jujur soal lokasi.** Kota dan provinsi ikut tersimpan pada baris ulasan (memang untuk ditampilkan sebagai asal cerita), jadi teks di formulir tidak lagi mengatakan "lokasi tidak dikirim ke server". Deteksi GPS-nya sendiri tetap berjalan di perangkat; yang dikirim hanya nama kota/provinsi yang tampil di ulasan.
 
@@ -475,7 +474,7 @@ Kolom lokasi tidak lagi memakai nilai bawaan seperti "Jawa Barat". Tanpa izin lo
 ## SEO dan performa
 
 - **Aset merek**: logo berada di `public/images/logo-umpan-mas.png` (512px, latar transparan) dan dirujuk lewat `src/lib/brand.ts` agar hanya ada satu sumber. Favicon memakai konvensi Next.js: `src/app/icon.png` (256px) dan `src/app/apple-icon.png` (180px, diratakan ke putih karena iOS tidak mendukung transparansi). Logo juga dikirim sebagai `logo`/`image` pada structured data `Organization` agar Google dapat menampilkan identitas merek.
-- Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi kustom di Netlify bila domain tersebut berbeda dari `URL` bawaan Netlify; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
+- Metadata halaman mencakup judul/deskripsi, canonical, Open Graph, Twitter Card, dan robots. Atur `NEXT_PUBLIC_SITE_URL` ke origin domain produksi; tanpa origin produksi, canonical absolut dan URL sitemap sengaja tidak diarahkan ke `localhost`.
 - `/robots.txt` mengarahkan crawler ke `/sitemap.xml`. Sitemap memuat halaman publik, 38 halaman provinsi, dan resep basis data berstatus `published` saja. Draft, dashboard, API, dan profil lokal tidak ditujukan untuk indeks pencarian. Area admin ditutup tiga lapis: `Disallow` di `robots.txt`, header `X-Robots-Tag: noindex, nofollow` dari `src/proxy.ts`, dan metadata `robots` di layout dashboard.
 - Structured data memakai `Organization`/`WebSite`, `Recipe`, `BreadcrumbList`, dan `CollectionPage` untuk halaman daerah. Halaman provinsi menghubungkan konten komunitas dengan wilayah administratif Indonesia.
 - UMPAN MAS adalah platform komunitas daring, bukan toko dengan lokasi fisik yang telah diverifikasi. Karena itu, jangan menambahkan alamat, nomor telepon, jam buka, atau markup `LocalBusiness` fiktif. Jika ada lokasi usaha yang benar-benar melayani pengunjung, lengkapi NAP (nama, alamat, telepon) yang konsisten dan profil Google Business Profile sebelum mengaktifkan data bisnis lokal.

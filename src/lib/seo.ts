@@ -9,8 +9,6 @@ export const SITE_DESCRIPTION =
 function getConfiguredOrigin(): string | undefined {
   const candidate =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.URL ||
-    process.env.DEPLOY_PRIME_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     process.env.VERCEL_URL;
 
@@ -27,8 +25,8 @@ function getConfiguredOrigin(): string | undefined {
 }
 
 /**
- * Gunakan domain produksi yang dikonfigurasi eksplisit. Netlify URL dan
- * variabel host deployment dipakai sebagai fallback; host lokal tidak pernah
+ * Gunakan domain produksi yang dikonfigurasi eksplisit. Variabel host
+ * deployment (Vercel) dipakai sebagai fallback; host lokal tidak pernah
  * dimasukkan ke canonical, sitemap, atau structured data.
  */
 export const siteOrigin = getConfiguredOrigin();

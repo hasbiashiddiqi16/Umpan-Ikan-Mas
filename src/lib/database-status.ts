@@ -7,11 +7,11 @@ import { normalizeDatabaseUrl } from "@/lib/database-url";
 
 /** Pesan yang ditampilkan ke admin saat basis data belum tersambung. */
 export const DATABASE_HINT =
-  "Basis data belum tersambung di lingkungan ini. Setel DATABASE_URL (atau NETLIFY_DB_URL) dengan connection string basis data, lalu deploy ulang.";
+  "Basis data belum tersambung di lingkungan ini. Setel DATABASE_URL dengan connection string basis data, lalu deploy ulang.";
 
 /** Pesan saat connection string ada tetapi basis data tidak bisa dihubungi. */
 export const DATABASE_CONNECTION_HINT =
-  "Basis data tidak dapat dihubungi dengan connection string yang ada. Periksa nilai DATABASE_URL (atau NETLIFY_DB_URL), lalu deploy ulang.";
+  "Basis data tidak dapat dihubungi dengan connection string yang ada. Periksa nilai DATABASE_URL, lalu deploy ulang.";
 
 /** Pesan yang ditampilkan saat tabelnya belum ada, biasanya migrasi belum jalan. */
 export const DATABASE_MIGRATION_HINT =
@@ -65,7 +65,7 @@ function isConnectionFailure(signals: ErrorSignals): boolean {
 
 export type DatabaseHealth = {
   /** Nama variabel lingkungan yang dipakai, bukan nilainya. */
-  envVar: "DATABASE_URL" | "NETLIFY_DB_URL" | null;
+  envVar: "DATABASE_URL" | null;
   /** Mode TLS yang dipakai klien: "required" memverifikasi sertifikat, "required-unverified" tidak. */
   ssl: "required" | "required-unverified" | "disabled" | "default";
   configured: boolean;
@@ -94,7 +94,7 @@ async function countRows(table: CountableTable) {
  */
 export async function checkDatabase(): Promise<DatabaseHealth> {
   const envVar = databaseEnvName();
-  const { ssl } = normalizeDatabaseUrl(process.env.DATABASE_URL || process.env.NETLIFY_DB_URL);
+  const { ssl } = normalizeDatabaseUrl(process.env.DATABASE_URL);
   const base = { envVar, ssl, tables: {} as Record<string, number>, missingTables: [] as string[], pendingReviews: null as number | null };
   if (!envVar) {
     return { ...base, configured: false, connected: false, message: DATABASE_HINT };
