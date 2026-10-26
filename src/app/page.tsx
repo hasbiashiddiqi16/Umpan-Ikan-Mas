@@ -58,7 +58,7 @@ export const revalidate = 3600;
 async function RatedRecipeSections() {
   const ratings = await getRecipeRatings();
   const publicRecipes = await getPublicRecipes();
-  const bestRecommendations = getRecommendedRecipes(publicRecipes, defaultPreferences, ratings).slice(0, 3);
+  const bestRecommendations = getRecommendedRecipes(publicRecipes, defaultPreferences, ratings).slice(0, 5);
   const popularRecipes = [...publicRecipes]
     .sort((a, b) => (ratings[b.slug]?.count ?? 0) - (ratings[a.slug]?.count ?? 0) || (ratings[b.slug]?.average ?? 0) - (ratings[a.slug]?.average ?? 0))
     .slice(0, 5);
@@ -67,7 +67,7 @@ async function RatedRecipeSections() {
     <>
       <section>
         <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kolam di DKI Jakarta. Rating tampil setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{bestRecommendations.map((recipe) => <RecipeCard key={recipe.slug} recipe={recipe} initialRating={ratings[recipe.slug]} />)}</div>
+        <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">{bestRecommendations.map((recipe) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} initialRating={ratings[recipe.slug]} /></div>)}</div>
       </section>
       <section>
         <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
@@ -96,8 +96,8 @@ function RatedSectionsSkeleton() {
             <div className="h-8 w-64 animate-pulse rounded bg-[#e9eee6]" />
             <div className="mt-3 h-4 w-full max-w-xl animate-pulse rounded bg-[#f0f3ed]" />
           </div>
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {[0, 1, 2].map((card) => <RecipeCardSkeleton key={card} />)}
+          <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scrollbar-none sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((card) => <div key={card} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCardSkeleton /></div>)}
           </div>
         </section>
       ))}
