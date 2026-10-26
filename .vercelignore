@@ -1,0 +1,6 @@
+# Berkas master karya asli di root repo: tidak dirujuk kode apa pun (salinan
+# tampilnya sudah tersimpan di public/images dan src/app/icon.png), jadi tidak
+# perlu ikut terunggah pada setiap deployment. Berkasnya tetap ada di repo
+# sebagai sumber bila ikon/logo perlu dibuat ulang.
+/Ikon Ikan Mas dan Umpan Memancing.png
+/new-white-logo-UNM.png
