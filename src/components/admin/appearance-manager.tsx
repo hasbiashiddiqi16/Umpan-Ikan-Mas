@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Eye, ImageUp, Loader2, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { adminCan, useAdminMe } from "@/components/admin/use-admin-me";
 import { POPUP_LATAR_RATIO, PromoModal } from "@/components/promo-modal";
 import { Badge } from "@/components/shared";
 import {
@@ -82,6 +83,10 @@ const formatDate = (value: string | null) => (value
   : "—");
 
 export function AppearanceManager() {
+  const me = useAdminMe();
+  // Peran tanpa kapabilitas tampilan (mis. Hanya-lihat): seluruh formulir
+  // nonaktif lewat fieldset di bawah. Server tetap penegak utama.
+  const readOnly = !adminCan(me, "tampilan");
   const [state, setState] = useState<AppearanceState | null>(null);
   const [form, setForm] = useState<PopupSettings>(DEFAULT_POPUP);
   const [loading, setLoading] = useState(true);
@@ -223,6 +228,11 @@ export function AppearanceManager() {
       {error && <p role="alert" className="mb-4 rounded-xl border border-[#eedbd3] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold text-[#995744]">{error}</p>}
 
       {/* Logo */}
+      {readOnly && me && (
+        <p role="status" className="mb-5 flex items-start gap-2 rounded-xl border border-[#e9e4cf] bg-[#fbf7e8] px-4 py-3 text-xs leading-5 text-[#7a6535]"><Eye size={15} className="mt-0.5 shrink-0" /><span><strong>Mode hanya-lihat.</strong> Peran Anda ({me.roleLabel}) dapat melihat pengaturan tampilan ini, tetapi tidak dapat mengubahnya — semua isian dan tombol simpan dinonaktifkan.</span></p>
+      )}
+
+      <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
       <section className="mb-6 overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
@@ -534,6 +544,8 @@ export function AppearanceManager() {
           </div>
         </div>
       </section>
+
+      </fieldset>
 
       {previewOpen && previewAppearance && (
         <PromoModal override={previewAppearance} preview onClose={() => setPreviewOpen(false)} />

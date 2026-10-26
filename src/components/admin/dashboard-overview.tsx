@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Clock3, Eye, FileText, MessageSquareText, Plus, RefreshCw, Send, TrendingUp } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { adminCan, useAdminMe } from "@/components/admin/use-admin-me";
 import { BAYESIAN_MIN_REVIEWS } from "@/lib/rating-utils";
 import { ChartHeading, ContentDonutChart, TopPagesChart, TrafficLineChart, type DailyAnalytic, type TopPage } from "@/components/admin/analytics-charts";
 import { Badge } from "@/components/shared";
@@ -42,6 +43,7 @@ function formattedDate(value: string) {
 }
 
 export function DashboardOverview() {
+  const me = useAdminMe();
   const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [recent, setRecent] = useState<RecentContent[]>([]);
   const [error, setError] = useState("");
@@ -79,7 +81,7 @@ export function DashboardOverview() {
 
   return (
     <AdminShell>
-      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-[10px] font-extrabold uppercase tracking-[.17em] text-[#656d64] (4.59:1 terburuk)">Rabu · Content studio</p><h1 className="mt-1 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Selamat datang</h1><p className="mt-2 text-sm text-[#626c62] (4.69:1 terburuk)">Ringkasan konten dan aktivitas UMPAN MAS.</p></div><div className="flex gap-2"><button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#e3e8e1] bg-white px-3.5 text-xs font-bold text-[#59685a] transition hover:bg-[#f6f8f4] disabled:opacity-60"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> Segarkan</button><Link href="/dashboard/konten?create=1" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-bold text-white transition hover:bg-[#203d29]"><Plus size={15} /> Konten baru</Link></div></div>
+      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-[10px] font-extrabold uppercase tracking-[.17em] text-[#656d64] (4.59:1 terburuk)">Rabu · Content studio</p><h1 className="mt-1 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Selamat datang</h1><p className="mt-2 text-sm text-[#626c62] (4.69:1 terburuk)">Ringkasan konten dan aktivitas UMPAN MAS.</p></div><div className="flex gap-2"><button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#e3e8e1] bg-white px-3.5 text-xs font-bold text-[#59685a] transition hover:bg-[#f6f8f4] disabled:opacity-60"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> Segarkan</button>{adminCan(me, "konten") && <Link href="/dashboard/konten?create=1" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-bold text-white transition hover:bg-[#203d29]"><Plus size={15} /> Konten baru</Link>}</div></div>
 
       {error && <div role="status" className="mb-5 rounded-xl border border-[#eddcc5] bg-[#fbf6ed] px-4 py-3 text-xs font-semibold text-[#7e6845]">{error}</div>}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div className="inline-flex items-center gap-2 text-xs font-bold text-[#4b5b4d]"><Activity size={15} className="text-[#5b7059] (4.61:1 terburuk)" /> Angka aktual dari database</div><span className="text-[10px] text-[#969d94]">Kunjungan publik · 30 hari terakhir</span></div>
