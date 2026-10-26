@@ -12,7 +12,7 @@ import { tujuanAman } from "@/lib/auth-shared";
  * dengan parameter `error`. Parameter itu tidak ditampilkan mentah ke
  * pengguna — diterjemahkan menjadi pesan singkat di halaman masuk.
  */
-function pesanGalatCallback(searchParams: URLSearchParams, gagalTukar: boolean): string {
+function pesanGalatCallback(searchParams: URLSearchParams, gagalTukar: boolean, untukReset = false): string {
   const deskripsi = (searchParams.get("error_description") ?? "").toLowerCase();
   const kode = `${searchParams.get("error_code") ?? ""} ${searchParams.get("error") ?? ""}`.toLowerCase();
   if (deskripsi.includes("provider is not enabled") || deskripsi.includes("unsupported provider")) {
@@ -22,10 +22,11 @@ function pesanGalatCallback(searchParams: URLSearchParams, gagalTukar: boolean):
     return "Izin masuk dibatalkan sebelum selesai. Tidak apa-apa, silakan coba lagi kapan pun.";
   }
   if (kode.includes("otp_expired") || kode.includes("expired") || deskripsi.includes("expired")) {
+    if (untukReset) return "Tautan atur ulang kata sandi sudah kedaluwarsa. Minta tautan baru dari halaman Lupa Kata Sandi.";
     return "Tautan di email sudah kedaluwarsa. Masuk dengan email dan kata sandimu, atau daftar ulang untuk mendapat tautan baru.";
   }
-  if (gagalTukar) return "Tautan masuk tidak berlaku lagi. Silakan masuk kembali.";
-  return "Proses masuk belum selesai. Silakan coba lagi.";
+  if (gagalTukar) return untukReset ? "Tautan atur ulang tidak berlaku lagi. Minta tautan baru dari halaman Lupa Kata Sandi." : "Tautan masuk tidak berlaku lagi. Silakan masuk kembali.";
+  return untukReset ? "Proses atur ulang belum selesai. Silakan minta tautan baru." : "Proses masuk belum selesai. Silakan coba lagi.";
 }
 
 export async function GET(request: NextRequest) {
@@ -43,6 +44,6 @@ export async function GET(request: NextRequest) {
       gagalTukar = true;
     }
   }
-  const pesan = pesanGalatCallback(searchParams, gagalTukar);
+  const pesan = pesanGalatCallback(searchParams, gagalTukar, tujuan === "/lupa-sandi/reset");
   return NextResponse.redirect(`${origin}/masuk?next=${encodeURIComponent(tujuan)}&pesan=${encodeURIComponent(pesan)}`);
 }

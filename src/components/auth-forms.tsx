@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoaderCircle, LogIn, Mail, UserRoundPlus } from "lucide-react";
+import { KeyRound, LoaderCircle, LogIn, Mail, UserRoundPlus } from "lucide-react";
 import Image from "next/image";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
 import { createClient } from "@/utils/supabase/client";
@@ -125,12 +125,12 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
       <form onSubmit={kirim} className="space-y-4">
         <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Email</span><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className={inputClass} /></label>
         <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Kata sandi</span><input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Kata sandimu" className={inputClass} /></label>
+        <div className="text-right"><Link href="/lupa-sandi" className="text-xs font-bold text-[#2f5b3a] hover:underline">Lupa kata sandi?</Link></div>
         {error ? <p role="alert" className="rounded-xl bg-[#fbf0ec] px-4 py-3 text-sm leading-6 text-[#8a4433]">{error}</p> : null}
         <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60">
           {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <LogIn size={17} />} Masuk
         </button>
       </form>
-      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c857c]"><Mail size={14} className="mt-0.5 shrink-0" /> Lupa kata sandi? Hubungi kami lewat halaman Komunitas bila akunmu terkunci.</p>
     </Kerangka>
   );
 }
@@ -199,6 +199,134 @@ export function DaftarForm({ next }: { next?: string }) {
         {info ? <p role="status" className="rounded-xl bg-[#eef6ec] px-4 py-3 text-sm leading-6 text-[#2f5b3a]">{info}</p> : null}
         <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60">
           {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <UserRoundPlus size={17} />} Daftar sekarang
+        </button>
+      </form>
+    </Kerangka>
+  );
+}
+
+export function LupaSandiForm() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [sibuk, setSibuk] = useState(false);
+  const tersedia = Boolean(supabasePublicConfig());
+
+  async function kirim(event: FormEvent) {
+    event.preventDefault();
+    setError(""); setInfo("");
+    if (!tersedia) { setError(SUPABASE_ENV_HINT); return; }
+    setSibuk(true);
+    const supabase = createClient();
+    const { error: galat } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/lupa-sandi/reset")}`,
+    });
+    setSibuk(false);
+    if (galat) { setError(pesanGalatAuth(galat.message)); return; }
+    setInfo("Jika email itu terdaftar, tautan atur ulang sudah kami kirim. Periksa kotak masuk atau folder spam, lalu buka tautannya untuk membuat kata sandi baru.");
+  }
+
+  return (
+    <Kerangka judul="Lupa kata sandi" subjudul="Untuk akun yang daftar dengan email dan kata sandi. Masukkan emailmu, kami kirim tautan untuk membuat kata sandi baru."
+      kaki={<>Sudah ingat kata sandimu? <Link href="/masuk" className="font-bold text-[#2f5b3a] hover:underline">Masuk di sini</Link></>}>
+      {!tersedia ? <p className="rounded-xl bg-[#fdf3e3] px-4 py-3 text-sm leading-6 text-[#7a5a17]">{SUPABASE_ENV_HINT}</p> : null}
+      <form onSubmit={kirim} className="space-y-4">
+        <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Email</span><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className={inputClass} /></label>
+        {error ? <p role="alert" className="rounded-xl bg-[#fbf0ec] px-4 py-3 text-sm leading-6 text-[#8a4433]">{error}</p> : null}
+        {info ? <p role="status" className="rounded-xl bg-[#eef6ec] px-4 py-3 text-sm leading-6 text-[#2f5b3a]">{info}</p> : null}
+        <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60">
+          {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <Mail size={17} />} Kirim tautan atur ulang
+        </button>
+      </form>
+      <p className="mt-4 text-xs leading-5 text-[#7c857c]">Akun yang masuk dengan Google tidak memakai kata sandi di sini. Gunakan tombol Google di halaman masuk.</p>
+    </Kerangka>
+  );
+}
+
+export function AturUlangSandiForm() {
+  const [password, setPassword] = useState("");
+  const [konfirmasi, setKonfirmasi] = useState("");
+  const [error, setError] = useState("");
+  const [sibuk, setSibuk] = useState(false);
+  const tersedia = Boolean(supabasePublicConfig());
+  const [memeriksa, setMemeriksa] = useState(tersedia);
+  const [tautanSah, setTautanSah] = useState(false);
+  const [berhasil, setBerhasil] = useState(false);
+
+  useEffect(() => {
+    if (!tersedia) return;
+    let aktif = true;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data, error: galat }) => {
+      if (!aktif) return;
+      setTautanSah(Boolean(data.user && !galat));
+      setMemeriksa(false);
+    });
+    return () => { aktif = false; };
+  }, [tersedia]);
+
+  async function kirim(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    if (password.length < 6) { setError("Kata sandi minimal 6 karakter."); return; }
+    if (password !== konfirmasi) { setError("Konfirmasi kata sandi belum sama. Periksa lagi."); return; }
+    if (!tersedia) { setError(SUPABASE_ENV_HINT); return; }
+    setSibuk(true);
+    const supabase = createClient();
+    const { error: galat } = await supabase.auth.updateUser({ password });
+    if (galat) { setSibuk(false); setError(pesanGalatAuth(galat.message)); return; }
+    await supabase.auth.signOut();
+    setSibuk(false);
+    setBerhasil(true);
+  }
+
+  if (!tersedia) {
+    return (
+      <Kerangka judul="Buat kata sandi baru" subjudul="Masukkan kata sandi baru untuk akunmu."
+        kaki={<>Butuh tautan baru? <Link href="/lupa-sandi" className="font-bold text-[#2f5b3a] hover:underline">Minta di sini</Link></>}>
+        <p className="rounded-xl bg-[#fdf3e3] px-4 py-3 text-sm leading-6 text-[#7a5a17]">{SUPABASE_ENV_HINT}</p>
+      </Kerangka>
+    );
+  }
+
+  if (memeriksa) {
+    return (
+      <Kerangka judul="Buat kata sandi baru" subjudul="Masukkan kata sandi baru untuk akunmu."
+        kaki={<>Butuh tautan baru? <Link href="/lupa-sandi" className="font-bold text-[#2f5b3a] hover:underline">Minta di sini</Link></>}>
+        <p role="status" className="rounded-xl bg-[#f3f6f1] px-4 py-3 text-sm leading-6 text-[#5c6a5d]">Memeriksa tautan atur ulang…</p>
+      </Kerangka>
+    );
+  }
+
+  if (berhasil) {
+    return (
+      <Kerangka judul="Kata sandi berhasil diubah" subjudul="Sekarang masuk lagi dengan kata sandi barumu."
+        kaki={<>Sudah siap? <Link href="/masuk" className="font-bold text-[#2f5b3a] hover:underline">Masuk sekarang</Link></>}>
+        <p role="status" className="rounded-xl bg-[#eef6ec] px-4 py-3 text-sm leading-6 text-[#2f5b3a]">Kata sandi barumu sudah tersimpan. Demi keamanan, sesi atur ulang ini sudah kami akhiri.</p>
+        <Link href="/masuk" className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]"><LogIn size={17} /> Masuk sekarang</Link>
+      </Kerangka>
+    );
+  }
+
+  if (!tautanSah) {
+    return (
+      <Kerangka judul="Tautan tidak berlaku" subjudul="Tautan atur ulang ini sudah kedaluwarsa atau sudah dipakai."
+        kaki={<>Masih butuh masuk? <Link href="/masuk" className="font-bold text-[#2f5b3a] hover:underline">Kembali ke halaman masuk</Link></>}>
+        <p role="alert" className="rounded-xl bg-[#fbf0ec] px-4 py-3 text-sm leading-6 text-[#8a4433]">Minta tautan baru dari halaman lupa kata sandi, lalu segera buat kata sandi baru sebelum tautannya kedaluwarsa.</p>
+        <Link href="/lupa-sandi" className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]"><KeyRound size={17} /> Minta tautan baru</Link>
+      </Kerangka>
+    );
+  }
+
+  return (
+    <Kerangka judul="Buat kata sandi baru" subjudul="Masukkan kata sandi baru untuk akunmu. Setelah disimpan, kamu perlu masuk lagi."
+      kaki="Tautan ini hanya berlaku sekali dan terbatas waktu.">
+      <form onSubmit={kirim} className="space-y-4">
+        <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Kata sandi baru</span><input type="password" required autoComplete="new-password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimal 6 karakter" className={inputClass} /></label>
+        <label className="block"><span className="mb-1.5 block text-sm font-bold text-[#344638]">Ulangi kata sandi baru</span><input type="password" required autoComplete="new-password" minLength={6} value={konfirmasi} onChange={(e) => setKonfirmasi(e.target.value)} placeholder="Ketik ulang kata sandi baru" className={inputClass} /></label>
+        {error ? <p role="alert" className="rounded-xl bg-[#fbf0ec] px-4 py-3 text-sm leading-6 text-[#8a4433]">{error}</p> : null}
+        <button type="submit" disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b] disabled:opacity-60">
+          {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <KeyRound size={17} />} Simpan kata sandi baru
         </button>
       </form>
     </Kerangka>

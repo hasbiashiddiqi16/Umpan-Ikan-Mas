@@ -22,7 +22,7 @@ import { updateSession } from "@/utils/supabase/middleware";
  *    meski ada tautan atau percobaan pengindeksan dari luar.
  */
 const AUTH_GATE_PREFIXES = ["/dashboard"] as const;
-const NO_INDEX_PREFIXES = ["/dashboard", "/login", "/masuk", "/daftar", "/bagikan", "/profil", "/auth"] as const;
+const NO_INDEX_PREFIXES = ["/dashboard", "/login", "/masuk", "/daftar", "/lupa-sandi", "/bagikan", "/profil", "/auth"] as const;
 const PENGALIHAN_RUTE_LAMA: Record<string, string> = {
   "/ai-umpan": "/tanya-umpan",
   "/sistem-pakar": "/pakar-umpan",
