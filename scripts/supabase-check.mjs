@@ -31,7 +31,7 @@ const read = (key) => process.env[key] || fromFile[key];
 
 const url = read("NEXT_PUBLIC_SUPABASE_URL");
 const key = read("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") || read("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-const databaseUrl = read("DATABASE_URL") || read("NETLIFY_DB_URL");
+const databaseUrl = read("DATABASE_URL");
 
 let failed = false;
 const line = (label, ok, detail) => {
@@ -88,7 +88,7 @@ if (databaseUrl) {
     line("Koneksi PostgreSQL (DATABASE_URL)", false, detail || "galat tidak dikenal");
   }
 } else {
-  console.log("• DATABASE_URL tidak disetel — lewati pemeriksaan PostgreSQL (di Netlify memakai NETLIFY_DB_URL otomatis).");
+  console.log("• DATABASE_URL tidak disetel — lewati pemeriksaan PostgreSQL.");
 }
 
 console.log(`\n${failed ? "Ada yang perlu diperbaiki." : "Semua siap."}`);

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Menerapkan migrasi di netlify/database/migrations ke basis data yang ditunjuk
- * DATABASE_URL (atau NETLIFY_DB_URL).
+ * Menerapkan migrasi di db/migrations ke basis data yang ditunjuk
+ * DATABASE_URL (PostgreSQL Supabase lewat Transaction pooler).
  *
- * Netlify menjalankan migrasi ini otomatis saat deploy. Host lain — misalnya
- * Vercel — memakai skrip `vercel-build` yang memanggil berkas ini dengan opsi
- * `--optional`, jadi deploy tetap jalan meski basis data belum siap.
+ * Skrip `vercel-build` memanggil berkas ini dengan opsi `--optional`
+ * sebelum `next build`, jadi migrasi berjalan otomatis setiap deploy dan
+ * deploy tetap jalan meski basis data belum siap.
  *
  *   DATABASE_URL="postgres://..." npm run db:migrate
  *
@@ -16,14 +16,14 @@
  *
  * Skrip ini aman dijalankan berulang: nama migrasi yang sudah diterapkan dicatat
  * di tabel cms_migrations, dan migrasi yang sudah ada di basis data (mis. sudah
- * dijalankan Netlify) dikenali lewat galat "already exists" tanpa menggagalkan
+ * diterapkan sebelum pelacak ini ada) dikenali lewat galat "already exists" tanpa menggagalkan
  * proses.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 
-const MIGRATIONS_DIR = join(process.cwd(), "netlify", "database", "migrations");
+const MIGRATIONS_DIR = join(process.cwd(), "db", "migrations");
 const TRACKING_TABLE = "cms_migrations";
 /** Kode galat PostgreSQL untuk objek yang sudah ada (tabel, indeks, kolom, dsb.). */
 const ALREADY_EXISTS = new Set(["42P07", "42710", "42701", "42P06", "42P16", "23505"]);
@@ -40,7 +40,7 @@ function readEnvFile(name) {
 }
 
 const fromFile = { ...readEnvFile(".env"), ...readEnvFile(".env.local") };
-const rawConnectionString = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL || fromFile.DATABASE_URL || fromFile.NETLIFY_DB_URL;
+const rawConnectionString = process.env.DATABASE_URL || fromFile.DATABASE_URL;
 
 /**
  * Logika yang sama dengan src/lib/database-url.ts (lihat berkas itu untuk
@@ -92,10 +92,10 @@ const connectionString = normalized.value;
 
 if (!connectionString) {
   if (optional) {
-    console.log("DATABASE_URL/NETLIFY_DB_URL belum disetel — migrasi dilewati, aplikasi tetap dibangun.");
+    console.log("DATABASE_URL belum disetel — migrasi dilewati, aplikasi tetap dibangun.");
     process.exit(0);
   }
-  console.error("Connection string belum ada. Setel DATABASE_URL (atau NETLIFY_DB_URL) lalu jalankan lagi.");
+  console.error("Connection string belum ada. Setel DATABASE_URL lalu jalankan lagi.");
   console.error("Contoh: DATABASE_URL=\"postgres://user:pass@host/db?sslmode=require\" npm run db:migrate");
   process.exit(1);
 }
@@ -153,7 +153,7 @@ try {
           await client.query("release savepoint langkah");
         } catch (error) {
           await client.query("rollback to savepoint langkah");
-          // Basis data yang sudah dimigrasi Netlify belum punya catatan kita.
+          // Basis data yang sudah dimigrasi sebelum pelacak ini ada belum punya catatan kita.
           if (!ALREADY_EXISTS.has(error.code)) throw error;
         }
       }

@@ -177,7 +177,7 @@ export async function verifyAdminSessionToken(token?: string) {
  */
 export function setAdminSessionCookie(response: NextResponse, request: Request, token: string) {
   // Cookie Secure hanya saat permintaan memang datang lewat HTTPS (langsung
-  // atau lewat proxy seperti Netlify). Dipaksakan di HTTP membuat browser
+  // atau lewat proxy seperti Vercel). Dipaksakan di HTTP membuat browser
   // menolak menyimpan cookie sesi sehingga pengguna "sudah login tapi tetap
   // tidak bisa masuk dashboard".
   response.cookies.set({
