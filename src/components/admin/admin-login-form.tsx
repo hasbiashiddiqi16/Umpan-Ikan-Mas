@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, MoveRight } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, MoveRight, UserRound } from "lucide-react";
 
 export function AdminLoginForm() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,12 +45,15 @@ export function AdminLoginForm() {
     event.preventDefault();
     // Baca nilai langsung dari form agar tetap benar saat iOS meng-autofill
     // tanpa memicu onChange React.
-    const submitted = new FormData(event.currentTarget).get("password");
+    const formData = new FormData(event.currentTarget);
+    const submitted = formData.get("password");
     const value = typeof submitted === "string" ? submitted : "";
     if (!value) {
       setError("Masukkan password admin terlebih dahulu.");
       return;
     }
+    const submittedUsername = formData.get("username");
+    const usernameValue = typeof submittedUsername === "string" ? submittedUsername.trim() : "";
 
     setError("");
     setIsSubmitting(true);
@@ -58,12 +62,12 @@ export function AdminLoginForm() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: value }),
+        body: JSON.stringify({ username: usernameValue, password: value }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string };
 
       if (!response.ok) {
-        setError(result.error ?? "Login gagal. Periksa password dan coba lagi.");
+        setError(result.error ?? "Login gagal. Periksa username dan password, lalu coba lagi.");
         setIsSubmitting(false);
         return;
       }
@@ -84,6 +88,26 @@ export function AdminLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="grid gap-5">
       <div>
+        <label htmlFor="admin-username" className="mb-2 block text-sm font-semibold text-[#354539]">Username</label>
+        <div className="relative">
+          <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-4 top-0 flex items-center text-[#656d65] (4.59:1 terburuk)"><UserRound size={17} /></span>
+          <input
+            id="admin-username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            autoFocus
+            enterKeyHint="next"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="admin"
+            aria-invalid={Boolean(error)}
+            className="h-[54px] w-full rounded-2xl border border-[#e1e7de] bg-[#fbfcfa] pl-11 pr-4 text-base text-[#27382b] outline-none transition placeholder:text-[#a2aaa0] focus:border-[#6b8c68] focus:bg-white"
+          />
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-[#98a196]">Admin utama cukup isi <strong>admin</strong>; admin tambahan isi username yang dibuatkan Pemilik.</p>
+      </div>
+      <div>
         <label htmlFor="admin-password" className="mb-2 block text-sm font-semibold text-[#354539]">Password admin</label>
         <div className="relative">
           <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-4 top-0 flex items-center text-[#656d65] (4.59:1 terburuk)"><LockKeyhole size={17} /></span>
@@ -94,7 +118,6 @@ export function AdminLoginForm() {
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
-            autoFocus
             enterKeyHint="go"
             value={password}
             onChange={(event) => setPassword(event.target.value)}

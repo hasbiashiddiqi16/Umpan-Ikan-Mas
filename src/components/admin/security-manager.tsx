@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { KeyRound, Loader2, RotateCcw, ShieldCheck, ShieldQuestion, TriangleAlert } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminsManager } from "@/components/admin/admins-manager";
 import { Badge } from "@/components/shared";
 import {
   ADMIN_PASSWORD_MAX_LENGTH,
@@ -313,6 +314,8 @@ export function SecurityManager() {
           </div>
         </div>
       </section>
+
+      <AdminsManager />
 
       <section className="mb-2 grid gap-3 rounded-[20px] border border-[#e5eae3] bg-[#fbfcfa] p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>

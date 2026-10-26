@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   const { id: idParam } = await context.params;
@@ -43,7 +43,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   const { id: idParam } = await context.params;

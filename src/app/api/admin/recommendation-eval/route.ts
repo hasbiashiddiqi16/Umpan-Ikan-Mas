@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * yang sudah disetujui. Ulasan tanpa persetujuan tidak pernah ikut dihitung.
  */
 export async function GET() {
-  const unauthorized = await requireAdminApi();
+  const unauthorized = await requireAdminApi("konten");
   if (unauthorized) return unauthorized;
 
   try {
