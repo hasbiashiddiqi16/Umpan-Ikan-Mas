@@ -33,6 +33,8 @@ Aplikasi menyesuaikan connection string sendiri: host non-lokal mendapat `sslmod
 
 Migrasi diterapkan otomatis setiap deploy: skrip `vercel-build` pada `package.json` menjalankan `node scripts/migrate.mjs --optional` sebelum `next build`, jadi Vercel membuat/memperbarui tabel `cms_*` sendiri. Mode `--optional` membuat deploy tetap berhasil bila `DATABASE_URL` belum disetel atau basis data sedang tidak dapat dihubungi (hanya dicatat sebagai peringatan).
 
+**Ukuran deployment dijaga ramping.** Berkas master karya asli di root repo (`Ikon Ikan Mas dan Umpan Memancing.png` ±1,5 MB dan `new-white-logo-UNM.png`) tidak dirujuk kode apa pun — salinan tampilnya sudah ada di `public/images` dan `src/app/icon.png` — jadi `.vercelignore` mengeluarkannya dari unggahan setiap deployment sambil tetap menyimpannya di repo sebagai sumber pembuatan ulang ikon/logo. Payload yang benar-benar ter-deploy terukur kecil: seluruh fungsi server terlacak ±9,7 MB (berkas unik), JavaScript klien ±2,1 MB, dan aset `public` ±0,6 MB. Source map hasil build (±40 MB) tidak ikut ter-deploy karena tidak terlacak ke fungsi mana pun, dan pustaka Excel hanya terlacak ke dua route impor spreadsheet.
+
 Menjalankan manual — aman diulang, migrasi yang sudah ada dilewati:
 
 ```bash
