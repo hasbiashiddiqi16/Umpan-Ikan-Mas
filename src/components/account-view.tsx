@@ -154,7 +154,7 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10"><UserRound size={22} /></span>
         <p className="mt-5 text-xs font-bold uppercase tracking-[.15em] text-[#d9c994]">Akun saya</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Halo, {nama}!</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">{email} · Resep yang kamu bagikan langsung tayang, ulasanmu tampil setelah moderasi, dan favorit tersinkron antarperangkat.</p>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">{email} · Resep yang kamu bagikan langsung tayang, ulasan tampil setelah moderasi, dan favorit tersinkron di semua perangkat.</p>
         <div className="mt-6 flex flex-wrap items-end gap-3">
           <label className="block min-w-56 flex-1 sm:max-w-xs">
             <span className="mb-1.5 block text-xs font-bold text-white/80">Nama tampil</span>
@@ -207,7 +207,7 @@ export function AccountView({ namaAwal, email, tabAwal }: { namaAwal: string; em
         </section>
       ) : tab === "ulasan" ? (
         <section className="pt-8">
-          <SectionHeader eyebrow="Pengalamanmu" title="Ulasan Saya" subtitle="Ulasan yang kamu kirim saat masuk. Yang disetujui tampil di halaman resep." />
+          <SectionHeader eyebrow="Pengalamanmu" title="Ulasan Saya" subtitle="Ulasan yang kamu kirim. Yang disetujui tampil di halaman resep." />
           {ulasanSaya.length ? (
             <div className="grid gap-4">
               {ulasanSaya.map((ulasan) => (

@@ -100,14 +100,14 @@ export function RecommendationEvalPanel() {
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {bobot.map(([key, nilai]) => <li key={key} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="font-semibold text-[#4b5b4d]">{LABELS[key] ?? key}</span><span className="font-black tabular-nums text-[#31593a]">{nilai}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">Bobot ini masih dugaan awal dan hanya berubah lewat <code className="rounded bg-[#f2f5f0] px-1">src/lib/recommendation-config.ts</code> setelah evaluasi.</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">Bobot ini masih dugaan awal dan hanya diubah lewat <code className="rounded bg-[#f2f5f0] px-1">src/lib/recommendation-config.ts</code> setelah evaluasi.</p>
             </div>
             <div>
               <p className="text-[11px] font-extrabold text-[#435445]">Kandidat bobot yang diuji</p>
               <ul className="mt-2 divide-y divide-[#eff1ed] rounded-xl border border-[#eef0ec]">
                 {data.candidates.map((kandidat) => <li key={kandidat.nama} className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px]"><span className="min-w-0 truncate font-semibold text-[#4b5b4d]">{kandidat.nama}</span><span className="shrink-0 font-black tabular-nums text-[#31593a]">{formatHitRate(kandidat.strict)}</span></li>)}
               </ul>
-              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.ringkasan.skippedUnknownRecipe ? `${data.ringkasan.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi belum bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.ringkasan.strictAbsoluteOnly ? ` — ada ${data.ringkasan.strictAbsoluteOnly} ulasan seperti itu` : ""}. Semuanya tetap ikut hit-rate versi longgar (rating saja).</p>
+              <p className="mt-2 text-[10px] leading-5 text-[#666d65] (4.57:1 terburuk)">{data.ringkasan.skippedUnknownRecipe ? `${data.ringkasan.skippedUnknownRecipe} ulasan dilewati karena resepnya tidak ada di katalog. ` : ""}Ulasan tanpa durasi sesi tidak bisa dibandingkan, jadi tidak dihitung sebagai &ldquo;tangkapan tinggi&rdquo;{data.ringkasan.strictAbsoluteOnly ? ` — ada ${data.ringkasan.strictAbsoluteOnly} ulasan seperti itu` : ""}. Ulasan itu tetap ikut hit-rate longgar (rating saja).</p>
             </div>
           </div>
         </>
@@ -116,7 +116,7 @@ export function RecommendationEvalPanel() {
       {!data && !error && <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#666d64] (4.58:1 terburuk)"><FlaskConical size={14} /> Menghitung hit-rate@3 dari ulasan nyata…</div>}
 
       <p className="mt-4 rounded-xl bg-[#f6f8f4] px-3.5 py-3 text-[10px] leading-5 text-[#646d63] (4.61:1 terburuk)">
-        Angka ini dihitung dari ulasan nyata yang sudah disetujui, dan ulasan yang sedang diuji selalu dikeluarkan dari bukti pemutus seri.
+        Dihitung dari ulasan nyata yang sudah disetujui. Ulasan yang sedang diuji tidak ikut jadi bukti pemutus seri.
       </p>
     </section>
   );

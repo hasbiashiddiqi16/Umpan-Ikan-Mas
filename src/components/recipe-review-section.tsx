@@ -146,7 +146,7 @@ function RecipeReviewForm({ recipe, onSubmitted }: { recipe: Recipe; onSubmitted
       <div className="flex min-w-0 items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eef3ea] text-[#567253] (4.59:1 terburuk)"><MessageSquareText size={19} /></span><div className="min-w-0"><h3 className="break-words text-base font-extrabold text-[#304133]">Pernah mencoba {recipe.name}?</h3><p className="mt-1 break-words text-xs leading-5 text-[#636c63] (4.67:1 terburuk)">Ulasan membantu pemancing lain dan menjadi sinyal untuk Pakar Umpan.</p></div></div>
       <div className="mt-5 rounded-xl bg-[#faf8f1] p-3.5"><p className="mb-1 text-xs font-bold text-[#716246]">Beri rating</p><StarRatingInput value={rating} onChange={setRating} /></div>
       <div className="mt-4 flex flex-col gap-2.5 rounded-xl border border-[#e9ede7] bg-[#f8faf6] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-5 text-[#626c65] (4.68:1 terburuk)">Kota dan provinsi membantu pemancing lain mengenali asal ceritamu, dan ikut tampil pada ulasan ini. Isi otomatis hanya muncul setelah kamu menekan tombol lokasi.</p>
+        <p className="text-xs leading-5 text-[#626c65] (4.68:1 terburuk)">Kota dan provinsi ikut tampil di ulasanmu agar pemancing lain tahu asal ceritamu. Terisi otomatis hanya setelah kamu menekan tombol lokasi.</p>
         <UseMyLocationButton onPlace={(place) => { setProvince(place.province); if (place.city) setCity(place.city); }} label="Gunakan lokasi saya" className="shrink-0" />
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -342,7 +342,7 @@ export function RecipeReviewSection({ recipe, initialRating }: { recipe: Recipe;
   return (
     <section id="ulasan" className="scroll-mt-24 space-y-4">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Ulasan tampil begitu lolos pemeriksaan otomatis. Yang mencurigakan ditinjau editor lebih dulu." />
+        <SectionHeader eyebrow="Cerita dari komunitas" title="Ulasan pemancing" subtitle="Hanya ulasan pengunjung yang dihitung. Ulasan tampil setelah lolos pemeriksaan otomatis. Yang mencurigakan ditinjau editor dulu." />
         <div className="mb-7 w-fit max-w-full shrink-0 rounded-2xl border border-[#e8ebe4] bg-white px-4 py-3">
           {agregatTampil.count ? (
             <div className="flex items-center gap-2"><span className="text-3xl font-black tracking-tight text-[#2d402f]">{agregatTampil.average.toFixed(1)}</span><div><Rating value={agregatTampil.average} compact /><p className="mt-1 text-[10px] text-[#929a90]">{new Intl.NumberFormat("id-ID").format(agregatTampil.count)} ulasan</p></div></div>

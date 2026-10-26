@@ -76,7 +76,7 @@ export function RecommendationCard({ recipe, score, isPrimary = false, rating }:
           <div className="flex flex-wrap items-center gap-2"><Badge tone={badge.tone} title={badge.title}>{badge.label}</Badge><RecipeRating rating={rating} /></div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-[#25372a] sm:text-3xl">{recipe.name}</h2>
           <p className="mt-2 text-sm leading-6 text-[#636d63] (4.62:1 terburuk)">{recipe.summary}</p>
-          {isPrimary && <div className="mt-4 rounded-xl bg-[#f3f7f1] p-3.5 text-sm leading-6 text-[#526653]">Racikan ini paling mendekati kondisi pilihanmu. Rekomendasi mempertimbangkan kecocokan cuaca, air, jenis kolam, daerah, rating, dan pengalaman komunitas.</div>}
+          {isPrimary && <div className="mt-4 rounded-xl bg-[#f3f7f1] p-3.5 text-sm leading-6 text-[#526653]">Racikan ini paling dekat dengan kondisi pilihanmu, dari kecocokan cuaca, air, jenis kolam, daerah, rating, dan pengalaman komunitas.</div>}
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[#566456] sm:grid-cols-4">
             <span className="inline-flex items-center gap-1 rounded-lg bg-[#f5f7f3] px-2.5 py-2"><Check size={12} aria-hidden="true" /> {recipe.weather[0]}</span><span className="inline-flex items-center gap-1 rounded-lg bg-[#f5f7f3] px-2.5 py-2"><Check size={12} aria-hidden="true" /> Air {recipe.water[0].toLowerCase()}</span><span className="inline-flex items-center gap-1 rounded-lg bg-[#f5f7f3] px-2.5 py-2"><Check size={12} aria-hidden="true" /> {fishingTypeTag(recipe)}</span><span className="inline-flex items-center gap-1 rounded-lg bg-[#f5f7f3] px-2.5 py-2"><Check size={12} aria-hidden="true" /> {recipe.difficulty}</span>
           </div>

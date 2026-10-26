@@ -110,7 +110,7 @@ async function ProvinceRecipesSection({ province, regionalRecipes }: { province:
   return (
     <>
       {structuredData && <JsonLd data={structuredData} />}
-      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada racikan yang ditandai khusus untuk ${province.name}. Pilihan berikut hanya referensi umum. Karakter kolam lokal bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
+      {regionalRecipes.length ? <ProvinceExplorer province={province.name} recipes={regionalRecipes} ratings={recipeRatings} /> : <section className="mt-10"><SectionHeader eyebrow="Belum ada racikan spesifik" title="Mulai dari racikan yang paling banyak diulas pengunjung" subtitle={`Belum ada racikan khusus untuk ${province.name}. Pilihan berikut hanya referensi umum. Karakter kolam di daerahmu bisa berbeda.`} /><ProvinceExplorer province={province.name} recipes={displayedRecipes} ratings={recipeRatings} /></section>}
     </>
   );
 }
@@ -171,7 +171,7 @@ export default async function ProvinceDetailPage({ params }: { params: Promise<{
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Racikan katalog untuk {province.name}. Provinsi adalah salah satu indikator. Karakter air setiap kolam tetap bisa berbeda.</p>
           <Suspense fallback={<ProvinceStatsSkeleton />}><ProvinceStats province={province} regionalRecipes={regionalRecipes} /></Suspense>
         </section>
-        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan hanya menghitung ulasan pengunjung yang sudah disetujui. Kondisi kolam, kualitas air, dan respons ikan tidak seragam di seluruh provinsi.</div>
+        <div className="mt-6 rounded-xl border border-[#ede4cc] bg-[#faf7ee] px-4 py-3 text-xs leading-5 text-[#716956] (4.67:1 terburuk)">Angka ulasan hanya dari ulasan pengunjung yang disetujui. Kondisi kolam dan respons ikan berbeda di tiap daerah.</div>
         <Suspense fallback={<ProvinceRecipesSkeleton />}><ProvinceRecipesSection province={province} regionalRecipes={regionalRecipes} /></Suspense>
       </main>
       <Footer />

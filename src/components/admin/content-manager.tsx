@@ -352,7 +352,7 @@ function RecipePreview({ form }: { form: RecipeForm }) {
   return (
     <div className="grid gap-6">
       <p className="rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-[11px] leading-5 font-semibold text-[#436444]">
-        Pratinjau ini memakai komponen yang sama dengan halaman publik, jadi yang Anda lihat di sini sama dengan yang dilihat pengunjung.
+        Pratinjau ini sama persis dengan tampilan pengunjung di halaman publik.
       </p>
       <section className="overflow-hidden rounded-[22px] border border-[#e5e9e2] bg-white">
         <div className="relative aspect-square w-full bg-[#e4e3d6]">
@@ -594,7 +594,7 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                       </button>
                     )}
                   </div>
-                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail yang tampil di kartu dan hasil berbagi. Berkas PNG, JPEG, atau WebP (maks 3 MB per foto, maksimal 5 foto). <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong> — membatalkan form tidak menyimpan apa pun ke basis data. Penghapusan foto lama berlaku setelah resep disimpan.</p>
+                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail tampil di kartu dan hasil berbagi. Format PNG, JPEG, atau WebP, maks 3 MB per foto dan maks 5 foto. <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong>. Membatalkan form tidak menyimpan apa pun. Foto lama terhapus setelah resep disimpan.</p>
                   {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
                 </div>
                 <Field label="Penulis"><input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} /></Field>
@@ -607,11 +607,11 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                 <PilihanField label="Cuaca"><MultiSelectDropdown value={form.weather} options={WEATHER_CONDITIONS} onChange={(value) => update("weather", value)} placeholder="Pilih cuaca" /></PilihanField>
                 <PilihanField label="Kondisi air" hint="Warna air kolam/spot"><MultiSelectDropdown value={form.water} options={WATER_CONDITIONS} onChange={(value) => update("water", value)} placeholder="Pilih kondisi air" /></PilihanField>
                 <PilihanField label="Tipe air"><MultiSelectDropdown value={form.waterBodies} options={WATER_BODIES} onChange={(value) => update("waterBodies", value)} placeholder="Pilih tipe air" /></PilihanField>
-                <Field label="Jenis kolam" hint="Bisa dipilih lebih dari satu. Centang ketiganya bila resep ini cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
+                <Field label="Jenis kolam" hint="Boleh lebih dari satu. Centang ketiganya bila cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
                 <PilihanField label="Musim"><MultiSelectDropdown value={form.seasons} options={SEASON_CONDITIONS} onChange={(value) => update("seasons", value)} placeholder="Pilih musim" /></PilihanField>
                 <PilihanField label="Provinsi terkait"><MultiSelectDropdown value={form.provinces} options={provinces.map((province) => province.name)} onChange={(value) => update("provinces", value)} placeholder="Pilih provinsi" searchable /></PilihanField>
                 <PilihanField label="Tingkat kesulitan"><SingleSelectDropdown value={form.difficulty} options={["Mudah", "Menengah", "Tingkat lanjut"]} onChange={(value) => update("difficulty", value)} placeholder="Pilih tingkat kesulitan" /></PilihanField>
-                <Field label="Label harga" hint="Harga acuan untuk saringan budget dihitung otomatis dari rentang ini (titik tengahnya), jadi tidak perlu diisi angka terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
+                <Field label="Label harga" hint="Harga acuan untuk filter budget dihitung otomatis dari titik tengah rentang ini, jadi tidak perlu diisi terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
               </div>
             </section>
 

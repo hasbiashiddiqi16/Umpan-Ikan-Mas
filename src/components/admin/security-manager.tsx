@@ -171,7 +171,7 @@ export function SecurityManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Password dashboard</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Dipakai di halaman masuk <code>/login</code> dan seluruh menu Content Studio.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Dipakai di halaman masuk <code>/login</code> dan semua menu Content Studio.</p>
           </div>
           <Badge tone={custom ? "sage" : "cream"}>{custom ? "Password sendiri" : "Password bawaan server"}</Badge>
         </header>
@@ -288,7 +288,7 @@ export function SecurityManager() {
       <section className="mb-6 overflow-hidden rounded-[20px] border border-[#e5eae3] bg-white shadow-[0_5px_20px_rgba(36,53,39,.03)]">
         <header className="border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <h2 className="text-sm font-extrabold text-[#344638]">Kembalikan ke password bawaan</h2>
-          <p className="mt-1 text-[10px] text-[#929a91]">Hapus password yang dipasang di dashboard, lalu pakai kembali nilai <code>ADMIN_PASSWORD</code> pada environment server.</p>
+          <p className="mt-1 text-[10px] text-[#929a91]">Hapus password dari dashboard, lalu pakai lagi nilai <code>ADMIN_PASSWORD</code> pada environment server.</p>
         </header>
         <div className="grid gap-3 p-4 sm:p-5">
           {!envConfigured && (

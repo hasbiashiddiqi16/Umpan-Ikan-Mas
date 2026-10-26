@@ -211,7 +211,7 @@ export function AppearanceManager() {
             <Link href="/dashboard" className="hover:text-[#3f6044]">Studio</Link><span>/</span><span>Tampilan</span>
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-[-.045em] text-[#25372a] sm:text-4xl">Logo &amp; popup</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#626c62] (4.69:1 terburuk)">Kelola logo situs dan popup sambutan yang dilihat pengunjung baru — sama persis dengan yang tampil di situs publik.</p>
+          <p className="mt-2 max-w-2xl text-sm text-[#626c62] (4.69:1 terburuk)">Atur logo situs dan popup sambutan pengunjung baru, persis seperti yang tampil di situs publik.</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button type="button" onClick={() => setPreviewOpen(true)} disabled={!previewAppearance}
@@ -265,7 +265,7 @@ export function AppearanceManager() {
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
-            <p className={hintClass}>Favicon/ikon aplikasi masih aset tetap di repo (<code>src/app/icon.png</code>), jadi mengikuti logo hanya setelah deploy ulang.</p>
+            <p className={hintClass}>Favicon masih berkas tetap di repo (<code>src/app/icon.png</code>), jadi baru mengikuti logo setelah deploy ulang.</p>
           </div>
         </div>
       </section>
@@ -275,7 +275,7 @@ export function AppearanceManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Logo footer</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Hanya dipakai di footer. Navbar tetap memakai logo situs di atas, jadi keduanya bisa berbeda berkas.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Khusus footer. Navbar tetap memakai logo situs di atas, jadi keduanya boleh berbeda berkas.</p>
           </div>
           {footerLogo && <Badge tone={footerLogo.custom ? "sage" : "cream"}>{footerLogo.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
         </header>
@@ -318,7 +318,7 @@ export function AppearanceManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Gambar hero (beranda)</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Gambar besar di bagian paling atas beranda. Sisi kiri beranda tertutup gradasi hijau dan teks, jadi objek utama sebaiknya berada di sisi kanan.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Gambar besar di atas beranda. Sisi kiri tertutup gradasi hijau dan teks, jadi letakkan objek utama di sisi kanan.</p>
           </div>
           {hero && <Badge tone={hero.custom ? "sage" : "cream"}>{hero.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
         </header>
@@ -345,7 +345,7 @@ export function AppearanceManager() {
               </div>
             </div>
             <p className="mt-2 text-[10px] font-medium leading-4 text-[#959c93]">
-              Pratinjau memakai rasio dan pemotongan yang sama seperti beranda. Gambar akan memenuhi lebar banner (potong tengah), jadi bagian penting jangan diletakkan di tepi atas/bawah.
+              Pratinjau memakai rasio dan potongan yang sama seperti beranda. Gambar memenuhi lebar banner (dipotong di tengah), jadi jangan letakkan bagian penting di tepi atas/bawah.
             </p>
           </div>
           <div className="grid content-start gap-3">
@@ -372,7 +372,7 @@ export function AppearanceManager() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-extrabold text-[#344638]">Popup sambutan</h2>
-            <p className="mt-1 text-[10px] text-[#929a91]">Muncul pada kunjungan pertama, setiap sesi peramban baru (tab ditutup lalu dibuka lagi), setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan satu kali setiap isi/gambar popup diganti. Tanpa scroll, dan aksinya hanya menutup.</p>
+            <p className="mt-1 text-[10px] text-[#929a91]">Muncul saat kunjungan pertama, tiap sesi browser baru, setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan sekali tiap isi/gambar popup diganti. Tanpa scroll, hanya bisa ditutup.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={showAgain} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#e2e7e0] bg-white px-3 text-[10px] font-bold text-[#5c6b5c] transition hover:bg-[#f4f7f2]">
@@ -446,7 +446,7 @@ export function AppearanceManager() {
                       <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} unoptimized alt="Pratinjau latar popup mode teks" fill sizes="190px" className="object-cover object-center" />
                     </div>
                   </div>
-                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) karena dipakai sebagai latar — persis seperti tampilan pengunjung. Pilih gambar yang gelap atau berkontras rendah di area teks, karena teks popup berwarna putih.</p>
+                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) sebagai latar, persis seperti yang dilihat pengunjung. Pilih gambar gelap atau berkontras rendah di area teks, karena teks popup putih.</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <input ref={(node) => { fileInputs.current["popup-latar"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
                       onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("popup-latar", file); }} />
@@ -522,11 +522,11 @@ export function AppearanceManager() {
             <div className="rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
               <p className="text-xs font-extrabold text-[#354639]">Yang dilihat pengunjung</p>
               <ul className="mt-3 grid gap-2 text-[11px] leading-5 text-[#606d62] (4.67:1 terburuk)">
-                <li>• Muncul pada kunjungan pertama, setiap sesi peramban baru, lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan satu kali setiap kali popup diganti — setelah halaman tenang (± 1,4 detik). Pengunjung tidak perlu menghapus cache.</li>
-                <li>• Selama masa itu, pengunjung yang berpindah halaman tidak melihatnya berulang kali.</li>
+                <li>• Muncul saat kunjungan pertama, tiap sesi browser baru, lagi setelah lewat {PROMO_SEEN_WINDOW_MS / 3_600_000} jam, dan sekali tiap popup diganti, setelah halaman tenang (± 1,4 detik). Tidak perlu hapus cache.</li>
+                <li>• Selama masa itu, popup tidak muncul berulang saat pengunjung berpindah halaman.</li>
                 <li>• Tidak muncul di <code>/dashboard</code> dan <code>/login</code>.</li>
                 <li>• Tanpa scroll. Aksinya hanya tombol tutup, klik di luar kartu, atau <code>Esc</code>.</li>
-                <li>• Teks nilai pada mode teks dibatasi panjangnya agar selalu muat.</li>
+                <li>• Teks nilai pada mode teks dibatasi agar selalu muat.</li>
               </ul>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -539,7 +539,7 @@ export function AppearanceManager() {
                 {busy === "popup" ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Simpan pengaturan popup
               </button>
             </div>
-            <p className={hintClass}>Pratinjau memakai pengaturan yang sedang Anda isi, termasuk perubahan yang belum disimpan.</p>
+            <p className={hintClass}>Pratinjau memakai pengaturan yang sedang Anda isi, termasuk yang belum disimpan.</p>
           </div>
         </div>
       </section>

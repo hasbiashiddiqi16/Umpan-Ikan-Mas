@@ -66,11 +66,11 @@ async function RatedRecipeSections() {
   return (
     <>
       <section>
-        <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kolam di DKI Jakarta. Rating tampil setelah ada ulasan pengunjung." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
+        <SectionHeader eyebrow="Pilihan sistem" title="Rekomendasi Terbaik" subtitle="Racikan pilihan redaksi untuk kolam di DKI Jakarta." action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua <ArrowRight size={16} /></Link>} />
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 scrollbar-none lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5">{bestRecommendations.map((recipe) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} initialRating={ratings[recipe.slug]} /></div>)}</div>
       </section>
       <section>
-        <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari jumlah ulasan pengunjung yang sudah disetujui." : "Dari umpan harian sampai racikan untuk lomba, dikurasi redaksi sampai ada ulasan pengunjung."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
+        <SectionHeader eyebrow={adaUlasan ? "Paling banyak ulasan" : "Kurasi redaksi"} title={adaUlasan ? "Racikan Populer" : "Racikan Pilihan"} subtitle={adaUlasan ? "Diurutkan dari ulasan pengunjung terbanyak." : "Pilihan redaksi, dari umpan harian sampai racikan lomba."} action={<Link href="/katalog" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Buka katalog <ArrowRight size={16} /></Link>} />
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 scrollbar-none lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5">{popularRecipes.map((recipe) => <div key={recipe.slug} className="w-[292px] shrink-0 snap-start sm:w-[320px] lg:w-auto"><RecipeCard recipe={recipe} initialRating={ratings[recipe.slug]} /></div>)}</div>
       </section>
     </>
@@ -156,26 +156,26 @@ export default function HomePage() {
           <QuickFinder />
           <Suspense fallback={<RatedSectionsSkeleton />}><RatedRecipeSections /></Suspense>
           <section>
-            <SectionHeader eyebrow="Baca situasinya" title="Pilih Berdasarkan Cuaca" subtitle="Cuaca berpengaruh pada suhu dan aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Baca situasinya" title="Pilih Berdasarkan Cuaca" subtitle="Cuaca memengaruhi aktivitas ikan. Temukan racikan untuk kondisimu." action={<Link href="/cuaca" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Panduan cuaca <ArrowRight size={16} /></Link>} />
             <Suspense fallback={<div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="min-h-[220px] animate-pulse rounded-[22px] bg-[#edf1eb]" />)}</div>}><WeatherCardsGrid /></Suspense>
           </section>
           <section>
-            <SectionHeader eyebrow="Dari berbagai daerah" title="Umpan Berdasarkan Provinsi" subtitle="Temukan racikan populer di sekitar spotmu. Karakter air bisa berbeda di setiap kolam." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Dari berbagai daerah" title="Umpan Berdasarkan Provinsi" subtitle="Racikan populer di sekitar spotmu. Karakter air tiap kolam bisa berbeda." action={<Link href="/provinsi" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat 38 provinsi <ArrowRight size={16} /></Link>} />
             <Suspense fallback={<ProvinceGridSkeleton />}><PopularProvinceGrid /></Suspense>
-            <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#656d64] (4.59:1 terburuk)">Provinsi merupakan salah satu indikator rekomendasi. Karakter air setiap kolam dapat berbeda, bahkan dalam satu daerah.</p>
+            <p className="mt-4 rounded-xl bg-[#f3f5f0] px-4 py-3 text-xs leading-5 text-[#656d64] (4.59:1 terburuk)">Provinsi hanya salah satu petunjuk. Karakter air tiap kolam bisa berbeda, bahkan di daerah yang sama.</p>
           </section>
           <section>
-            <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Pengalaman nyata membantu kita memahami bagaimana racikan bekerja di kondisi yang berbeda." action={<Link href="/katalog?tab=komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
+            <SectionHeader eyebrow="Dari pinggir kolam" title="Cerita Pemancing" subtitle="Cerita nyata pemancing di berbagai kondisi kolam." action={<Link href="/katalog?tab=komunitas" className="inline-flex items-center gap-2 text-sm font-bold text-[#355a3b] hover:underline">Lihat semua cerita <ArrowRight size={16} /></Link>} />
             <Suspense fallback={<CommunityStoriesSkeleton />}><CommunityStories /></Suspense>
             <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-[#dde7d8] bg-[#f3f8f0] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div><p className="text-sm font-extrabold text-[#2c3f30]">Punya racikan yang sering bikin strike?</p><p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6d60]">Ceritakan bahan dan cara meraciknya — racikanmu langsung tayang dan bisa jadi andalan pemancing lain.</p></div>
+              <div><p className="text-sm font-extrabold text-[#2c3f30]">Punya racikan yang sering bikin strike?</p><p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6d60]">Ceritakan bahan dan cara meraciknya. Racikanmu langsung tayang dan bisa jadi andalan pemancing lain.</p></div>
               <Link href="/bagikan" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#294b34] px-5 text-sm font-bold text-white transition hover:bg-[#223f2b]">Bagikan Racikan Andalanmu <ArrowRight size={15} /></Link>
             </div>
           </section>
           <section className="relative isolate overflow-hidden rounded-[28px] bg-[#1e3d2b] px-6 py-9 text-white sm:px-10 sm:py-12 lg:px-14">
             <div className="absolute -right-16 -top-24 -z-10 h-72 w-72 rounded-full border-[42px] border-white/[.04]" /><div className="absolute -bottom-36 right-40 -z-10 h-72 w-72 rounded-full border-[32px] border-[#d5b66f]/[.09]" />
             <div className="grid gap-7 md:grid-cols-[1fr_auto] md:items-center">
-              <div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#e5d5a9]"><Sparkles size={14} /> Rekomendasi yang terasa personal</span><h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Kondisi kolammu unik.<br className="hidden sm:block" /> Racikanmu juga bisa lebih pas.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Jawab beberapa pertanyaan singkat dan temukan racikan yang paling mendekati cuaca, air, serta jenis kolammu.</p></div>
+              <div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#e5d5a9]"><Sparkles size={14} /> Rekomendasi yang terasa personal</span><h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Kondisi kolammu unik.<br className="hidden sm:block" /> Racikanmu juga bisa lebih pas.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Jawab pertanyaan singkat untuk menemukan racikan yang cocok dengan cuaca, air, dan jenis kolammu.</p></div>
               <Link href="/pakar-umpan" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e7bd66] px-6 text-sm font-extrabold text-[#263722] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#f0cb7a]"><Bot size={18} /> Coba Pakar Umpan <ChevronRight size={17} /></Link>
             </div>
           </section>

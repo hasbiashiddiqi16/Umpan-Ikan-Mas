@@ -134,7 +134,7 @@ export function AdminsManager() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-4 sm:px-5">
         <div>
           <h2 className="inline-flex items-center gap-2 text-sm font-extrabold text-[#344638]"><Users size={16} className="text-[#4d7351] (4.64:1 terburuk)" /> Admin tambahan</h2>
-          <p className="mt-1 text-[10px] text-[#929a91]">Akun khusus dashboard dengan username + password sendiri dan batasan peran. Hanya Pemilik yang dapat mengelola bagian ini.</p>
+          <p className="mt-1 text-[10px] text-[#929a91]">Akun dashboard dengan username dan password sendiri, dibatasi peran. Hanya Pemilik yang bisa mengelola bagian ini.</p>
         </div>
         <Badge tone="sage">Khusus Pemilik</Badge>
       </header>
@@ -144,14 +144,14 @@ export function AdminsManager() {
           <h3 className="inline-flex items-center gap-2 text-xs font-extrabold text-[#344638]"><UserPlus size={14} /> Buat admin baru</h3>
           <label className={labelClass}>Username
             <input value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="mis. siti.editor" autoComplete="off" className={inputClass} />
-            <span className={hintClass}>3–32 karakter: huruf kecil, angka, titik, strip, atau garis bawah. Tidak bisa diganti setelah dibuat.</span>
+            <span className={hintClass}>3–32 karakter: huruf kecil, angka, titik, strip, atau garis bawah. Tidak bisa diubah setelah dibuat.</span>
           </label>
           <label className={labelClass}>Nama
             <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Nama admin" className={inputClass} />
           </label>
           <label className={labelClass}>Password awal
             <input value={password} onChange={(e) => setPassword(e.target.value)} required type="password" autoComplete="new-password" placeholder="Minimal 8 karakter" className={inputClass} />
-            <span className={hintClass}>Sampaikan password ini ke admin yang bersangkutan; ia dapat diganti Pemilik kapan saja dari daftar di samping.</span>
+            <span className={hintClass}>Sampaikan password ini ke adminnya. Pemilik bisa menggantinya kapan saja dari daftar di samping.</span>
           </label>
           <label className={labelClass}>Peran
             <select value={role} onChange={(e) => setRole(e.target.value as AdminRole)} className={inputClass}>
@@ -217,12 +217,12 @@ export function AdminsManager() {
                       <button type="button" disabled={busyId === admin.id} onClick={() => void handleResetPassword(admin)} className="inline-flex min-h-10 items-center rounded-xl bg-[#294b34] px-3 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-50">Simpan password</button>
                     </div>
                   )}
-                  <p className={hintClass + " mt-2"}>Mengubah peran, status, atau password otomatis mengakhiri sesi admin tersebut di semua perangkat.</p>
+                  <p className={hintClass + " mt-2"}>Mengubah peran, status, atau password langsung mengakhiri sesi admin itu di semua perangkat.</p>
                 </li>
               ))}
             </ul>
           )}
-          <p className={hintClass}>Admin utama (username <strong>admin</strong>, password dari server) tidak tercantum di sini, tidak bisa dihapus atau dinonaktifkan, dan selalu memiliki akses penuh sebagai cadangan.</p>
+          <p className={hintClass}>Admin utama (username <strong>admin</strong>, password dari server) tidak tampil di sini, tidak bisa dihapus atau dinonaktifkan, dan selalu punya akses penuh sebagai cadangan.</p>
         </div>
       </div>
     </section>

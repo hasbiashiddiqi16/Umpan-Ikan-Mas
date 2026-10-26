@@ -114,7 +114,7 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
   }
 
   return (
-    <Kerangka judul="Selamat datang kembali" subjudul="Masuk untuk membagikan resep, melihat ulasanmu, dan menyinkronkan favorit antarperangkat."
+    <Kerangka judul="Selamat datang kembali" subjudul="Masuk untuk membagikan resep, melihat ulasanmu, dan menyinkronkan favoritmu."
       kaki={<>Belum punya akun? <Link href={`/daftar?next=${encodeURIComponent(tujuan)}`} className="font-bold text-[#2f5b3a] hover:underline">Daftar gratis</Link></>}>
       {!tersedia ? <p className="rounded-xl bg-[#fdf3e3] px-4 py-3 text-sm leading-6 text-[#7a5a17]">{SUPABASE_ENV_HINT}</p> : null}
       <button type="button" onClick={denganGoogle} disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#dfe5dc] bg-white px-4 text-sm font-bold text-[#334436] transition hover:bg-[#f6f8f4] disabled:opacity-60">
@@ -130,7 +130,7 @@ export function MasukForm({ next, pesan }: { next?: string; pesan?: string }) {
           {sibuk ? <LoaderCircle size={17} className="animate-spin" /> : <LogIn size={17} />} Masuk
         </button>
       </form>
-      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c857c]"><Mail size={14} className="mt-0.5 shrink-0" /> Lupa kata sandi? Buka halaman daftar ulang tidak perlu — cukup hubungi kami lewat halaman komunitas bila terkunci.</p>
+      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c857c]"><Mail size={14} className="mt-0.5 shrink-0" /> Lupa kata sandi? Hubungi kami lewat halaman Komunitas bila akunmu terkunci.</p>
     </Kerangka>
   );
 }
@@ -183,7 +183,7 @@ export function DaftarForm({ next }: { next?: string }) {
   }
 
   return (
-    <Kerangka judul="Buat akun gratis" subjudul="Satu akun untuk membagikan racikan andalanmu, menyimpan ulasan, dan favorit yang tersinkron di semua perangkat."
+    <Kerangka judul="Buat akun gratis" subjudul="Satu akun untuk membagikan racikan, menyimpan ulasan, dan menyinkronkan favorit di semua perangkat."
       kaki={<>Sudah punya akun? <Link href={`/masuk?next=${encodeURIComponent(tujuan)}`} className="font-bold text-[#2f5b3a] hover:underline">Masuk di sini</Link></>}>
       {!tersedia ? <p className="rounded-xl bg-[#fdf3e3] px-4 py-3 text-sm leading-6 text-[#7a5a17]">{SUPABASE_ENV_HINT}</p> : null}
       <button type="button" onClick={denganGoogle} disabled={sibuk} className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#dfe5dc] bg-white px-4 text-sm font-bold text-[#334436] transition hover:bg-[#f6f8f4] disabled:opacity-60">

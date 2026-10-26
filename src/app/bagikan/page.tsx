@@ -23,7 +23,7 @@ export default async function BagikanPage() {
       <main className="mx-auto min-h-[70vh] max-w-7xl px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
         <p className="text-xs font-bold uppercase tracking-[.15em] text-[#8a6d2f]">Komunitas pemancing</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-[#223528] sm:text-4xl">Bagikan racikanmu, {user.name}</h1>
-        <p className="mb-8 mt-3 max-w-2xl text-sm leading-6 text-[#636d63]">Isi bahan dan langkah sejujur pengalamanmu. Begitu terkirim, resepmu <strong>langsung tayang</strong> di katalog dan bisa disunting kapan saja dari Akun Saya.</p>
+        <p className="mb-8 mt-3 max-w-2xl text-sm leading-6 text-[#636d63]">Isi bahan dan langkah sesuai pengalamanmu. Begitu terkirim, resepmu <strong>langsung tayang</strong> di katalog dan bisa diubah kapan saja dari Akun Saya.</p>
         <RecipeShareForm />
       </main>
       <Footer />
