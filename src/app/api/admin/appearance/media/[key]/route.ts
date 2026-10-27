@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { MEDIA_MAX_BYTES, isMediaKey, mediaUrl, sniffImageMime } from "@/lib/appearance";
 import { deleteMediaFile, saveMediaFile } from "@/lib/appearance-server";
 import { requireAdminApi } from "@/lib/admin-auth";
@@ -30,6 +31,9 @@ export async function POST(request: Request, context: RouteContext) {
     if (!mimeType) return Response.json({ error: "Format harus PNG, JPEG, atau WebP." }, { status: 400 });
 
     const updatedAt = await saveMediaFile(key, mimeType, bytes);
+    // Hero dirender server pada Beranda (ISR) dengan alamat berversi, jadi
+    // bangun ulang Beranda agar alamat versi terbaru langsung terpakai.
+    if (key === "hero") revalidatePath("/");
     return Response.json({
       notice: "Gambar tersimpan.",
       media: { key, url: mediaUrl(key, updatedAt), custom: true, updatedAt: updatedAt.toISOString() },
@@ -49,6 +53,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   try {
     await deleteMediaFile(key);
+    if (key === "hero") revalidatePath("/");
     return Response.json({ notice: "Aset bawaan dipakai kembali.", media: { key, url: mediaUrl(key), custom: false, updatedAt: null } });
   } catch {
     return Response.json({ error: "Gagal mengembalikan aset bawaan. Coba lagi." }, { status: 500 });

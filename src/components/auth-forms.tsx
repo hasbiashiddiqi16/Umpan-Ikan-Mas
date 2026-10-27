@@ -4,8 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KeyRound, LoaderCircle, LogIn, Mail, UserRoundPlus } from "lucide-react";
-import Image from "next/image";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { AppearanceLogoImage } from "@/components/appearance-logo";
 import { createClient } from "@/utils/supabase/client";
 import { supabasePublicConfig, SUPABASE_ENV_HINT } from "@/utils/supabase/env";
 import { PESAN_EMAIL_SUDAH_TERDAFTAR, pesanGalatAuth, tujuanAman } from "@/lib/auth-shared";
@@ -67,7 +67,7 @@ function Kerangka({ judul, subjudul, children, kaki }: { judul: string; subjudul
   return (
     <div className="mx-auto w-full max-w-md">
       <section className="rounded-[28px] border border-[#e6eae3] bg-white p-6 shadow-[0_18px_50px_rgba(38,55,40,.08)] sm:p-8">
-        <Link href="/" aria-label="UMPAN MAS, beranda" className="flex shrink-0 items-center gap-2.5"><Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} className="h-10 w-10 shrink-0" /><span className="text-[15px] font-black tracking-[.07em] text-[#21392a] sm:text-base">UMPAN MAS</span></Link>
+        <Link href="/" aria-label="UMPAN MAS, beranda" className="flex shrink-0 items-center gap-2.5"><AppearanceLogoImage slot="logo" src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} className="h-10 w-10 shrink-0" /><span className="text-[15px] font-black tracking-[.07em] text-[#21392a] sm:text-base">UMPAN MAS</span></Link>
         <h1 className="mt-5 text-2xl font-black tracking-tight text-[#223528]">{judul}</h1>
         <p className="mt-2 text-sm leading-6 text-[#636d63]">{subjudul}</p>
         <div className="mt-6">{children}</div>
