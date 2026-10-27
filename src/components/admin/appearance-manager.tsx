@@ -352,7 +352,7 @@ export function AppearanceManager() {
             <p className={hintClass}>
               Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.hero)}. Disarankan gambar lanskap minimal 1280 px.
             </p>
-            <p className={hintClass}>Diperbarui: {formatDate(hero?.updatedAt ?? null)}. Gambar baru tampil di beranda dalam ±2 menit (cache gambar), atau langsung setelah muat ulang paksa.</p>
+            <p className={hintClass}>Diperbarui: {formatDate(hero?.updatedAt ?? null)}. Gambar baru langsung tampil di beranda setelah tersimpan.</p>
             <div className="flex flex-wrap gap-2">
               <input ref={(node) => { fileInputs.current.hero = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
                 onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("hero", file); }} />

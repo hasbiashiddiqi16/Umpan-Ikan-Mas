@@ -11,6 +11,7 @@ import {
   type PopupIcon,
 } from "@/lib/appearance";
 import { LOGO_ALT, LOGO_SRC } from "@/lib/brand";
+import { AppearanceLogoImage } from "@/components/appearance-logo";
 import { isPromoForced, markPromoSeen, nextPromoDueAt, shouldShowPromo } from "@/lib/promo-storage";
 import { useHydrated } from "@/lib/use-location";
 
@@ -381,7 +382,7 @@ function PopupText({ settings, compact }: { settings: AppearanceState["popup"]; 
         className="inline-flex w-fit items-center rounded-full border border-white/25 bg-white/10 font-bold uppercase text-[#f0e2bd]"
         style={{ gap: "1.8cqw", padding: "1.4cqw 2.6cqw", fontSize: "2.3cqw", letterSpacing: ".16em" }}
       >
-        <Image src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} className="shrink-0" style={{ width: "4.6cqw", height: "4.6cqw" }} />
+        <AppearanceLogoImage slot="logo" src={LOGO_SRC} alt={LOGO_ALT} width={40} height={40} className="shrink-0" style={{ width: "4.6cqw", height: "4.6cqw" }} />
         UMPAN MAS
       </span>
 

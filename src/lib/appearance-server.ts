@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { eq, inArray, like } from "drizzle-orm";
 import { db } from "@/db";
 import { cmsMedia, cmsSettings } from "@/db/schema";
@@ -35,9 +36,11 @@ function toInfo(key: MediaKey, row?: MediaRow): MediaInfo {
 /**
  * Membaca pengaturan tampilan untuk halaman publik. Bila database belum siap
  * atau tabelnya belum ada (mis. saat pratinjau lokal tanpa Postgres), nilai
- * bawaan dipakai supaya situs tetap tampil utuh.
+ * bawaan dipakai supaya situs tetap tampil utuh. Dibungkus `cache` React
+ * agar satu render yang memakai beberapa aset tampilan (logo, hero, footer)
+ * hanya membaca basis data sekali.
  */
-export async function readAppearance(): Promise<AppearanceState> {
+export const readAppearance = cache(async (): Promise<AppearanceState> => {
   try {
     const [setting] = await db.select().from(cmsSettings).where(eq(cmsSettings.key, APPEARANCE_KEY)).limit(1);
     const media = await db.select({ key: cmsMedia.key, updatedAt: cmsMedia.updatedAt }).from(cmsMedia)
@@ -61,7 +64,7 @@ export async function readAppearance(): Promise<AppearanceState> {
   } catch {
     return defaultAppearance();
   }
-}
+});
 
 /** Menyimpan pengaturan popup. Melempar error agar API bisa melaporkan kegagalan. */
 export async function savePopupSettings(popup: PopupSettings): Promise<PopupSettings> {
