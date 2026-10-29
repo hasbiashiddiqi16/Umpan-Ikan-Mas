@@ -7,6 +7,7 @@ import { Camera, Check, CheckCircle2, Circle, Eye, LoaderCircle, Plus, Send, Tra
 import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import type { CmsRecipeRecord } from "@/lib/cms";
+import { kompresGambar } from "@/lib/image-compress";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 
 const inputClass = "min-h-12 w-full rounded-xl border border-[#e4e9e2] bg-white px-3.5 text-sm text-[#334436] outline-none transition placeholder:text-[#a0a79e] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
@@ -107,12 +108,17 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
 
   // `files` wajib sudah berupa salinan array: FileList dari input bersifat
   // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
-  function tambahFotoBaru(files: File[]) {
+  async function tambahFotoBaru(files: File[]) {
     const dipilih = [...files].slice(0, Math.max(0, 5 - totalFoto));
     if (dipilih.length < files.length) setError("Satu resep maksimal 5 foto. Hapus foto lain dulu.");
-    const baru = dipilih.map((file) => ({ file, url: URL.createObjectURL(file) }));
+    // Kompres di peramban dulu (maks lebar 1280 px, target ±200 KB) agar
+    // unggahan ringan; pratinjau memakai berkas hasil kompresinya.
+    const baru = await Promise.all(dipilih.map(async (file) => {
+      const hasil = await kompresGambar(file, { lebarMaks: 1280, targetBytes: 200_000 });
+      return { file: hasil.file, url: URL.createObjectURL(hasil.file) };
+    }));
     baru.forEach((item) => fotoBaruUrls.current.push(item.url));
-    if (baru.length) setFotoBaru((cur) => [...cur, ...baru]);
+    if (baru.length) setFotoBaru((cur) => [...cur, ...baru].slice(0, Math.max(0, 5 - galeri.length)));
   }
 
   function hapusFotoTersimpan(url: string) {
@@ -232,9 +238,9 @@ export function RecipeShareForm({ recipeId }: { recipeId?: number }) {
         <div className="flex flex-wrap items-center gap-4">
           <label className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#eef3ea] px-4 text-sm font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf] ${totalFoto >= 5 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             <Camera size={17} /> {totalFoto ? "Tambah foto" : "Pilih foto"}
-            <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => { const files = e.target.files ? [...e.target.files] : []; e.target.value = ""; if (files.length) tambahFotoBaru(files); }} />
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => { const files = e.target.files ? [...e.target.files] : []; e.target.value = ""; if (files.length) void tambahFotoBaru(files); }} />
           </label>
-          <span className="text-xs text-[#7c857c]">PNG, JPEG, atau WebP, maks 3 MB per foto · {totalFoto}/5 foto.</span>
+          <span className="text-xs text-[#7c857c]">PNG, JPEG, atau WebP, maks 3 MB per foto · {totalFoto}/5 foto. Foto besar otomatis dikecilkan dan dikompres (target sekitar 200 KB) agar tetap tajam tetapi ringan.</span>
         </div>
       </div>
 

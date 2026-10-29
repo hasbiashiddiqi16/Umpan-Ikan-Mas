@@ -13,6 +13,7 @@ import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATH
 import { provinces } from "@/data/provinces";
 import { hargaAcuanDariLabel, slugify } from "@/lib/utils";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
+import { kompresGambar } from "@/lib/image-compress";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
 
@@ -423,12 +424,23 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
 
   // `files` wajib sudah berupa salinan array: FileList dari input bersifat
   // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
-  function tambahFotoBaru(files: File[]) {
+  async function tambahFotoBaru(files: File[]) {
     const dipilih = files.slice(0, Math.max(0, 5 - totalFoto));
     setPhotoError(dipilih.length < files.length ? "Satu resep maksimal 5 foto. Hapus foto lain dulu." : "");
-    const baru = dipilih.map((file) => ({ file, url: URL.createObjectURL(file) }));
-    baru.forEach((item) => fotoBaruUrls.current.push(item.url));
-    if (baru.length) setFotoBaru((cur) => [...cur, ...baru]);
+    if (!dipilih.length) return;
+    // Kompres di peramban dulu (maks lebar 1280 px, target ±200 KB) agar
+    // unggahan ringan; pratinjau memakai berkas hasil kompresinya.
+    setPhotoBusy(true);
+    try {
+      const baru = await Promise.all(dipilih.map(async (file) => {
+        const hasil = await kompresGambar(file, { lebarMaks: 1280, targetBytes: 200_000 });
+        return { file: hasil.file, url: URL.createObjectURL(hasil.file) };
+      }));
+      baru.forEach((item) => fotoBaruUrls.current.push(item.url));
+      setFotoBaru((cur) => [...cur, ...baru].slice(0, Math.max(0, 5 - galeri.length)));
+    } finally {
+      setPhotoBusy(false);
+    }
   }
 
   function hapusFoto(url: string) {
@@ -584,7 +596,7 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                   )}
                   <div className="flex flex-wrap gap-2">
                     <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" aria-label="Pilih berkas foto racikan"
-                      onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) tambahFotoBaru(files); }} />
+                      onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) void tambahFotoBaru(files); }} />
                     <button type="button" disabled={photoBusy || totalFoto >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
                       {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {totalFoto ? "Tambah foto" : "Pilih foto"}
                     </button>
@@ -594,7 +606,7 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                       </button>
                     )}
                   </div>
-                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail tampil di kartu dan hasil berbagi. Format PNG, JPEG, atau WebP, maks 3 MB per foto dan maks 5 foto. <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong>. Membatalkan form tidak menyimpan apa pun. Foto lama terhapus setelah resep disimpan.</p>
+                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail tampil di kartu dan hasil berbagi. Format PNG, JPEG, atau WebP, maks 3 MB per foto dan maks 5 foto. Foto besar otomatis dikecilkan dan dikompres (target sekitar 200 KB) agar tetap tajam tetapi ringan. <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong>. Membatalkan form tidak menyimpan apa pun. Foto lama terhapus setelah resep disimpan.</p>
                   {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
                 </div>
                 <Field label="Penulis"><input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} /></Field>
