@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LOGO_SRC } from "@/lib/brand";
+import { HERO_ALT, LOGO_SRC } from "@/lib/brand";
 
 export const SITE_NAME = "UMPAN MAS";
 export const SITE_DESCRIPTION =
@@ -55,13 +55,24 @@ type PageMetadataOptions = {
   includeBrandInSocialTitle?: boolean;
 };
 
-/** Metadata halaman publik: judul, deskripsi, canonical, dan preview berbagi. */
+/**
+ * Metadata halaman publik: judul, deskripsi, canonical, dan preview berbagi.
+ *
+ * Halaman yang tidak menyebut `image` sendiri memakai endpoint media hero
+ * (`/api/media/hero`) sebagai gambar pratinjau: endpoint itu menyajikan
+ * banner hero terkini dari Dashboard Tampilan, atau berkas banner bawaan
+ * bila belum ada unggahan. Dulu bawaannya berkas statis
+ * `/images/pond-hero.jpg`, sehingga pratinjau berbagi selalu menampilkan
+ * banner lama walau hero sudah diganti dari dashboard. Halaman yang
+ * membutuhkan alamat berversi (beranda dan halaman publik utama) meneruskan
+ * `hero.url` dari data tampilan secara eksplisit.
+ */
 export function createPageMetadata({
   title,
   description,
   path,
-  image = "/images/pond-hero.jpg",
-  imageAlt = "Pemancing menikmati suasana kolam pagi berkabut",
+  image = "/api/media/hero",
+  imageAlt = HERO_ALT,
   noIndex = false,
   openGraphType = "website",
   includeBrandInSocialTitle = true,

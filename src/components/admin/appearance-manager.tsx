@@ -11,6 +11,7 @@ import { Badge } from "@/components/shared";
 import {
   DEFAULT_POPUP,
   MEDIA_ACCEPT,
+  MEDIA_DEFAULTS,
   MEDIA_LABELS,
   MEDIA_MAX_BYTES,
   POPUP_ICONS,
@@ -22,6 +23,7 @@ import {
   type PopupIcon,
   type PopupSettings,
 } from "@/lib/appearance";
+import { formatUkuranBerkas, kompresGambar, type OpsiKompresi } from "@/lib/image-compress";
 import { PROMO_SEEN_WINDOW_MS, clearPromoSeen } from "@/lib/promo-storage";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
@@ -30,6 +32,28 @@ const labelClass = "grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terbur
 const hintClass = "text-[10px] font-medium leading-4 text-[#959c93]";
 
 const formatBytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
+
+/**
+ * Perubahan gambar yang masih ditahan di halaman ini dan baru dikirim ke
+ * server saat tombol "Simpan perubahan" ditekan — sama seperti isian teks
+ * popup. `berkas` = admin memilih gambar baru (pratinjau lokal dari berkas
+ * hasil kompresi), `bawaan` = admin meminta kembali ke gambar bawaan.
+ */
+type PerubahanMedia =
+  | { jenis: "berkas"; file: File; pratinjau: string; ukuranAsli: number }
+  | { jenis: "bawaan" };
+
+type InfoMedia = AppearanceState["logo"];
+
+/** Target kompresi per slot: resolusi tidak lebih kecil dari ukuran tampilnya. */
+const OPSI_KOMPRESI_MEDIA: Record<MediaKey, OpsiKompresi> = {
+  logo: { lebarMaks: 512, targetBytes: 100_000 },
+  "logo-footer": { lebarMaks: 512, targetBytes: 100_000 },
+  hero: { lebarMaks: 1920, targetBytes: 200_000 },
+  "popup-mobile": { lebarMaks: 1080, targetBytes: 200_000 },
+  "popup-desktop": { lebarMaks: 1080, targetBytes: 200_000 },
+  "popup-latar": { lebarMaks: 1080, targetBytes: 200_000 },
+};
 
 /**
  * Pratinjau poster yang menampilkan gambar secara utuh.
@@ -89,12 +113,26 @@ export function AppearanceManager() {
   const readOnly = !adminCan(me, "tampilan");
   const [state, setState] = useState<AppearanceState | null>(null);
   const [form, setForm] = useState<PopupSettings>(DEFAULT_POPUP);
+  // Potret pengaturan popup yang terakhir tersimpan di server, pembanding
+  // untuk tahu apakah isian teks berubah dan untuk tombol Batalkan.
+  const [formTersimpan, setFormTersimpan] = useState<PopupSettings>(DEFAULT_POPUP);
+  const [tertunda, setTertunda] = useState<Partial<Record<MediaKey, PerubahanMedia>>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
+  const [menyimpan, setMenyimpan] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputs = useRef<Partial<Record<MediaKey, HTMLInputElement | null>>>({});
+  const tertundaRef = useRef(tertunda);
+
+  useEffect(() => { tertundaRef.current = tertunda; }, [tertunda]);
+  // Lepas semua URL pratinjau lokal saat halaman ditinggalkan.
+  useEffect(() => () => {
+    Object.values(tertundaRef.current).forEach((item) => {
+      if (item?.jenis === "berkas") URL.revokeObjectURL(item.pratinjau);
+    });
+  }, []);
 
   /** Menyimpan keadaan tampilan dari server ke state editor. */
   const applyAppearance = useCallback((payload: unknown) => {
@@ -104,6 +142,7 @@ export function AppearanceManager() {
     void _media;
     void _version;
     setForm(popup);
+    setFormTersimpan(popup);
   }, []);
 
   // `loading` sudah bernilai true sejak awal; perubahan state hanya terjadi di
@@ -122,37 +161,30 @@ export function AppearanceManager() {
     return () => { active = false; };
   }, [applyAppearance]);
 
-  async function savePopup() {
-    setBusy("popup"); setError(""); setNotice("");
-    try {
-      const response = await fetch("/api/admin/appearance", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await response.json() as { appearance?: AppearanceState; notice?: string; error?: string };
-      if (!response.ok || !data.appearance) throw new Error(data.error ?? "Pengaturan popup gagal disimpan.");
-      applyAppearance(data.appearance);
-      setNotice(data.notice ?? "Pengaturan popup disimpan.");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Pengaturan popup gagal disimpan.");
-    } finally {
-      setBusy("");
-    }
+  /** Menyetel/menghapus satu perubahan gambar tertunda, melepas pratinjau lokal yang tergantikan. */
+  function gantiTertunda(key: MediaKey, item: PerubahanMedia | undefined) {
+    setTertunda((prev) => {
+      const lama = prev[key];
+      if (lama?.jenis === "berkas") URL.revokeObjectURL(lama.pratinjau);
+      const next = { ...prev };
+      if (item) next[key] = item; else delete next[key];
+      return next;
+    });
   }
 
-  async function uploadMedia(key: MediaKey, file: File) {
+  /**
+   * Memilih gambar baru: kompres dulu di peramban, lalu tahan sebagai
+   * pratinjau lokal. Belum ada yang dikirim ke server — gambar baru tayang
+   * setelah "Simpan perubahan" ditekan, dan membatalkannya tidak menyisakan
+   * berkas yatim di basis data.
+   */
+  async function pilihBerkas(key: MediaKey, file: File) {
     setBusy(key); setError(""); setNotice("");
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "POST", body });
-      const data = await response.json() as { error?: string; notice?: string; media?: AppearanceState["logo"] };
-      if (!response.ok || !data.media) throw new Error(data.error ?? "Gambar gagal diunggah.");
-      setState((current) => current ? applyMedia(current, data.media!) : current);
-      setNotice(`${MEDIA_LABELS[key]} diperbarui.`);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Gambar gagal diunggah.");
+      const hasil = await kompresGambar(file, OPSI_KOMPRESI_MEDIA[key]);
+      gantiTertunda(key, { jenis: "berkas", file: hasil.file, pratinjau: URL.createObjectURL(hasil.file), ukuranAsli: hasil.ukuranAsli });
+    } catch {
+      setError(`Gambar untuk ${MEDIA_LABELS[key].toLowerCase()} gagal diproses. Coba berkas lain.`);
     } finally {
       setBusy("");
       const input = fileInputs.current[key];
@@ -160,20 +192,81 @@ export function AppearanceManager() {
     }
   }
 
-  async function resetMedia(key: MediaKey) {
-    if (!window.confirm(`Kembalikan ${MEDIA_LABELS[key].toLowerCase()} ke gambar bawaan?`)) return;
-    setBusy(key); setError(""); setNotice("");
-    try {
-      const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "DELETE" });
-      const data = await response.json() as { error?: string; media?: AppearanceState["logo"] };
-      if (!response.ok || !data.media) throw new Error(data.error ?? "Gagal mengembalikan aset bawaan.");
-      setState((current) => current ? applyMedia(current, data.media!) : current);
-      setNotice(`${MEDIA_LABELS[key]} kembali ke gambar bawaan.`);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Gagal mengembalikan aset bawaan.");
-    } finally {
-      setBusy("");
+  /** Menahan permintaan kembali ke gambar bawaan sampai disimpan; masih bisa diurungkan sebelum itu. */
+  function tundaBawaan(key: MediaKey) {
+    setError(""); setNotice("");
+    gantiTertunda(key, { jenis: "bawaan" });
+  }
+
+  /** Mengirim satu perubahan gambar tertunda ke server dan menerapkan hasilnya ke state. */
+  async function kirimPerubahanMedia(key: MediaKey, item: PerubahanMedia) {
+    if (item.jenis === "berkas") {
+      const body = new FormData();
+      body.append("file", item.file);
+      const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "POST", body });
+      const data = await response.json() as { error?: string; media?: InfoMedia };
+      if (!response.ok || !data.media) throw new Error(data.error ?? "Gambar gagal diunggah.");
+      setState((current) => (current ? applyMedia(current, data.media!) : current));
+      return;
     }
+    const response = await fetch(`/api/admin/appearance/media/${key}`, { method: "DELETE" });
+    const data = await response.json() as { error?: string; media?: InfoMedia };
+    if (!response.ok || !data.media) throw new Error(data.error ?? "Gagal mengembalikan aset bawaan.");
+    setState((current) => (current ? applyMedia(current, data.media!) : current));
+  }
+
+  /**
+   * Satu-satunya jalan menyimpan halaman ini: kirim gambar yang tertunda satu
+   * per satu, lalu pengaturan popup bila berubah. Bila satu gambar gagal,
+   * penyimpanan berhenti dan sisanya tetap tertahan di halaman untuk dicoba
+   * lagi — tidak ada editan yang hilang.
+   */
+  async function simpanSemua() {
+    if (menyimpan) return;
+    setMenyimpan(true); setError(""); setNotice("");
+    const tersimpan: string[] = [];
+    for (const [key, item] of Object.entries(tertunda) as [MediaKey, PerubahanMedia][]) {
+      try {
+        await kirimPerubahanMedia(key, item);
+        tersimpan.push(MEDIA_LABELS[key]);
+        gantiTertunda(key, undefined);
+      } catch (caught) {
+        const pesan = caught instanceof Error ? caught.message : "Gambar gagal disimpan.";
+        setError(`${MEDIA_LABELS[key]} gagal disimpan, jadi penyimpanan dihentikan (${pesan}).${tersimpan.length ? ` ${tersimpan.join(", ")} sudah tersimpan.` : ""} Perubahan lain masih tertahan di halaman ini — periksa lalu tekan "Simpan perubahan" lagi.`);
+        setMenyimpan(false);
+        return;
+      }
+    }
+    if (JSON.stringify(form) !== JSON.stringify(formTersimpan)) {
+      try {
+        const response = await fetch("/api/admin/appearance", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await response.json() as { appearance?: AppearanceState; error?: string };
+        if (!response.ok || !data.appearance) throw new Error(data.error ?? "Pengaturan popup gagal disimpan.");
+        applyAppearance(data.appearance);
+      } catch (caught) {
+        const pesan = caught instanceof Error ? caught.message : "Pengaturan popup gagal disimpan.";
+        setError(`Gambar sudah tersimpan, tetapi pengaturan popup gagal disimpan (${pesan}). Tekan "Simpan perubahan" lagi untuk mencobanya.`);
+        setMenyimpan(false);
+        return;
+      }
+    }
+    setNotice("Perubahan tersimpan dan sudah tayang di situs publik.");
+    setMenyimpan(false);
+  }
+
+  /** Membuang semua perubahan yang belum disimpan dan kembali ke keadaan terakhir dari server. */
+  function batalkanSemua() {
+    (Object.values(tertunda) as PerubahanMedia[]).forEach((item) => {
+      if (item.jenis === "berkas") URL.revokeObjectURL(item.pratinjau);
+    });
+    setTertunda({});
+    setForm(formTersimpan);
+    setError("");
+    setNotice("Perubahan yang belum disimpan dibatalkan.");
   }
 
   function showAgain() {
@@ -199,8 +292,67 @@ export function AppearanceManager() {
   const footerLogo = state?.footerLogo;
   const hero = state?.hero;
   const media = state?.popup.media;
-  const previewAppearance: AppearanceState | undefined = state && media
-    ? { logo: state.logo, footerLogo: state.footerLogo, hero: state.hero, popup: { ...form, media, version: getPopupVersion({ ...form, media }) } }
+
+  /**
+   * Versi info media untuk pratinjau popup publik. Popup asli dirender lewat
+   * pengoptimal gambar Next yang tidak menerima URL blob lokal, jadi gambar
+   * yang baru dipilih tetap memakai gambar tersimpan di pratinjau ini —
+   * gambar barunya terlihat di pratinjau panelnya masing-masing. Penahanan
+   * "kembali ke bawaan" bisa ditampilkan persis karena berkas bawaannya ada
+   * sebagai berkas publik di repo.
+   */
+  function infoPratinjauPopup(key: MediaKey, info: InfoMedia): InfoMedia {
+    if (tertunda[key]?.jenis === "bawaan") return { ...info, url: MEDIA_DEFAULTS[key], custom: false, updatedAt: null };
+    return info;
+  }
+
+  /** Alamat gambar untuk pratinjau panel, termasuk gambar yang masih tertunda. */
+  function sumberTampil(key: MediaKey, info: InfoMedia | undefined): string {
+    const item = tertunda[key];
+    if (item?.jenis === "berkas") return item.pratinjau;
+    if (item?.jenis === "bawaan") return MEDIA_DEFAULTS[key];
+    return `${info?.url ?? MEDIA_DEFAULTS[key]}?v=${info?.updatedAt ?? "bawaan"}`;
+  }
+
+  function badgeMedia(key: MediaKey, info: InfoMedia | undefined) {
+    if (tertunda[key]) return <Badge tone="gold">Belum disimpan</Badge>;
+    if (!info) return null;
+    return <Badge tone={info.custom ? "sage" : "cream"}>{info.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>;
+  }
+
+  /** Catatan + tombol urungkan untuk satu slot gambar yang perubahannya masih tertunda. */
+  function catatanTertunda(key: MediaKey) {
+    const item = tertunda[key];
+    if (!item) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e9e2c8] bg-[#fbf7e8] px-3 py-2.5">
+        <p className="min-w-0 flex-1 text-[11px] font-semibold leading-4 text-[#7a6535]">
+          {item.jenis === "berkas"
+            ? <>Gambar baru belum disimpan — {item.file.name} ({formatUkuranBerkas(item.file.size)}{item.ukuranAsli !== item.file.size ? ` dari ${formatUkuranBerkas(item.ukuranAsli)}` : ""}). Tayang setelah Anda menekan &quot;Simpan perubahan&quot;.</>
+            : <>Akan dikembalikan ke gambar bawaan setelah Anda menekan &quot;Simpan perubahan&quot;.</>}
+        </p>
+        <button type="button" disabled={menyimpan} onClick={() => gantiTertunda(key, undefined)} className="inline-flex min-h-8 items-center rounded-lg border border-[#ddd3ae] bg-white px-2.5 text-[11px] font-bold text-[#7a6535] transition hover:bg-[#fbf7e8] disabled:opacity-50">
+          Urungkan
+        </button>
+      </div>
+    );
+  }
+
+  const popupKotor = JSON.stringify(form) !== JSON.stringify(formTersimpan);
+  const jumlahTertunda = Object.keys(tertunda).length;
+  const adaPerubahan = popupKotor || jumlahTertunda > 0;
+  const ringkasanPerubahan = [
+    ...(popupKotor ? ["pengaturan popup"] : []),
+    ...(Object.keys(tertunda) as MediaKey[]).map((key) => MEDIA_LABELS[key].toLowerCase()),
+  ].join(", ");
+
+  const mediaPratinjau = media ? {
+    mobile: infoPratinjauPopup("popup-mobile", media.mobile),
+    desktop: infoPratinjauPopup("popup-desktop", media.desktop),
+    latar: infoPratinjauPopup("popup-latar", media.latar),
+  } : undefined;
+  const previewAppearance: AppearanceState | undefined = state && mediaPratinjau
+    ? { logo: state.logo, footerLogo: state.footerLogo, hero: state.hero, popup: { ...form, media: mediaPratinjau, version: getPopupVersion({ ...form, media: mediaPratinjau }) } }
     : undefined;
 
   return (
@@ -239,32 +391,33 @@ export function AppearanceManager() {
             <h2 className="text-sm font-extrabold text-[#344638]">Logo situs</h2>
             <p className="mt-1 text-[10px] text-[#929a91]">Dipakai di navbar, footer, halaman masuk, popup sambutan, dan dashboard.</p>
           </div>
-          {logo && <Badge tone={logo.custom ? "sage" : "cream"}>{logo.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+          {badgeMedia("logo", logo)}
         </header>
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr]">
           <div className="grid content-start gap-3">
             <div className="grid place-items-center rounded-2xl border border-[#e8ece5] bg-[#f7f9f5] p-4">
-              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} unoptimized alt="Pratinjau logo situs" width={104} height={104} className="h-26 w-26 object-contain" />
+              <Image src={sumberTampil("logo", logo)} unoptimized alt="Pratinjau logo situs" width={104} height={104} className="h-26 w-26 object-contain" />
             </div>
-            <p className="text-center text-[10px] leading-4 text-[#929a91]">Diperbarui: {formatDate(logo?.updatedAt ?? null)}</p>
+            <p className="text-center text-[10px] leading-4 text-[#929a91]">{tertunda.logo ? "Ada gambar baru yang belum disimpan." : `Diperbarui: ${formatDate(logo?.updatedAt ?? null)}`}</p>
           </div>
           <div className="grid content-start gap-3">
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] px-4 py-3">
-              <Image src={`${logo?.url ?? "/images/logo-umpan-mas.png"}?v=${logo?.updatedAt ?? "bawaan"}`} unoptimized alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl" />
+              <Image src={sumberTampil("logo", logo)} unoptimized alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl" />
               <span className="text-[15px] font-black tracking-[.07em] text-[#21392a]">UMPAN MAS</span>
               <span className="ml-auto text-[10px] font-semibold text-[#929a91]">Contoh pemakaian di navbar</span>
             </div>
-            <p className={hintClass}>Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.logo)}. Latar transparan (PNG) paling bagus untuk logo.</p>
+            <p className={hintClass}>Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.logo)}. Gambar besar otomatis dikecilkan dan dikompres (target sekitar 100 KB) dengan kualitas dijaga. Latar transparan (PNG) paling bagus untuk logo.</p>
             <div className="flex flex-wrap gap-2">
               <input ref={(node) => { fileInputs.current.logo = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
-                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("logo", file); }} />
-              <button type="button" disabled={busy === "logo"} onClick={() => fileInputs.current.logo?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                {busy === "logo" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo baru
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void pilihBerkas("logo", file); }} />
+              <button type="button" disabled={busy === "logo" || menyimpan} onClick={() => fileInputs.current.logo?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "logo" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Pilih logo baru
               </button>
-              <button type="button" disabled={busy === "logo" || !logo?.custom} onClick={() => void resetMedia("logo")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "logo" || menyimpan || (!logo?.custom && !tertunda.logo)} onClick={() => tundaBawaan("logo")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
+            {catatanTertunda("logo")}
             <p className={hintClass}>Favicon masih berkas tetap di repo (<code>src/app/icon.png</code>), jadi baru mengikuti logo setelah deploy ulang.</p>
           </div>
         </div>
@@ -277,13 +430,13 @@ export function AppearanceManager() {
             <h2 className="text-sm font-extrabold text-[#344638]">Logo footer</h2>
             <p className="mt-1 text-[10px] text-[#929a91]">Khusus footer. Navbar tetap memakai logo situs di atas, jadi keduanya boleh berbeda berkas.</p>
           </div>
-          {footerLogo && <Badge tone={footerLogo.custom ? "sage" : "cream"}>{footerLogo.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+          {badgeMedia("logo-footer", footerLogo)}
         </header>
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr]">
           <div className="grid content-start gap-3">
             <div className="grid place-items-center gap-2 rounded-2xl bg-[#172d22] p-4">
               <Image
-                src={`${footerLogo?.url ?? "/api/media/logo-footer"}?v=${footerLogo?.updatedAt ?? "bawaan"}`}
+                src={sumberTampil("logo-footer", footerLogo)}
                 unoptimized
                 alt="Pratinjau logo footer"
                 width={64}
@@ -292,23 +445,24 @@ export function AppearanceManager() {
               />
               <span className="text-lg font-extrabold tracking-tight text-white">UMPAN MAS</span>
             </div>
-            <p className="text-center text-[10px] leading-4 text-[#929a91]">Contoh di atas latar hijau footer · diperbarui {formatDate(footerLogo?.updatedAt ?? null)}</p>
+            <p className="text-center text-[10px] leading-4 text-[#929a91]">{tertunda["logo-footer"] ? "Ada gambar baru yang belum disimpan." : `Contoh di atas latar hijau footer · diperbarui ${formatDate(footerLogo?.updatedAt ?? null)}`}</p>
           </div>
           <div className="grid content-start gap-3">
             <p className={hintClass}>
-              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES["logo-footer"])}. Latar transparan (PNG) paling bagus.
-              Bawaannya berkas <code>public/images/logo-footer.png</code> — bisa diganti langsung di GitHub, atau diunggah di sini agar berlaku tanpa deploy ulang.
+              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES["logo-footer"])}. Gambar besar otomatis dikecilkan dan dikompres (target sekitar 100 KB) dengan kualitas dijaga. Latar transparan (PNG) paling bagus.
+              Bawaannya berkas <code>public/images/logo-footer.png</code> — bisa diganti langsung di GitHub, atau dipilih di sini agar berlaku tanpa deploy ulang.
             </p>
             <div className="flex flex-wrap gap-2">
               <input ref={(node) => { fileInputs.current["logo-footer"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
-                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("logo-footer", file); }} />
-              <button type="button" disabled={busy === "logo-footer"} onClick={() => fileInputs.current["logo-footer"]?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                {busy === "logo-footer" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah logo footer
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void pilihBerkas("logo-footer", file); }} />
+              <button type="button" disabled={busy === "logo-footer" || menyimpan} onClick={() => fileInputs.current["logo-footer"]?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "logo-footer" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Pilih logo footer
               </button>
-              <button type="button" disabled={busy === "logo-footer" || !footerLogo?.custom} onClick={() => void resetMedia("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "logo-footer" || menyimpan || (!footerLogo?.custom && !tertunda["logo-footer"])} onClick={() => tundaBawaan("logo-footer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
+            {catatanTertunda("logo-footer")}
           </div>
         </div>
       </section>
@@ -320,7 +474,7 @@ export function AppearanceManager() {
             <h2 className="text-sm font-extrabold text-[#344638]">Gambar hero (beranda)</h2>
             <p className="mt-1 text-[10px] text-[#929a91]">Gambar besar di atas beranda. Sisi kiri tertutup gradasi hijau dan teks, jadi letakkan objek utama di sisi kanan.</p>
           </div>
-          {hero && <Badge tone={hero.custom ? "sage" : "cream"}>{hero.custom ? "Gambar unggahan" : "Gambar bawaan"}</Badge>}
+          {badgeMedia("hero", hero)}
         </header>
         <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
@@ -329,7 +483,7 @@ export function AppearanceManager() {
             <div className="mt-2 overflow-hidden rounded-xl border border-[#e8ece5] bg-[#173326]">
               <div className="relative aspect-[16/9] w-full">
                 <Image
-                  src={`${hero?.url ?? "/api/media/hero"}?v=${hero?.updatedAt ?? "bawaan"}`}
+                  src={sumberTampil("hero", hero)}
                   unoptimized
                   alt="Pratinjau gambar hero"
                   fill
@@ -350,19 +504,20 @@ export function AppearanceManager() {
           </div>
           <div className="grid content-start gap-3">
             <p className={hintClass}>
-              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.hero)}. Disarankan gambar lanskap minimal 1280 px.
+              Format PNG, JPEG, atau WebP. Maksimal {formatBytes(MEDIA_MAX_BYTES.hero)}. Gambar besar otomatis dikecilkan (lebar maks 1920 px) dan dikompres dengan target sekitar 200 KB agar beranda tetap ringan, dengan kualitas dijaga supaya tidak pecah. Disarankan gambar lanskap minimal 1280 px.
             </p>
-            <p className={hintClass}>Diperbarui: {formatDate(hero?.updatedAt ?? null)}. Gambar baru langsung tampil di beranda setelah tersimpan.</p>
+            <p className={hintClass}>{tertunda.hero ? "Ada gambar baru yang belum disimpan." : `Diperbarui: ${formatDate(hero?.updatedAt ?? null)}. Gambar baru langsung tampil di beranda setelah tersimpan.`}</p>
             <div className="flex flex-wrap gap-2">
               <input ref={(node) => { fileInputs.current.hero = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
-                onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("hero", file); }} />
-              <button type="button" disabled={busy === "hero"} onClick={() => fileInputs.current.hero?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                {busy === "hero" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Unggah gambar hero
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) void pilihBerkas("hero", file); }} />
+              <button type="button" disabled={busy === "hero" || menyimpan} onClick={() => fileInputs.current.hero?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                {busy === "hero" ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} Pilih gambar hero
               </button>
-              <button type="button" disabled={busy === "hero" || !hero?.custom} onClick={() => void resetMedia("hero")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              <button type="button" disabled={busy === "hero" || menyimpan || (!hero?.custom && !tertunda.hero)} onClick={() => tundaBawaan("hero")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                 <RotateCcw size={14} /> Kembalikan bawaan
               </button>
             </div>
+            {catatanTertunda("hero")}
           </div>
         </div>
       </section>
@@ -410,26 +565,28 @@ export function AppearanceManager() {
                     <div key={key} className="rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS[key]}</p>
-                        <Badge tone={info?.custom ? "sage" : "cream"}>{info?.custom ? "Unggahan" : "Bawaan"}</Badge>
+                        {badgeMedia(key, info)}
                       </div>
                       <PosterPreview
-                        src={`${info?.url ?? ""}?v=${info?.updatedAt ?? "bawaan"}`}
+                        src={sumberTampil(key, info)}
                         intrinsicWidth={key === "popup-mobile" ? 860 : 1640}
                         intrinsicHeight={key === "popup-mobile" ? 1216 : 1040}
                         frameClass={key === "popup-mobile" ? "mx-auto max-w-[190px]" : ""}
                         alt={`Pratinjau ${MEDIA_LABELS[key].toLowerCase()}`}
-                        note={`bawaan ${formatBytes(key === "popup-mobile" ? 90_655 : 125_652)} · diperbarui ${formatDate(info?.updatedAt ?? null)}`}
+                        note={tertunda[key] ? "gambar baru belum disimpan" : `bawaan ${formatBytes(key === "popup-mobile" ? 90_655 : 125_652)} · diperbarui ${formatDate(info?.updatedAt ?? null)}`}
                       />
+                      <p className={`mt-2 ${hintClass}`}>Gambar besar otomatis dikecilkan (lebar maks 1080 px) dan dikompres dengan target sekitar 200 KB, kualitas dijaga.</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <input ref={(node) => { fileInputs.current[key] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
-                          onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(key, file); }} />
-                        <button type="button" disabled={busy === key} onClick={() => fileInputs.current[key]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                          {busy === key ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
+                          onChange={(event) => { const file = event.target.files?.[0]; if (file) void pilihBerkas(key, file); }} />
+                        <button type="button" disabled={busy === key || menyimpan} onClick={() => fileInputs.current[key]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                          {busy === key ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Pilih gambar
                         </button>
-                        <button type="button" disabled={busy === key || !info?.custom} onClick={() => void resetMedia(key)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                        <button type="button" disabled={busy === key || menyimpan || (!info?.custom && !tertunda[key])} onClick={() => tundaBawaan(key)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                           <Trash2 size={13} /> Hapus
                         </button>
                       </div>
+                      <div className="mt-2">{catatanTertunda(key)}</div>
                     </div>
                   );
                 })}
@@ -439,24 +596,25 @@ export function AppearanceManager() {
                 <div className="rounded-2xl border border-[#e8ece5] bg-[#fbfcfa] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-extrabold text-[#354639]">{MEDIA_LABELS["popup-latar"]}</p>
-                    <Badge tone={media?.latar.custom ? "sage" : "cream"}>{media?.latar.custom ? "Unggahan" : "Bawaan"}</Badge>
+                    {badgeMedia("popup-latar", media?.latar)}
                   </div>
                   <div className="mt-3 rounded-xl border border-[#e8ece5] bg-[#f1f4ef] p-2">
                     <div className="relative mx-auto w-full max-w-[190px] overflow-hidden rounded-lg" style={{ aspectRatio: POPUP_LATAR_RATIO }}>
-                      <Image src={`${media?.latar.url ?? ""}?v=${media?.latar.updatedAt ?? "bawaan"}`} unoptimized alt="Pratinjau latar popup mode teks" fill sizes="190px" className="object-cover object-center" />
+                      <Image src={sumberTampil("popup-latar", media?.latar)} unoptimized alt="Pratinjau latar popup mode teks" fill sizes="190px" className="object-cover object-center" />
                     </div>
                   </div>
-                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) sebagai latar, persis seperti yang dilihat pengunjung. Pilih gambar gelap atau berkontras rendah di area teks, karena teks popup putih.</p>
+                  <p className="mt-2 text-[10px] font-medium text-[#959c93]">Dipotong mengikuti bingkai popup (43:64) sebagai latar, persis seperti yang dilihat pengunjung. Pilih gambar gelap atau berkontras rendah di area teks, karena teks popup putih. Gambar besar otomatis dikecilkan (lebar maks 1080 px) dan dikompres dengan target sekitar 200 KB, kualitas dijaga.</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <input ref={(node) => { fileInputs.current["popup-latar"] = node; }} type="file" accept={MEDIA_ACCEPT} className="sr-only"
-                      onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia("popup-latar", file); }} />
-                    <button type="button" disabled={busy === "popup-latar"} onClick={() => fileInputs.current["popup-latar"]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                      {busy === "popup-latar" ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Ganti gambar
+                      onChange={(event) => { const file = event.target.files?.[0]; if (file) void pilihBerkas("popup-latar", file); }} />
+                    <button type="button" disabled={busy === "popup-latar" || menyimpan} onClick={() => fileInputs.current["popup-latar"]?.click()} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#294b34] px-3 text-[11px] font-bold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                      {busy === "popup-latar" ? <Loader2 size={13} className="animate-spin" /> : <ImageUp size={13} />} Pilih gambar
                     </button>
-                    <button type="button" disabled={busy === "popup-latar" || !media?.latar.custom} onClick={() => void resetMedia("popup-latar")} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                    <button type="button" disabled={busy === "popup-latar" || menyimpan || (!media?.latar.custom && !tertunda["popup-latar"])} onClick={() => tundaBawaan("popup-latar")} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3 text-[11px] font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
                       <Trash2 size={13} /> Hapus
                     </button>
                   </div>
+                  <div className="mt-2">{catatanTertunda("popup-latar")}</div>
                 </div>
 
                 <label className={labelClass}>
@@ -534,15 +692,29 @@ export function AppearanceManager() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe7dc] bg-white px-4 text-xs font-bold text-[#506550] transition hover:bg-[#f3f6f0] disabled:opacity-50">
                 <Eye size={15} /> Pratinjau versi sekarang
               </button>
-              <button type="button" onClick={() => void savePopup()} disabled={busy === "popup"}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
-                {busy === "popup" ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Simpan pengaturan popup
-              </button>
             </div>
-            <p className={hintClass}>Pratinjau memakai pengaturan yang sedang Anda isi, termasuk yang belum disimpan.</p>
+            <p className={hintClass}>Pratinjau memakai isian yang sedang Anda buat, termasuk yang belum disimpan. Gambar popup yang baru dipilih terlihat di pratinjau panelnya; semua perubahan baru tayang setelah tombol &quot;Simpan perubahan&quot; di bawah halaman ditekan.</p>
           </div>
         </div>
       </section>
+
+      {adaPerubahan && !readOnly && (
+        <div className="sticky bottom-4 z-20 mt-6 flex flex-col gap-3 rounded-2xl border border-[#d8e2d2] bg-white/95 p-4 shadow-[0_16px_40px_rgba(31,46,34,.14)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <p role="status" className="text-xs leading-5 text-[#5c6a5c]">
+            <strong className="text-[#344638]">Ada perubahan belum disimpan</strong> — {ringkasanPerubahan}. Perubahan baru tayang di situs publik setelah disimpan.
+          </p>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button type="button" onClick={batalkanSemua} disabled={menyimpan}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+              Batalkan
+            </button>
+            <button type="button" onClick={() => void simpanSemua()} disabled={menyimpan}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+              {menyimpan ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Simpan perubahan
+            </button>
+          </div>
+        </div>
+      )}
 
       </fieldset>
 

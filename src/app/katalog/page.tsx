@@ -3,13 +3,20 @@ import { PageShell } from "@/components/navigation";
 import { Footer } from "@/components/shared";
 import { CatalogView } from "@/components/catalog-view";
 import { createPageMetadata } from "@/lib/seo";
+import { readAppearance } from "@/lib/appearance-server";
+import { HERO_ALT } from "@/lib/brand";
 import { getPublicRecipeData } from "@/lib/public-recipes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Katalog Resep Umpan Ikan Mas",
-  description: "Jelajahi resep umpan ikan mas, saring berdasarkan bahan, cuaca, kondisi air, budget, jenis kolam, dan provinsi — plus baca cerita dan ulasan komunitas pemancing.",
-  path: "/katalog",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const { hero } = await readAppearance();
+  return createPageMetadata({
+    title: "Katalog Resep Umpan Ikan Mas",
+    description: "Jelajahi resep umpan ikan mas, saring berdasarkan bahan, cuaca, kondisi air, budget, jenis kolam, dan provinsi — plus baca cerita dan ulasan komunitas pemancing.",
+    path: "/katalog",
+    image: hero.url,
+    imageAlt: HERO_ALT,
+  });
+}
 
 /**
  * ISR satu jam (plus revalidasi on-demand saat resep disimpan dari
