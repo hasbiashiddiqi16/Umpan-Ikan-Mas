@@ -10,6 +10,8 @@ import type { Recipe as RecipeData } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
 import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, createPageMetadata } from "@/lib/seo";
+import { readAppearance } from "@/lib/appearance-server";
+import { HERO_ALT } from "@/lib/brand";
 import { getRecipeRatings } from "@/lib/review-summary";
 import { getPublicRecipes } from "@/lib/public-recipes";
 import { RecipeCardSkeleton } from "@/components/skeletons";
@@ -19,10 +21,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const province = provinces.find((item) => item.slug === slug);
   if (!province) return { title: "Provinsi tidak ditemukan", robots: { index: false, follow: false } };
 
+  const { hero } = await readAppearance();
   return createPageMetadata({
     title: `Umpan Ikan Mas di ${province.name}`,
     description: `Temukan resep umpan ikan mas di ${province.name}, racikan yang dikaitkan dengan daerah, cuaca, dan kondisi kolam. Lihat bahan dan langkah meraciknya.`,
     path: `/provinsi/${province.slug}`,
+    image: hero.url,
+    imageAlt: HERO_ALT,
   });
 }
 

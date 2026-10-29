@@ -8,14 +8,21 @@ import { RecipeCard } from "@/components/recipe-card";
 import { RecipeCardSkeleton } from "@/components/skeletons";
 import type { Recipe } from "@/data/recipes";
 import { createPageMetadata } from "@/lib/seo";
+import { readAppearance } from "@/lib/appearance-server";
+import { HERO_ALT } from "@/lib/brand";
 import { getRecipeRatings } from "@/lib/review-summary";
 import { getPublicRecipes } from "@/lib/public-recipes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Umpan Ikan Mas Berdasarkan Cuaca",
-  description: "Panduan memilih resep umpan ikan mas saat hujan, panas, mendung, atau cerah dengan mempertimbangkan kondisi kolam.",
-  path: "/cuaca",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const { hero } = await readAppearance();
+  return createPageMetadata({
+    title: "Umpan Ikan Mas Berdasarkan Cuaca",
+    description: "Panduan memilih resep umpan ikan mas saat hujan, panas, mendung, atau cerah dengan mempertimbangkan kondisi kolam.",
+    path: "/cuaca",
+    image: hero.url,
+    imageAlt: HERO_ALT,
+  });
+}
 
 const guides = [
   { id: "musim-hujan", title: "Musim Hujan", icon: CloudRain, description: "Perubahan suhu dan aliran air bisa memengaruhi aktivitas ikan. Racikan beraroma gurih sering menjadi titik awal yang dicoba pemancing.", conditions: ["Hujan ringan hingga sedang", "Air dapat berubah lebih keruh", "Perhatikan aliran masuk kolam"], tip: "Sesuaikan kelembapan adonan agar tetap menempel saat air lebih aktif. Hindari menambahkan essen terlalu banyak sekaligus.", filter: (recipe: Recipe) => recipe.seasons.includes("Musim Hujan") },

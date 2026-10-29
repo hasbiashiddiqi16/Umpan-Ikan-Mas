@@ -7,14 +7,21 @@ import { ProvinceCard } from "@/components/cards";
 import { provinces } from "@/data/provinces";
 import { jabodetabekProvinces } from "@/data/recipes";
 import { createPageMetadata } from "@/lib/seo";
+import { readAppearance } from "@/lib/appearance-server";
+import { HERO_ALT } from "@/lib/brand";
 import { getRecipeRatings } from "@/lib/review-summary";
 import { countRecipesForProvince, getPublicRecipes } from "@/lib/public-recipes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Umpan Ikan Mas per Provinsi",
-  description: "Jelajahi resep umpan ikan mas dan cerita mancing komunitas dari 38 provinsi di Indonesia. Kondisi tiap kolam dapat berbeda.",
-  path: "/provinsi",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const { hero } = await readAppearance();
+  return createPageMetadata({
+    title: "Umpan Ikan Mas per Provinsi",
+    description: "Jelajahi resep umpan ikan mas dan cerita mancing komunitas dari 38 provinsi di Indonesia. Kondisi tiap kolam dapat berbeda.",
+    path: "/provinsi",
+    image: hero.url,
+    imageAlt: HERO_ALT,
+  });
+}
 
 export default async function ProvincesPage() {
   // Resep populer tiap provinsi dihitung dari ulasan nyata, bukan angka katalog.

@@ -15,19 +15,32 @@ import { provinces } from "@/data/provinces";
 import { getRecommendedRecipes } from "@/lib/recommendation";
 import { getLatestCommunityReviews, getRecipeRatings } from "@/lib/review-summary";
 import { countRecipesForProvince, getPublicRecipes } from "@/lib/public-recipes";
+import { readAppearance } from "@/lib/appearance-server";
+import { HERO_ALT } from "@/lib/brand";
 import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  ...createPageMetadata({
-    title: "Umpan Ikan Mas Indonesia | UMPAN MAS",
-    description: "Temukan resep umpan ikan mas untuk kolam di DKI Jakarta berdasarkan cuaca, kondisi air, dan jenis kolam.",
-    path: "/",
-    includeBrandInSocialTitle: false,
-  }),
-  verification: {
-    google: "ksR7woDfyr120REWdc8Keka9ionxwZMLodsD4P-4r9M",
-  },
-};
+/**
+ * Metadata beranda dibuat dinamis agar gambar pratinjau berbaginya selalu
+ * memakai banner hero terkini dari Dashboard Tampilan (alamat berversi),
+ * bukan berkas banner statis. Karena simpan hero dari dashboard sudah
+ * memicu pembangunan ulang halaman ini, pratinjau ikut terbarui bersamanya.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { hero } = await readAppearance();
+  return {
+    ...createPageMetadata({
+      title: "Umpan Ikan Mas Indonesia | UMPAN MAS",
+      description: "Temukan resep umpan ikan mas untuk kolam di DKI Jakarta berdasarkan cuaca, kondisi air, dan jenis kolam.",
+      path: "/",
+      image: hero.url,
+      imageAlt: HERO_ALT,
+      includeBrandInSocialTitle: false,
+    }),
+    verification: {
+      google: "ksR7woDfyr120REWdc8Keka9ionxwZMLodsD4P-4r9M",
+    },
+  };
+}
 
 /** Resep paling banyak diulas di sebuah provinsi — dihitung dari tabel ulasan. */
 function popularRecipeFor(provinceName: string, ratings: Record<string, { count: number; average: number }>, publicRecipes: Recipe[]) {
