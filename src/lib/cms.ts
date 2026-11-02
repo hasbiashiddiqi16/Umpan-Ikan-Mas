@@ -63,9 +63,10 @@ const validWater: string[] = [...WATER_CONDITIONS];
 const validTypes = ["Harian", "Lomba", "Galatama", "Galat"];
 const validSeasons: string[] = [...SEASON_CONDITIONS];
 
-function stringArray(value: unknown, allowed?: string[]): string[] | null {
+function stringArray(value: unknown, allowed?: string[], maxItemLength = 120): string[] | null {
+  if (value === undefined || value === null) return [];
   // Batas 40: daftar terpanjang yang sah adalah 38 provinsi (tombol "Semua").
-  if (!Array.isArray(value) || value.length > 40 || value.some((item) => typeof item !== "string" || item.length > 120)) return null;
+  if (!Array.isArray(value) || value.length > 40 || value.some((item) => typeof item !== "string" || item.length > maxItemLength)) return null;
   const values = [...new Set(value.map((item) => (item as string).trim()).filter(Boolean))];
   return allowed && values.some((item) => !allowed.includes(item)) ? null : values;
 }
@@ -76,10 +77,12 @@ function ingredientArray(value: unknown): CmsIngredient[] | null {
   for (const entry of value) {
     if (!entry || typeof entry !== "object") return null;
     const item = entry as Record<string, unknown>;
-    if ([item.name, item.brand, item.amount].some((part) => typeof part !== "string" || !part.trim() || part.length > 120)) return null;
+    if ([item.name, item.amount].some((part) => typeof part !== "string" || !part.trim() || part.length > 120)) return null;
+    if (item.brand !== undefined && item.brand !== null && (typeof item.brand !== "string" || item.brand.trim().length > 120)) return null;
+    const rawBrand = typeof item.brand === "string" ? item.brand.trim() : "";
     result.push({
       name: (item.name as string).trim(),
-      brand: (item.brand as string).trim(),
+      brand: rawBrand === "-" ? "" : rawBrand,
       amount: (item.amount as string).trim(),
       ...(item.optional === true ? { optional: true } : {}),
     });
@@ -119,7 +122,7 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const title = typeof item.title === "string" ? item.title.trim() : "";
   const summary = typeof item.summary === "string" ? item.summary.trim() : "";
   if (title.length < 3 || title.length > 180) return { error: "Judul harus berisi 3–180 karakter." };
-  if (summary.length < 15 || summary.length > 1500) return { error: "Ringkasan harus berisi 15–1.500 karakter." };
+  if (summary.length < 10 || summary.length > 1500) return { error: "Ringkasan harus berisi 10–1.500 karakter." };
   const status = typeof item.status === "string" && validStatuses.includes(item.status) ? item.status : "draft";
   const difficulty = typeof item.difficulty === "string" && validDifficulties.includes(item.difficulty) ? item.difficulty : "Mudah";
   const weather = stringArray(item.weather, validWeather);
@@ -140,13 +143,14 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   const category = fishingTypes ? fishingTypes[0] : primaryFishingType(title, []);
   const provinces = stringArray(item.provinces);
   const seasons = stringArray(item.seasons, validSeasons);
-  const steps = stringArray(item.steps);
-  const suitable = stringArray(item.suitable)?.map(normalizeFishingText);
-  const notSuitable = stringArray(item.notSuitable)?.map(normalizeFishingText);
+  const steps = stringArray(item.steps, undefined, 500);
+  const suitable = stringArray(item.suitable, undefined, 500)?.map(normalizeFishingText);
+  const notSuitable = stringArray(item.notSuitable, undefined, 500)?.map(normalizeFishingText);
   const ingredients = ingredientArray(item.ingredients);
-  // Pesan khusus untuk tipe air, supaya editor tahu bagian mana yang salah.
+  // Pesan khusus untuk tipe air & langkah, supaya pengirim tahu bagian mana yang salah.
   if (waterBodies === null) return { error: "Tipe air hanya boleh berisi Kolam, Sungai, atau Danau." };
-  if (!weather || !water || !fishingTypes || !provinces || !seasons || !steps || !suitable || !notSuitable || !ingredients) return { error: "Daftar kondisi, bahan, atau langkah tidak valid." };
+  if (steps === null) return { error: "Setiap langkah maksimal 500 karakter (maksimal 40 langkah)." };
+  if (!weather || !water || !fishingTypes || !provinces || !seasons || !suitable || !notSuitable || !ingredients) return { error: "Daftar kondisi, bahan, atau langkah tidak valid." };
   if (ingredients.length < 1) return { error: "Tambahkan minimal satu bahan resep." };
   if (steps.length < 1) return { error: "Tambahkan minimal satu langkah meracik." };
   const suppliedSlug = typeof item.slug === "string" ? item.slug : "";
@@ -154,7 +158,7 @@ export function validateCmsRecipeInput(value: unknown): { data?: CmsRecipeInput;
   if (!slug || slug.length > 180) return { error: "Slug konten tidak valid." };
   const priceValue = Number(item.priceValue);
   if (!Number.isFinite(priceValue) || priceValue < 0 || priceValue > 100_000_000) return { error: "Estimasi harga tidak valid." };
-  const price = typeof item.price === "string" && item.price.trim().length <= 80 ? item.price.trim() : "Rp15.000–30.000";
+  const price = typeof item.price === "string" && item.price.trim().length > 0 && item.price.trim().length <= 80 ? item.price.trim() : "Rp15.000–30.000";
   // Foto: `image` adalah thumbnail, `images` seluruh galeri. Masukan lama
   // yang hanya membawa `image` otomatis menjadi galeri satu foto.
   const imageMentah = typeof item.image === "string" && item.image.startsWith("/") && item.image.length <= 500 ? item.image : DEFAULT_RECIPE_IMAGE;

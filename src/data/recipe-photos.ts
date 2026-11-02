@@ -58,6 +58,6 @@ export function buildRecipeImageAlt(recipe: {
   const bahanInti = recipe.ingredients.filter((item) => !item.optional).slice(0, 3).map((item) => item.name.toLocaleLowerCase("id-ID"));
   const bahan = bahanInti.length ? bahanInti.join(", ") : "bahan racikan pilihan";
   const jenis = recipe.fishingTypes[0] ?? "Harian";
-  const air = recipe.water[0]?.toLocaleLowerCase("id-ID") ?? "keruh";
-  return `Adonan ${recipe.name} berwarna ${recipePhotoWarna(recipe.name)}, berbahan ${bahan}. Racikan ikan mas untuk ${jenis} di air ${air}`;
+  const air = recipe.water[0]?.toLocaleLowerCase("id-ID");
+  return `Adonan ${recipe.name} berwarna ${recipePhotoWarna(recipe.name)}, berbahan ${bahan}. Racikan ikan mas untuk ${jenis}${air ? ` di air ${air}` : ""}`;
 }

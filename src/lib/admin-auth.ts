@@ -175,18 +175,26 @@ export async function verifyAdminSessionToken(token?: string) {
  * Menyimpan cookie sesi admin pada respons. Dipakai saat login dan saat password
  * diganti (agar perangkat yang mengganti tidak ikut terkeluar).
  */
+export function adminCookieOptions(request: Request) {
+  const secure = requestIsSecure(request);
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
+  // Di preview iframe lintas-domain Arena (*.e2b.app via HTTPS), cookie Lax
+  // tidak dikirim peramban; gunakan SameSite=None + Partitioned hanya di host preview itu.
+  const embeddedPreview = secure && host.endsWith(".e2b.app");
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: embeddedPreview ? ("none" as const) : ("lax" as const),
+    ...(embeddedPreview ? { partitioned: true } : {}),
+    path: "/",
+  };
+}
+
 export function setAdminSessionCookie(response: NextResponse, request: Request, token: string) {
-  // Cookie Secure hanya saat permintaan memang datang lewat HTTPS (langsung
-  // atau lewat proxy seperti Vercel). Dipaksakan di HTTP membuat browser
-  // menolak menyimpan cookie sesi sehingga pengguna "sudah login tapi tetap
-  // tidak bisa masuk dashboard".
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,
     value: token,
-    httpOnly: true,
-    secure: requestIsSecure(request),
-    sameSite: "lax",
-    path: "/",
+    ...adminCookieOptions(request),
     maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
   });
 }
