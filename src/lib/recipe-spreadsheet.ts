@@ -26,37 +26,59 @@ export const SPREADSHEET_MAX_ROWS = 200;
 
 export type SpreadsheetRowFailure = { baris: number; judul: string; pesan: string };
 
-type Kolom = { key: string; header: string; width: number };
+type Kolom = { key: string; header: string; width: number; wajib?: boolean };
 
-/** Urutan kolom pada template (sekaligus urutan yang disarankan di berkas admin). */
+/**
+ * Urutan kolom pada template Excel (selaras formulir ringkas dashboard):
+ * 5 kolom wajib di kiri, diikuti 8 kolom opsional di kanan.
+ * Kolom lama yang sudah dipensiunkan dari formulir (Tingkat kesulitan, Tipe air,
+ * Musim, Cocok untuk, Kurang cocok) tetap dikenali saat impor berkas lama lewat
+ * `HEADER_ALIASES`, tetapi tidak lagi ditampilkan di template baru.
+ */
 export const RECIPE_SPREADSHEET_COLUMNS: Kolom[] = [
-  { key: "title", header: "Judul", width: 28 },
+  { key: "title", header: "Judul", width: 30, wajib: true },
+  { key: "summary", header: "Ringkasan", width: 46, wajib: true },
+  { key: "fishingTypes", header: "Jenis kolam", width: 20, wajib: true },
+  { key: "ingredients", header: "Bahan", width: 42, wajib: true },
+  { key: "steps", header: "Langkah", width: 48, wajib: true },
+  { key: "status", header: "Status", width: 14 },
   { key: "slug", header: "Slug", width: 24 },
-  { key: "summary", header: "Ringkasan", width: 44 },
-  { key: "status", header: "Status", width: 12 },
-  { key: "price", header: "Label harga", width: 18 },
-  { key: "difficulty", header: "Tingkat kesulitan", width: 16 },
-  { key: "weather", header: "Cuaca", width: 24 },
+  { key: "image", header: "URL foto", width: 28 },
+  { key: "weather", header: "Cuaca", width: 22 },
   { key: "water", header: "Kondisi air", width: 22 },
-  { key: "waterBodies", header: "Tipe air", width: 16 },
-  { key: "fishingTypes", header: "Jenis kolam", width: 22 },
   { key: "provinces", header: "Provinsi terkait", width: 26 },
-  { key: "seasons", header: "Musim", width: 22 },
-  { key: "ingredients", header: "Bahan", width: 46 },
-  { key: "steps", header: "Langkah", width: 46 },
-  { key: "suitable", header: "Cocok untuk", width: 28 },
-  { key: "notSuitable", header: "Kurang cocok", width: 28 },
-  { key: "author", header: "Penulis", width: 16 },
-  { key: "image", header: "URL foto", width: 26 },
+  { key: "price", header: "Perkiraan biaya", width: 20 },
+  { key: "author", header: "Penulis", width: 18 },
 ];
 
-/** Nama kolom yang dikenali (Bahasa Indonesia sesuai template + beberapa alias). */
+/**
+ * Baris contoh pada template Excel: HANYA 5 kolom wajib yang diberi contoh isi.
+ * Seluruh kolom opsional — termasuk merek bahan & penanda "| opsional" —
+ * sengaja dibiarkan kosong.
+ */
+export const CONTOH_BARIS_RESEP: Readonly<Record<"title" | "summary" | "fishingTypes" | "ingredients" | "steps", string>> = {
+  title: "Contoh Umpan Jagung Kukus",
+  summary: "Racikan dasar jagung manis kukus dan pelet halus yang mudah disiapkan untuk kolam harian.",
+  fishingTypes: "Harian",
+  ingredients: [
+    "Jagung manis kukus | 2 bonggol",
+    "Pelet halus | 100 g",
+    "Kuning telur bebek | 1 butir",
+  ].join("\n"),
+  steps: [
+    "Parut jagung manis kukus lalu haluskan sampai lembut.",
+    "Campurkan kuning telur bebek dan pelet halus sedikit demi sedikit sambil diuleni.",
+    "Bentuk adonan seukuran kelereng dan siap dipasang di kail.",
+  ].join("\n"),
+};
+
+/** Nama kolom yang dikenali (Bahasa Indonesia sesuai template + beberapa alias & kolom lama). */
 const HEADER_ALIASES: Record<string, string> = {
   judul: "title", "nama resep": "title", title: "title",
   slug: "slug",
   ringkasan: "summary", deskripsi: "summary", summary: "summary",
   status: "status",
-  "label harga": "price", harga: "price", price: "price",
+  "perkiraan biaya": "price", "estimasi biaya": "price", biaya: "price", "label harga": "price", harga: "price", price: "price",
   "tingkat kesulitan": "difficulty", kesulitan: "difficulty", difficulty: "difficulty",
   cuaca: "weather", weather: "weather",
   "kondisi air": "water", water: "water",
@@ -74,7 +96,7 @@ const HEADER_ALIASES: Record<string, string> = {
 
 /** Kolom yang wajib ada di baris judul berkas. */
 const REQUIRED_COLUMNS: Record<string, string> = {
-  title: "Judul", summary: "Ringkasan", ingredients: "Bahan", steps: "Langkah",
+  title: "Judul", summary: "Ringkasan", fishingTypes: "Jenis kolam", ingredients: "Bahan", steps: "Langkah",
 };
 
 /** Status boleh ditulis dalam Bahasa Indonesia maupun nilai simpannya. */
@@ -202,12 +224,26 @@ export function parseRecipeSpreadsheet(rows: BarisMentah[]): { recipes: CmsRecip
   const failures: SpreadsheetRowFailure[] = [];
   const recipes: CmsRecipeInput[] = [];
   const slugTerpakai = new Map<string, number>();
+  const normBaris = (teks: string) => teks.replace(/\r\n/g, "\n").trim();
+  let contohDilewati = 0;
 
   for (const row of dataRows.slice(0, SPREADSHEET_MAX_ROWS + 1)) {
     const ambil = (key: string) => {
       const indeks = kolomKe[key];
       return indeks === undefined ? "" : (row.cells[indeks] ?? "").trim();
     };
+    const adalahContohUtuh =
+      normBaris(ambil("title")) === CONTOH_BARIS_RESEP.title &&
+      normBaris(ambil("summary")) === CONTOH_BARIS_RESEP.summary &&
+      normBaris(ambil("fishingTypes")) === CONTOH_BARIS_RESEP.fishingTypes &&
+      normBaris(ambil("ingredients")) === CONTOH_BARIS_RESEP.ingredients &&
+      normBaris(ambil("steps")) === CONTOH_BARIS_RESEP.steps &&
+      ["status", "slug", "image", "weather", "water", "provinces", "price", "author"].every((key) => !ambil(key));
+    if (adalahContohUtuh) {
+      contohDilewati += 1;
+      continue;
+    }
+
     const title = ambil("title");
     const judul = title || "(judul kosong)";
     const ingredients = ambil("ingredients")
@@ -276,8 +312,11 @@ export function parseRecipeSpreadsheet(rows: BarisMentah[]): { recipes: CmsRecip
     recipes.push(parsed.data);
   }
 
-  if (dataRows.length > SPREADSHEET_MAX_ROWS) {
-    throw new Error(`Berkas berisi ${dataRows.length} baris resep — batasnya ${SPREADSHEET_MAX_ROWS} baris per unggahan. Pecah berkasnya lalu unggah bertahap.`);
+  if (dataRows.length - contohDilewati > SPREADSHEET_MAX_ROWS) {
+    throw new Error(`Berkas berisi ${dataRows.length - contohDilewati} baris resep — batasnya ${SPREADSHEET_MAX_ROWS} baris per unggahan. Pecah berkasnya lalu unggah bertahap.`);
+  }
+  if (contohDilewati > 0 && recipes.length === 0 && failures.length === 0) {
+    throw new Error("Berkas masih berisi baris contoh bawaan template saja. Ganti baris ke-2 dengan resepmu atau tambahkan baris resep baru di bawahnya.");
   }
   return { recipes, failures };
 }
@@ -328,10 +367,11 @@ export async function readSpreadsheetRows(buffer: Buffer, filename: string): Pro
 
   const rows: BarisMentah[] = [];
   const batas = Math.min(sheet.rowCount, SPREADSHEET_MAX_ROWS + 500);
+  const batasKolom = Math.max(RECIPE_SPREADSHEET_COLUMNS.length + 8, 24);
   for (let nomor = 1; nomor <= batas; nomor++) {
     const row = sheet.getRow(nomor);
     const cells: string[] = [];
-    const kolom = Math.min(Math.max(row.cellCount, 1), RECIPE_SPREADSHEET_COLUMNS.length + 4);
+    const kolom = Math.min(Math.max(row.cellCount, 1), batasKolom);
     for (let c = 1; c <= kolom; c++) cells.push(cellText(row.getCell(c).value));
     rows.push({ baris: nomor, cells });
   }
@@ -341,11 +381,24 @@ export async function readSpreadsheetRows(buffer: Buffer, filename: string): Pro
 /** Bangun berkas template `.xlsx` (lembar "Resep" + lembar "Petunjuk"). */
 export async function buildRecipeTemplateWorkbook(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Resep");
+  const sheet = workbook.addWorksheet("Resep", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
   sheet.columns = RECIPE_SPREADSHEET_COLUMNS.map((kolom) => ({ header: kolom.header, key: kolom.key, width: kolom.width }));
+
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true };
-  headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EFE4" } };
+  RECIPE_SPREADSHEET_COLUMNS.forEach((kolom, indeks) => {
+    const cell = headerRow.getCell(indeks + 1);
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: kolom.wajib ? "FFE2EBD9" : "FFF3F5F1" },
+    };
+  });
+
+  // Baris ke-2 hanya mengisi kolom wajib; semua kolom opsional dibiarkan kosong.
+  sheet.addRow(CONTOH_BARIS_RESEP);
   sheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true }; });
 
   const guide = workbook.addWorksheet("Petunjuk");
@@ -353,26 +406,26 @@ export async function buildRecipeTemplateWorkbook(): Promise<Buffer> {
   const barisPetunjuk = [
     "CARA MENGISI TEMPLATE IMPOR RESEP",
     "",
-    "1. Satu baris = satu resep. Isi mulai baris ke-2. Lembar \"Resep\" hanya berisi judul kolom; tidak ada baris bawaan yang ikut terimpor.",
-    "2. Unggah lewat Dashboard → Konten → Impor Excel. Format .xlsx atau .csv, ukuran maksimal 2 MB, maksimal 200 baris per berkas.",
-    "3. Kolom wajib: Judul, Ringkasan, Bahan, Langkah. Jenis kolam wajib diisi minimal satu (Harian/Lomba/Galatama).",
-    "4. Untuk kolom pilihan seperti Cuaca dan Kondisi air, pisahkan beberapa nilai dengan koma. Daftar nilai yang sah tercantum di bagian NILAI YANG SAH di bawah.",
-    "5. Bahan ditulis per bahan dengan format Nama bahan | Merek | Takaran. Tulis setiap bahan pada baris baru di dalam sel yang sama. Tambahkan \"| opsional\" di belakang bahan yang boleh dilewati.",
-    "6. Tulis setiap langkah pada baris baru di dalam sel yang sama. Nomor di awal langkah otomatis dibuang.",
-    "7. Harga acuan untuk saringan budget dihitung otomatis dari Label harga (titik tengah rentangnya) — tidak ada kolom angka harga.",
-    "8. Slug boleh dikosongkan (dibuat otomatis dari judul). Bila slug sama dengan resep yang sudah ada, resep itu DIPERBARUI — bukan dibuat duplikat.",
-    "9. URL foto boleh dikosongkan (resep memakai foto bawaan) atau diisi alamat foto yang diawali \"/\" — misalnya alamat hasil unggah foto dari formulir resep (/api/media/recipe-...).",
-    "10. Semua baris diperiksa dulu sebelum disimpan: bila ada satu baris tidak valid, tidak ada yang disimpan. Perbaiki baris yang disebut dalam laporan, lalu unggah lagi.",
+    "1. Satu baris = satu resep. Baris ke-2 pada lembar \"Resep\" adalah contoh pengisian untuk 5 kolom wajib saja — seluruh kolom opsional sengaja dibiarkan kosong.",
+    "2. Ganti atau hapus baris contoh ke-2 sebelum mengunggah (bila baris contoh tidak diubah sama sekali, sistem akan melewatinya otomatis agar tidak ikut masuk ke daftar resep).",
+    "3. Unggah lewat Dashboard → Konten → Upload Excel. Format .xlsx atau .csv, ukuran maksimal 2 MB, maksimal 200 baris resep per berkas.",
+    "4. Kolom wajib (5 kolom berlatar hijau muda di kiri): Judul, Ringkasan, Jenis kolam, Bahan, Langkah.",
+    "5. Kolom opsional (8 kolom di kanan, boleh dikosongkan): Status, Slug, URL foto, Cuaca, Kondisi air, Provinsi terkait, Perkiraan biaya, Penulis.",
+    "6. Bahan ditulis satu bahan per baris di dalam sel yang sama dengan format wajib: Nama bahan | Takaran (contoh: Pelet halus | 100 g). Bila ingin mencantumkan merek (opsional), tulis: Nama bahan | Merek | Takaran. Bila bahan boleh dilewati, tambahkan \"| opsional\" di belakang.",
+    "7. Tulis setiap langkah meracik pada baris baru di dalam sel yang sama. Nomor urut di awal langkah otomatis dirapikan.",
+    "8. Untuk kolom pilihan (Jenis kolam, Cuaca, Kondisi air, Provinsi terkait), pisahkan beberapa nilai dengan koma sesuai daftar NILAI YANG SAH di bawah.",
+    "9. Perkiraan biaya boleh dikosongkan (otomatis memakai rentang bawaan Rp15.000–30.000) atau diisi pilihan cepat seperti di formulir (< Rp25.000, Rp25.000–50.000, > Rp50.000). Angka acuan filter budget dihitung otomatis.",
+    "10. Slug boleh dikosongkan (dibuat otomatis dari judul). Bila slug sama dengan resep yang sudah ada, resep tersebut DIPERBARUI — bukan dibuat duplikat.",
+    "11. URL foto boleh dikosongkan (memakai foto bawaan) atau diisi alamat foto yang diawali \"/\" (mis. /api/media/recipe-...).",
+    "12. Semua baris diperiksa dulu sebelum disimpan: bila ada satu baris tidak valid, tidak ada yang disimpan dan baris yang perlu diperbaiki dilaporkan.",
     "",
     "NILAI YANG SAH UNTUK KOLOM PILIHAN",
-    `Cuaca: ${WEATHER_CONDITIONS.join(", ")}`,
-    `Kondisi air: ${WATER_CONDITIONS.join(", ")}`,
-    `Tipe air: ${WATER_BODIES.join(", ")}`,
-    `Jenis kolam: ${FISHING_TYPES.join(", ")}`,
-    `Musim: ${SEASON_CONDITIONS.join(", ")}`,
-    "Tingkat kesulitan: Mudah, Menengah, Tingkat lanjut",
-    "Status: draft (draf, belum tayang), published (tayang), archived (arsip). Kosong berarti draft.",
-    `Provinsi terkait (38 provinsi): ${provinceDirectory.map((provinsi) => provinsi.name).join(", ")}`,
+    `Jenis kolam (wajib minimal satu): ${FISHING_TYPES.join(", ")}`,
+    `Cuaca (opsional): ${WEATHER_CONDITIONS.join(", ")}`,
+    `Kondisi air (opsional): ${WATER_CONDITIONS.join(", ")}`,
+    "Perkiraan biaya (opsional): < Rp25.000, Rp25.000–50.000, > Rp50.000 (atau rentang seperti Rp15.000–30.000)",
+    "Status (opsional): draft (draf, belum tayang), published (tayang), archived (arsip). Kosong berarti draft.",
+    `Provinsi terkait (opsional, 38 provinsi): ${provinceDirectory.map((provinsi) => provinsi.name).join(", ")}`,
   ];
   barisPetunjuk.forEach((teks, indeks) => {
     const cell = guide.getCell(`A${indeks + 1}`);
