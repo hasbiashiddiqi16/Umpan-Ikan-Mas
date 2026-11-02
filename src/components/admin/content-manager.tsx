@@ -338,6 +338,12 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
 
 /** Pratinjau memakai komponen yang sama dengan halaman publik. */
 function RecipePreview({ form }: { form: RecipeForm }) {
+  const [fotoSorot, setFotoSorot] = useState<string | null>(null);
+  const daftarFoto = linesFrom(form.images);
+  const gambarUtama = form.image || daftarFoto[0] || "/images/recipe-putih.jpg";
+  const gambarAktif = fotoSorot && daftarFoto.includes(fotoSorot) ? fotoSorot : gambarUtama;
+  const perluUnoptimized = (url: string) => url.startsWith("blob:") || url.startsWith("/api/media/");
+
   const ingredients = filledIngredients(form.ingredients);
   const steps = form.steps.map((s) => s.trim()).filter(Boolean);
   const kategori = primaryFishingType(form.title, listFrom(form.fishingTypes));
@@ -359,15 +365,16 @@ function RecipePreview({ form }: { form: RecipeForm }) {
       </p>
       <section className="overflow-hidden rounded-[22px] border border-[#e5e9e2] bg-white">
         <div className="relative aspect-square w-full bg-[#e4e3d6]">
-          {form.image && <Image src={form.image} alt="" fill sizes="640px" unoptimized={form.image.startsWith("blob:")} className="object-cover" />}
+          <Image src={gambarAktif} alt={form.title.trim() ? `Foto pratinjau ${form.title.trim()}` : "Foto pratinjau resep"} fill sizes="640px" unoptimized={perluUnoptimized(gambarAktif)} className="object-cover" />
           <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{kategori} · Ikan mas</span>
         </div>
-        {linesFrom(form.images).length > 1 && (
+        {daftarFoto.length > 1 && (
           <div className="flex gap-2 overflow-x-auto border-b border-[#eef0ec] p-3">
-            {linesFrom(form.images).map((url) => (
-              <span key={url} className={`relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea] ${url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : "opacity-75"}`}>
-                <Image src={url} alt="" fill sizes="56px" unoptimized={url.startsWith("blob:")} className="object-cover" />
-              </span>
+            {daftarFoto.map((url, idx) => (
+              <button key={url} type="button" onClick={() => setFotoSorot(url)} aria-label={`Lihat foto pratinjau ${idx + 1}`}
+                className={`relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea] transition ${url === gambarAktif ? "ring-2 ring-[#294b34] ring-offset-1" : "opacity-75 hover:opacity-100"}`}>
+                <Image src={url} alt="" fill sizes="56px" unoptimized={perluUnoptimized(url)} className="object-cover" />
+              </button>
             ))}
           </div>
         )}
@@ -385,8 +392,20 @@ function RecipePreview({ form }: { form: RecipeForm }) {
           </div>
         </div>
       </section>
-      <IngredientTable ingredients={ingredients} />
-      {steps.length > 0 && <PreparationSteps steps={steps} />}
+      {ingredients.length > 0 ? (
+        <IngredientTable ingredients={ingredients} />
+      ) : (
+        <p className="rounded-[22px] border border-dashed border-[#d9e0d5] bg-[#fafbf8] p-4 text-xs leading-5 text-[#636d63]">
+          Tambahkan bahan di formulir untuk melihat tabel takaran di sini.
+        </p>
+      )}
+      {steps.length > 0 ? (
+        <PreparationSteps steps={steps} />
+      ) : (
+        <p className="rounded-[22px] border border-dashed border-[#d9e0d5] bg-[#fafbf8] p-4 text-xs leading-5 text-[#636d63]">
+          Tambahkan langkah meracik di formulir untuk melihat urutan langkah di sini.
+        </p>
+      )}
       <ConditionTags suitable={linesFrom(form.suitable)} notSuitable={linesFrom(form.notSuitable)} />
     </div>
   );
@@ -492,10 +511,18 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
     } finally { setPhotoBusy(false); }
   }
 
+  const semuaFotoPratinjau = [...galeri, ...fotoBaru.map((item) => item.url)];
+  const fotoUtamaUrl =
+    (thumbnailBaru !== null && fotoBaru[thumbnailBaru]?.url) ||
+    (form.image && galeri.includes(form.image) ? form.image : "") ||
+    galeri[0] ||
+    fotoBaru[0]?.url ||
+    "";
+
   const formPratinjau: RecipeForm = {
     ...form,
-    image: thumbnailBaru !== null && fotoBaru[thumbnailBaru] ? fotoBaru[thumbnailBaru].url : form.image,
-    images: [...galeri, ...fotoBaru.map((item) => item.url)].join("\n"),
+    image: fotoUtamaUrl,
+    images: semuaFotoPratinjau.join("\n"),
   };
 
   const bahanMulai = form.ingredients.filter((b) => b.name.trim() || b.amount.trim() || b.brand.trim());
@@ -589,35 +616,41 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                   <span>Foto racikan <span className="font-medium text-[#636d63]">(opsional, {totalFoto}/5 foto · persegi 1:1)</span></span>
                   {totalFoto > 0 && (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                      {galeri.map((url) => (
-                        <div key={url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${thumbnailBaru === null && url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
-                          <Image src={url} alt="" fill sizes="120px" unoptimized={url.startsWith("/api/media/")} className="object-cover" />
-                          {thumbnailBaru === null && url === form.image && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
-                          <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
-                            <button type="button" disabled={photoBusy || (thumbnailBaru === null && url === form.image)} onClick={() => { aturGaleri(galeri, url); setThumbnailBaru(null); }} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
-                              <Check size={11} /> Utama
-                            </button>
-                            <button type="button" disabled={photoBusy} onClick={() => hapusFoto(url)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
-                              <Trash2 size={12} />
-                            </button>
-                          </span>
-                        </div>
-                      ))}
-                      {fotoBaru.map((item, indeks) => (
-                        <div key={item.url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${thumbnailBaru === indeks ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
-                          <Image src={item.url} alt="" fill sizes="120px" unoptimized className="object-cover" />
-                          <span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#5c6a5c]">Baru</span>
-                          {thumbnailBaru === indeks && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
-                          <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
-                            <button type="button" disabled={photoBusy || thumbnailBaru === indeks} onClick={() => setThumbnailBaru(indeks)} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
-                              <Check size={11} /> Utama
-                            </button>
-                            <button type="button" disabled={photoBusy} onClick={() => hapusFotoBaru(indeks)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
-                              <Trash2 size={12} />
-                            </button>
-                          </span>
-                        </div>
-                      ))}
+                      {galeri.map((url) => {
+                        const adalahUtama = url === fotoUtamaUrl;
+                        return (
+                          <div key={url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${adalahUtama ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                            <Image src={url} alt="" fill sizes="120px" unoptimized={url.startsWith("/api/media/")} className="object-cover" />
+                            {adalahUtama && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                            <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+                              <button type="button" disabled={photoBusy || adalahUtama} onClick={() => { aturGaleri(galeri, url); setThumbnailBaru(null); }} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
+                                <Check size={11} /> Utama
+                              </button>
+                              <button type="button" disabled={photoBusy} onClick={() => hapusFoto(url)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
+                                <Trash2 size={12} />
+                              </button>
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {fotoBaru.map((item, indeks) => {
+                        const adalahUtama = item.url === fotoUtamaUrl;
+                        return (
+                          <div key={item.url} className={`relative aspect-square overflow-hidden rounded-xl border border-[#e8ece5] bg-[#edf1ea] ${adalahUtama ? "ring-2 ring-[#294b34] ring-offset-1" : ""}`}>
+                            <Image src={item.url} alt="" fill sizes="120px" unoptimized className="object-cover" />
+                            <span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#5c6a5c]">Baru</span>
+                            {adalahUtama && <span className="absolute left-1.5 top-1.5 rounded-full bg-[#16251b]/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">Thumbnail</span>}
+                            <span className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+                              <button type="button" disabled={photoBusy || adalahUtama} onClick={() => setThumbnailBaru(indeks)} className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-white/95 px-1.5 text-[9px] font-extrabold text-[#315a39] shadow-sm transition hover:bg-white disabled:opacity-60">
+                                <Check size={11} /> Utama
+                              </button>
+                              <button type="button" disabled={photoBusy} onClick={() => hapusFotoBaru(indeks)} aria-label="Hapus foto" className="grid h-7 w-7 place-items-center rounded-lg bg-white/95 text-[#8a4433] shadow-sm transition hover:bg-white disabled:opacity-60">
+                                <Trash2 size={12} />
+                              </button>
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -970,7 +1003,7 @@ export function ContentManager() {
                   <tr key={item.id} className="transition hover:bg-[#fafbf9]">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill sizes="48px" className="object-cover" /></span>
+                        <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea]"><Image src={item.image || "/images/recipe-putih.jpg"} alt="" fill sizes="48px" unoptimized={Boolean(item.image?.startsWith("/api/media/"))} className="object-cover" /></span>
                         <div className="min-w-0">
                           <p className="max-w-[270px] truncate text-xs font-extrabold text-[#37483a]">{item.title}</p>
                           <p className="mt-1 max-w-[270px] truncate text-[9px] text-[#969d94]">/{item.slug} · angka katalog {(item.rating / 10).toFixed(1)} dari 5 · {new Intl.NumberFormat("id-ID").format(item.users)} pemancing</p>
