@@ -127,18 +127,18 @@ function parseIngredients(text: string, baris: number, judul: string, failures: 
   const bagian = text.split(/[;\n]/).map((item) => item.trim()).filter(Boolean);
   for (const [indeks, item] of bagian.entries()) {
     const kolom = item.split("|").map((part) => part.trim());
-    const [name, brand, amount, penanda] = kolom;
+    const [name, brand, amount, penanda] = kolom.length === 2 ? [kolom[0], "", kolom[1], ""] : kolom;
     if (!name || !amount) {
       failures.push({
         baris,
         judul,
-        pesan: `Bahan ke-${indeks + 1} belum lengkap — formatnya "Nama | Merek | Takaran" (mis. "Pelet ikan | Pelet Jitu | 50 g").`,
+        pesan: `Bahan ke-${indeks + 1} belum lengkap — tulis "Nama | Takaran" atau "Nama | Merek | Takaran" (mis. "Pelet ikan | Pelet Jitu | 50 g").`,
       });
       return null;
     }
     hasil.push({
       name,
-      brand: brand || "-",
+      brand: brand && brand !== "-" ? brand : "",
       amount,
       ...(/opsional|optional/i.test(penanda ?? "") ? { optional: true } : {}),
     });

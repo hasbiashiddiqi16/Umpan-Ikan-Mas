@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, ListChecks, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CirclePlus, CloudRain, Droplets, Eye, FileDown, FilePenLine, FileSpreadsheet, Fish, Gauge, Globe2, ImageUp, Loader2, Plus, RotateCcw, Search, Send, Trash2, Wallet, Waves, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { adminCan, useAdminMe } from "@/components/admin/use-admin-me";
 import { Badge, FishingTypeIcon, WaterBodyIcon, WaterIcon, WeatherIcon } from "@/components/shared";
 import { ConditionTags, IngredientTable, PreparationSteps } from "@/components/recipe-details";
-import { FISHING_TYPES, SEASON_CONDITIONS, WATER_BODIES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, type FishingType, type Ingredient } from "@/data/recipes";
+import { FISHING_TYPES, WATER_CONDITIONS, WEATHER_CONDITIONS, normalizeFishingType, primaryFishingType, type FishingType, type Ingredient } from "@/data/recipes";
 import { provinces } from "@/data/provinces";
-import { hargaAcuanDariLabel, slugify } from "@/lib/utils";
+import { BIAYA_BAWAAN_RESEP, PILIHAN_BIAYA_CEPAT, hargaAcuanDariLabel, slugify } from "@/lib/utils";
 import { BAYESIAN_HINT, bayesianRatingScore, ratingScoreRanker } from "@/lib/rating-utils";
 import { kompresGambar } from "@/lib/image-compress";
 import type { RecipeRatingMap } from "@/lib/review-summary";
 import { SELECT_FIELD_CLASS, SelectBox } from "@/components/form-fields";
+import { UseMyLocationButton } from "@/components/location-controls";
+import { useLocationAutofill } from "@/lib/use-location";
 
 /** Pilihan urutan pustaka konten. "skor" memakai rumus yang sama dengan katalog publik. */
 const urutanKonten = ["Terakhir diubah", "Skor rating (Bayesian)", "Ulasan terbanyak", "Judul A–Z"] as const;
@@ -25,63 +27,86 @@ export type ManagedRecipe = {
   id: number; slug: string; title: string; summary: string; category: string; status: string; image: string; images: string[]; price: string; priceValue: number; difficulty: string; rating: number; reviewCount: number; users: number; popularity: number; weather: string[]; water: string[]; waterBodies: string[]; fishingTypes: string[]; provinces: string[]; seasons: string[]; ingredients: { name: string; brand: string; amount: string; optional?: boolean }[]; steps: string[]; suitable: string[]; notSuitable: string[]; author: string; createdAt: string; updatedAt: string;
 };
 
-/** Satu baris bahan di editor: bentuknya sama dengan yang tampil di halaman publik. */
 type IngredientRow = { name: string; brand: string; amount: string; optional: boolean };
 
 type RecipeForm = {
-  title: string; slug: string; summary: string; status: string; image: string; images: string; price: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string; suitable: string; notSuitable: string; author: string;
+  title: string; slug: string; summary: string; status: string; image: string; images: string; price: string; difficulty: string; weather: string; water: string; waterBodies: string; fishingTypes: string; provinces: string; seasons: string; ingredients: IngredientRow[]; steps: string[]; suitable: string; notSuitable: string; author: string;
 };
 
 const statuses = ["draft", "published", "archived"];
 const statusFilters = ["Semua", "published", "draft", "archived"];
 const blankForm: RecipeForm = {
   title: "", slug: "", summary: "", status: "draft", image: "", images: "",
-  price: "Rp15.000–30.000", difficulty: "Mudah", weather: "Hujan, Mendung", water: "Keruh", waterBodies: "Kolam",
-  fishingTypes: "Harian", provinces: "Jawa Barat", seasons: "Musim Hujan",
-  ingredients: [
-    { name: "Pelet ikan", brand: "Pelet Jitu", amount: "50 g", optional: false },
-    { name: "Tepung tapioka", brand: "Rose Brand", amount: "15 g", optional: false },
-    { name: "Kroto", brand: "Segar", amount: "1 ons", optional: true },
-  ],
-  steps: "Haluskan pelet hingga lembut.\nCampurkan bahan kering sampai rata.\nTambahkan air sedikit demi sedikit sampai adonan mudah dibentuk.",
-  suitable: "Kolam harian\nIkan mas aktif", notSuitable: "Air sangat jernih", author: "Tim UMPAN MAS",
+  price: "", difficulty: "Mudah", weather: "", water: "", waterBodies: "Kolam",
+  fishingTypes: "Harian", provinces: "", seasons: "",
+  ingredients: [{ name: "", brand: "", amount: "", optional: false }],
+  steps: [""],
+  suitable: "", notSuitable: "", author: "Tim UMPAN MAS",
 };
 
-const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
-const areaClass = "min-h-24 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-3 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#a1a89f] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+const fieldClass = "min-h-11 w-full rounded-xl border border-[#e2e8e1] bg-white px-3.5 text-sm text-[#344638] outline-none transition placeholder:text-[#969f94] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
+const areaClass = "min-h-24 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-3 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#969f94] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10";
 const chipClass = "!h-7 !px-2.5 !text-[10px]";
 
 function listFrom(text: string) { return text.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean); }
+function linesFrom(text: string) { return text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean); }
 
-/** Baris bahan yang terisi lengkap, dipakai untuk menyimpan maupun pratinjau. */
+/** Baris bahan yang terisi lengkap (nama + takaran; merek opsional). */
 function filledIngredients(rows: IngredientRow[]): Ingredient[] {
   return rows
-    .map((row) => ({ name: row.name.trim(), brand: row.brand.trim() || "-", amount: row.amount.trim(), optional: row.optional }))
+    .map((row) => ({
+      name: row.name.trim(),
+      brand: row.brand.trim() === "-" ? "" : row.brand.trim(),
+      amount: row.amount.trim(),
+      optional: row.optional,
+    }))
     .filter((row) => row.name && row.amount)
     .map((row) => ({ name: row.name, brand: row.brand, amount: row.amount, ...(row.optional ? { optional: true } : {}) }));
 }
 
 function formFromRecipe(recipe: ManagedRecipe): RecipeForm {
   return {
-    title: recipe.title, slug: recipe.slug, summary: recipe.summary, status: recipe.status, image: recipe.image, images: (recipe.images?.length ? recipe.images : (recipe.image && recipe.image !== "/images/recipe-putih.jpg" ? [recipe.image] : [])).join("\n"),
-    price: recipe.price, difficulty: recipe.difficulty, weather: recipe.weather.join(", "),
-    water: recipe.water.join(", "), waterBodies: recipe.waterBodies.join(", "), fishingTypes: recipe.fishingTypes.join(", "), provinces: recipe.provinces.join(", "),
+    title: recipe.title,
+    slug: recipe.slug,
+    summary: recipe.summary,
+    status: recipe.status,
+    image: recipe.image,
+    images: (recipe.images?.length ? recipe.images : (recipe.image && recipe.image !== "/images/recipe-putih.jpg" ? [recipe.image] : [])).join("\n"),
+    price: recipe.price && recipe.price !== BIAYA_BAWAAN_RESEP ? recipe.price : "",
+    difficulty: recipe.difficulty || "Mudah",
+    weather: recipe.weather.join(", "),
+    water: recipe.water.join(", "),
+    waterBodies: recipe.waterBodies.join(", "),
+    fishingTypes: recipe.fishingTypes.join(", "),
+    provinces: recipe.provinces.join(", "),
     seasons: recipe.seasons.join(", "),
-    ingredients: recipe.ingredients.map((item) => ({ name: item.name, brand: item.brand, amount: item.amount, optional: Boolean(item.optional) })),
-    steps: recipe.steps.join("\n"), suitable: recipe.suitable.join("\n"), notSuitable: recipe.notSuitable.join("\n"), author: recipe.author,
+    ingredients: recipe.ingredients.length
+      ? recipe.ingredients.map((item) => ({
+          name: item.name,
+          brand: item.brand === "-" ? "" : item.brand,
+          amount: item.amount,
+          optional: Boolean(item.optional),
+        }))
+      : [{ name: "", brand: "", amount: "", optional: false }],
+    steps: recipe.steps.length ? recipe.steps : [""],
+    suitable: recipe.suitable.join("\n"),
+    notSuitable: recipe.notSuitable.join("\n"),
+    author: recipe.author,
   };
 }
 
 function toPayload(form: RecipeForm, status = form.status) {
+  const labelBiaya = form.price.trim() || BIAYA_BAWAAN_RESEP;
   return {
-    ...form,
     title: form.title.trim(),
     slug: form.slug.trim() || slugify(form.title),
     summary: form.summary.trim(),
     status,
-    // Harga acuan tidak lagi diketik manual: diturunkan dari label harga.
-    priceValue: hargaAcuanDariLabel(form.price),
-    images: listFrom(form.images),
+    image: form.image,
+    price: labelBiaya,
+    priceValue: hargaAcuanDariLabel(labelBiaya),
+    difficulty: form.difficulty || "Mudah",
+    images: linesFrom(form.images),
     weather: listFrom(form.weather),
     water: listFrom(form.water),
     waterBodies: listFrom(form.waterBodies),
@@ -89,9 +114,10 @@ function toPayload(form: RecipeForm, status = form.status) {
     provinces: listFrom(form.provinces),
     seasons: listFrom(form.seasons),
     ingredients: filledIngredients(form.ingredients),
-    steps: listFrom(form.steps),
-    suitable: listFrom(form.suitable),
-    notSuitable: listFrom(form.notSuitable),
+    steps: form.steps.map((s) => s.trim()).filter(Boolean),
+    suitable: linesFrom(form.suitable),
+    notSuitable: linesFrom(form.notSuitable),
+    author: form.author.trim() || "Tim UMPAN MAS",
   };
 }
 
@@ -101,78 +127,86 @@ function formattedDate(value: string) {
 }
 
 function Field({ label, hint, children, wide = false }: { label: string; hint?: string; children: ReactNode; wide?: boolean }) {
-  return <label className={`grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) ${wide ? "sm:col-span-2" : ""}`}><span>{label}</span>{children}{hint && <span className="text-[10px] font-medium leading-4 text-[#959c93]">{hint}</span>}</label>;
+  return <label className={`grid gap-1.5 text-xs font-bold text-[#4f5d50] ${wide ? "sm:col-span-2" : ""}`}><span>{label}</span>{children}{hint && <span className="text-[11px] font-medium leading-4 text-[#636d63]">{hint}</span>}</label>;
 }
 
 /**
- * Editor bahan berbentuk baris, dipisah persis seperti tampilan publik:
- * "Bahan racikan" dan "Tambahan opsional". Tombol panah memindahkan sebuah
- * bahan antar bagian tanpa perlu mengetik ulang.
+ * Daftar bahan ringkas dalam satu kotak (selaras dengan form publik):
+ * Nama bahan + Takaran wajib, Merek opsional, centang kecil Opsional bila perlu.
  */
 function IngredientRowsEditor({ rows, onChange }: { rows: IngredientRow[]; onChange: (rows: IngredientRow[]) => void }) {
   const update = (index: number, patch: Partial<IngredientRow>) => onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  const groups = [
-    { key: false, title: "Bahan racikan", note: "Bahan inti resep yang selalu dipakai." },
-    { key: true, title: "Tambahan opsional", note: "Boleh dilewati. Bagian ini tidak menjadi pembeda di pencarian dan Pakar Umpan." },
-  ] as const;
-
   return (
-    <div className="grid gap-4">
-      {groups.map((group) => {
-        const indexes = rows.map((row, index) => ({ row, index })).filter(({ row }) => row.optional === group.key);
-        return (
-          <div key={group.title} className={`rounded-2xl border p-3 ${group.key ? "border-[#efe7d3] bg-[#fdfbf6]" : "border-[#e6eae3] bg-white"}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-extrabold text-[#354639]">{group.title} <span className="font-semibold text-[#959c93]">({indexes.length})</span></p>
-                <p className="mt-0.5 text-[10px] font-medium text-[#959c93]">{group.note}</p>
-              </div>
-              <button type="button" onClick={() => onChange([...rows, { name: "", brand: "", amount: "", optional: group.key }])}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-dashed border-[#cfdac9] px-3 text-[11px] font-bold text-[#4f6b50] transition hover:bg-[#f4f7f2]">
-                <Plus size={13} /> Tambah bahan
-              </button>
+    <div className="space-y-2.5">
+      <ul className="grid gap-2">
+        {rows.map((row, index) => (
+          <li key={index} className="grid gap-2 rounded-xl border border-[#e9ece6] bg-[#fafbf9] p-2.5 sm:grid-cols-[26px_minmax(0,1.2fr)_minmax(0,.8fr)_minmax(0,1fr)_auto] sm:items-center">
+            <span className="hidden h-7 w-7 place-items-center rounded-lg bg-[#eff4ec] text-[10px] font-bold text-[#4a634c] sm:grid">{String(index + 1).padStart(2, "0")}</span>
+            <input className={fieldClass} value={row.name} maxLength={120} placeholder="Nama bahan (mis. Kroto)" aria-label={`Nama bahan ${index + 1}`} onChange={(event) => update(index, { name: event.target.value })} />
+            <input className={fieldClass} value={row.amount} maxLength={120} placeholder="Takaran (mis. 1 ons)" aria-label={`Takaran bahan ${index + 1}`} onChange={(event) => update(index, { amount: event.target.value })} />
+            <input className={fieldClass} value={row.brand} maxLength={120} placeholder="Merek (opsional)" aria-label={`Merek bahan ${index + 1}`} onChange={(event) => update(index, { brand: event.target.value })} />
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 px-1 text-xs font-bold text-[#4f5d50]">
+                <input type="checkbox" checked={row.optional} onChange={(event) => update(index, { optional: event.target.checked })} className="h-4 w-4 accent-[#294b34]" /> Opsional
+              </label>
+              {rows.length > 1 && (
+                <button type="button" aria-label={`Hapus baris bahan ${index + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}
+                  className="grid h-9 w-9 place-items-center rounded-xl text-[#8a4433] transition hover:bg-[#fbefec]">
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
-            {indexes.length === 0 ? (
-              <p className="mt-3 rounded-xl bg-[#f6f8f4] px-3 py-2.5 text-[11px] text-[#929a91]">Belum ada bahan di bagian ini.</p>
-            ) : (
-              <ul className="mt-3 grid gap-2">
-                {indexes.map(({ row, index }, order) => (
-                  <li key={index} className="grid gap-2 rounded-xl border border-[#e9ece6] bg-white p-2.5 sm:grid-cols-[28px_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,.7fr)_auto] sm:items-center">
-                    <span className="hidden h-7 w-7 place-items-center rounded-lg bg-[#eff4ec] text-[10px] font-bold text-[#5a715c] (4.56:1 terburuk) sm:grid">{String(order + 1).padStart(2, "0")}</span>
-                    <input className={fieldClass} value={row.name} placeholder="Nama bahan" aria-label={`Nama bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { name: event.target.value })} />
-                    <input className={fieldClass} value={row.brand} placeholder="Merek / catatan" aria-label={`Merek bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { brand: event.target.value })} />
-                    <input className={fieldClass} value={row.amount} placeholder="Takaran" aria-label={`Takaran bahan ${group.title} ${order + 1}`} onChange={(event) => update(index, { amount: event.target.value })} />
-                    <div className="flex items-center gap-1 sm:justify-end">
-                      <button type="button" onClick={() => update(index, { optional: !row.optional })}
-                        aria-label={row.optional ? `Jadikan ${row.name || "bahan"} bahan inti` : `Jadikan ${row.name || "bahan"} tambahan opsional`}
-                        title={row.optional ? "Pindahkan ke bahan racikan" : "Pindahkan ke tambahan opsional"}
-                        className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[#e2e7e0] px-2.5 text-[10px] font-bold text-[#5c6b5c] transition hover:bg-[#f4f7f2]">
-                        <ListChecks size={13} /> {row.optional ? "Opsional" : "Inti"}
-                      </button>
-                      <button type="button" aria-label={`Hapus baris bahan ${order + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                        className="grid h-9 w-9 place-items-center rounded-xl text-[#905f50] (4.57:1 terburuk) transition hover:bg-[#fbefec]">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
+          </li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => onChange([...rows, { name: "", brand: "", amount: "", optional: false }])}
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#eef3ea] px-3.5 text-xs font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf]">
+        <Plus size={14} /> Tambah bahan
+      </button>
     </div>
   );
 }
 
+/** Daftar langkah bernomor; mendukung tempel teks multi-baris otomatis pecah jadi langkah. */
+function StepsRowsEditor({ steps, onChange }: { steps: string[]; onChange: (steps: string[]) => void }) {
+  function tempel(indeks: number, event: ClipboardEvent<HTMLTextAreaElement>) {
+    const teks = event.clipboardData.getData("text");
+    if (!teks.includes("\n")) return;
+    const baris = teks.split(/\r?\n/).map((b) => b.replace(/^\d+\s*[.)]\s*/, "").trim()).filter(Boolean);
+    if (baris.length <= 1) return;
+    event.preventDefault();
+    const awal = steps[indeks]?.trim();
+    const sisipan = awal ? [`${awal} ${baris[0]}`.slice(0, 500), ...baris.slice(1).map((b) => b.slice(0, 500))] : baris.map((b) => b.slice(0, 500));
+    onChange([...steps.slice(0, indeks), ...sisipan, ...steps.slice(indeks + 1)].slice(0, 40));
+  }
 
-/**
- * Pemilih jenis kolam berbentuk centang, bukan teks bebas: satu resep boleh
- * cocok untuk beberapa jenis sekaligus — centang ketiganya bila resep bisa
- * dipakai di semua jenis kolam (harian, lomba, dan galatama). Nilai tetap
- * ditulis sebagai teks terpisah koma agar bentuk data formulir tidak berubah;
- * urutannya selalu urutan baku supaya kategori turunan stabil.
- */
+  return (
+    <div className="space-y-2.5">
+      <div className="grid gap-2">
+        {steps.map((langkah, index) => (
+          <div key={index} className="flex items-start gap-2">
+            <span className="mt-2.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#eef3ea] text-[11px] font-black text-[#2f5b3a]">{index + 1}</span>
+            <textarea rows={2} maxLength={500} value={langkah} onPaste={(e) => tempel(index, e)}
+              onChange={(event) => onChange(steps.map((s, i) => (i === index ? event.target.value : s)))}
+              placeholder="Tulis satu langkah meracik…" aria-label={`Langkah ${index + 1}`}
+              className="min-h-12 w-full resize-y rounded-xl border border-[#e2e8e1] bg-white px-3.5 py-2.5 text-sm leading-6 text-[#344638] outline-none transition placeholder:text-[#969f94] focus:border-[#748f70] focus:ring-4 focus:ring-[#345d3a]/10" />
+            {steps.length > 1 && (
+              <button type="button" aria-label={`Hapus langkah ${index + 1}`} onClick={() => onChange(steps.filter((_, i) => i !== index))}
+                className="mt-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#8a4433] transition hover:bg-[#fbefec]">
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={() => onChange([...steps, ""])}
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#eef3ea] px-3.5 text-xs font-bold text-[#2f5b3a] transition hover:bg-[#e2ecdf]">
+        <Plus size={14} /> Tambah langkah
+      </button>
+    </div>
+  );
+}
+
 function FishingTypePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const terpilih = new Set(listFrom(value).map(normalizeFishingType));
   const toggle = (type: FishingType) => {
@@ -184,39 +218,58 @@ function FishingTypePicker({ value, onChange }: { value: string; onChange: (valu
   const toggleSemua = () => onChange(semuaTerpilih ? "" : FISHING_TYPES.join(", "));
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Pilih jenis kolam">
-      <label className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-bold transition ${semuaTerpilih ? "border-[#8fae87] bg-[#eef5ea] text-[#33523a]" : "border-dashed border-[#c9b458] bg-white text-[#7a5f14] hover:bg-[#fdf6e0]"}`}>
-        <input type="checkbox" className="sr-only" checked={semuaTerpilih} onChange={toggleSemua} />
-        {semuaTerpilih && <Check size={13} aria-hidden="true" />}
-        Semua
-      </label>
+      <button type="button" aria-pressed={semuaTerpilih} onClick={toggleSemua}
+        className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-xs font-bold transition ${semuaTerpilih ? "border-[#294b34] bg-[#294b34] text-white" : "border-dashed border-[#c9b458] bg-white text-[#7a5f14] hover:bg-[#fdf6e0]"}`}>
+        {semuaTerpilih && <Check size={13} aria-hidden="true" />}Semua
+      </button>
       {FISHING_TYPES.map((type) => {
         const aktif = terpilih.has(type);
         return (
-          <label key={type} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-bold transition ${aktif ? "border-[#8fae87] bg-[#eef5ea] text-[#33523a]" : "border-[#e2e8e1] bg-white text-[#626e61] (4.59:1 terburuk) hover:bg-[#f6f8f5]"}`}>
-            <input type="checkbox" className="sr-only" checked={aktif} onChange={() => toggle(type)} />
-            {aktif && <Check size={13} aria-hidden="true" />}
-            {type}
-          </label>
+          <button key={type} type="button" aria-pressed={aktif} onClick={() => toggle(type)}
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-xs font-bold transition ${aktif ? "border-[#294b34] bg-[#294b34] text-white" : "border-[#e2e8e1] bg-[#f4f7f2] text-[#4b5b4e] hover:bg-[#e9efe6]"}`}>
+            {aktif && <Check size={13} aria-hidden="true" />}{type}
+          </button>
         );
       })}
     </div>
   );
 }
 
-
-/** Pembungkus kolom khusus dropdown: bukan <label> agar daftar centang di dalamnya sah. */
-function PilihanField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <div className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk)"><span>{label}</span>{children}{hint && <span className="text-[10px] font-medium leading-4 text-[#959c93]">{hint}</span>}</div>;
+function ConditionChipPicker({ label, options, value, onChange }: { label: string; options: readonly string[]; value: string; onChange: (value: string) => void }) {
+  const dipilih = listFrom(value);
+  const semuaTerpilih = options.length > 0 && options.every((item) => dipilih.includes(item));
+  const toggle = (item: string) => {
+    const set = new Set(dipilih);
+    if (set.has(item)) set.delete(item); else set.add(item);
+    onChange(options.filter((opsi) => set.has(opsi)).join(", "));
+  };
+  return (
+    <fieldset>
+      <legend className="mb-1.5 block text-xs font-bold text-[#4f5d50]">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.length > 1 && (
+          <button type="button" aria-pressed={semuaTerpilih} onClick={() => onChange(semuaTerpilih ? "" : options.join(", "))}
+            className={`min-h-9 rounded-full border px-3 text-xs font-bold transition ${semuaTerpilih ? "border-[#294b34] bg-[#294b34] text-white" : "border-dashed border-[#c9b458] bg-white text-[#7a5f14] hover:bg-[#fdf6e0]"}`}>
+            Semua
+          </button>
+        )}
+        {options.map((item) => {
+          const aktif = dipilih.includes(item);
+          return (
+            <button key={item} type="button" aria-pressed={aktif} onClick={() => toggle(item)}
+              className={`min-h-9 rounded-full border px-3 text-xs font-bold transition ${aktif ? "border-[#294b34] bg-[#294b34] text-white" : "border-[#e2e8e1] bg-white text-[#4b5b4e] hover:bg-[#eef3ea]"}`}>
+              {item}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 }
 
 /**
- * Dropdown banyak pilihan untuk kolom kondisi: nilai dipilih dari daftar
- * resmi, bukan diketik bebas, supaya tidak ada nilai salah ketik yang
- * ditolak server atau tak pernah cocok dengan saringan publik. Boleh lebih
- * dari satu (mis. resep cocok untuk Hujan dan Mendung). Nilai disimpan
- * sebagai teks terpisah koma dalam urutan daftar; nilai lama yang tidak
- * ada di daftar tetap ditampilkan agar tidak hilang diam-diam saat
- * menyunting resep lama.
+ * Dropdown banyak pilihan dengan pencarian (dipakai untuk daftar 38 provinsi).
+ * Panel melayang di atas isi lain dan menutup saat klik luar atau Escape.
  */
 function MultiSelectDropdown({ value, options, onChange, placeholder, searchable = false }: {
   value: string; options: readonly string[]; onChange: (value: string) => void; placeholder: string; searchable?: boolean;
@@ -225,8 +278,6 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
   const [kata, setKata] = useState("");
   const akarRef = useRef<HTMLDivElement>(null);
 
-  // Panel dropdown melayang di atas isi lain (bukan mendorong grid), dan
-  // menutup saat admin mengeklik di luar panel atau menekan Escape.
   useEffect(() => {
     if (!terbuka) return;
     const klikLuar = (event: PointerEvent) => {
@@ -251,21 +302,20 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
     if (berikutnya.has(item)) berikutnya.delete(item); else berikutnya.add(item);
     onChange(semuaPilihan.filter((pilihan) => berikutnya.has(pilihan)).join(", "));
   };
-  // "Pilih semua" memilih seluruh opsi sekaligus; ditekan lagi mengosongkan.
   const semuaTerpilih = options.length > 0 && options.every((item) => terpilih.includes(item));
   const toggleSemua = () => onChange(semuaTerpilih ? "" : semuaPilihan.join(", "));
   return (
     <div ref={akarRef} className="relative">
       <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
-        <span className={`truncate ${terpilih.length ? "font-semibold" : "font-medium text-[#a1a89f]"}`}>{terpilih.length ? terpilih.join(", ") : placeholder}</span>
+        <span className={`truncate ${terpilih.length ? "font-semibold" : "font-medium text-[#636d63]"}`}>{terpilih.length ? terpilih.join(", ") : placeholder}</span>
         <span className="flex shrink-0 items-center gap-1.5">
           {terpilih.length > 0 && <span className="rounded-full bg-[#eef5ea] px-2 py-0.5 text-[10px] font-extrabold text-[#33523a]">{terpilih.length}</span>}
-          <ChevronDown size={15} aria-hidden="true" className={`text-[#7a857a] transition ${terbuka ? "rotate-180" : ""}`} />
+          <ChevronDown size={15} aria-hidden="true" className={`text-[#626d63] transition ${terbuka ? "rotate-180" : ""}`} />
         </span>
       </button>
       {terbuka && (
         <div className="absolute inset-x-0 top-full z-30 mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_16px_40px_rgba(36,53,39,.16)]">
-          {searchable && <input value={kata} onChange={(event) => setKata(event.target.value)} placeholder="Cari provinsi…" aria-label="Cari provinsi" className="mb-1.5 min-h-9 w-full rounded-lg border border-[#e8ece5] bg-[#fbfcfa] px-3 text-xs font-medium text-[#344638] outline-none placeholder:text-[#a1a89f] focus:border-[#748f70]" />}
+          {searchable && <input value={kata} onChange={(event) => setKata(event.target.value)} placeholder="Cari provinsi…" aria-label="Cari provinsi" className="mb-1.5 min-h-9 w-full rounded-lg border border-[#e8ece5] bg-[#fbfcfa] px-3 text-xs font-medium text-[#344638] outline-none placeholder:text-[#969f94] focus:border-[#748f70]" />}
           {options.length > 1 && (
             <button type="button" onClick={toggleSemua} aria-pressed={semuaTerpilih} className={`mb-1 flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-bold transition ${semuaTerpilih ? "bg-[#eef5ea] text-[#33523a]" : "text-[#33523a] hover:bg-[#f6f8f5]"}`}>
               <span aria-hidden="true" className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${semuaTerpilih ? "border-[#345d3a] bg-[#345d3a] text-white" : "border-[#c3cec0] bg-white text-transparent"}`}><Check size={11} /></span>
@@ -278,7 +328,7 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
                 <input type="checkbox" checked={terpilih.includes(item)} onChange={() => toggle(item)} className="h-4 w-4 shrink-0 accent-[#345d3a]" />
                 <span className="min-w-0 flex-1 truncate">{item}</span>
               </label>
-            )) : <p className="px-2.5 py-2 text-[11px] font-medium text-[#959c93]">Tidak ada pilihan yang cocok.</p>}
+            )) : <p className="px-2.5 py-2 text-[11px] font-medium text-[#636d63]">Tidak ada pilihan yang cocok.</p>}
           </div>
         </div>
       )}
@@ -286,68 +336,20 @@ function MultiSelectDropdown({ value, options, onChange, placeholder, searchable
   );
 }
 
-
-/**
- * Dropdown satu pilihan dengan cangkang yang sama persis seperti
- * `MultiSelectDropdown`, agar semua kolom pilihan di formulir tampil
- * seragam (Tingkat kesulitan sebelumnya <select> bawaan peramban yang
- * tampil beda sendiri). Memilih satu nilai langsung menutup panel.
- */
-function SingleSelectDropdown({ value, options, onChange, placeholder }: {
-  value: string; options: readonly string[]; onChange: (value: string) => void; placeholder: string;
-}) {
-  const [terbuka, setTerbuka] = useState(false);
-  const akarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!terbuka) return;
-    const klikLuar = (event: PointerEvent) => {
-      if (akarRef.current && !akarRef.current.contains(event.target as Node)) setTerbuka(false);
-    };
-    const tombol = (event: KeyboardEvent) => { if (event.key === "Escape") setTerbuka(false); };
-    document.addEventListener("pointerdown", klikLuar);
-    document.addEventListener("keydown", tombol);
-    return () => {
-      document.removeEventListener("pointerdown", klikLuar);
-      document.removeEventListener("keydown", tombol);
-    };
-  }, [terbuka]);
-
-  return (
-    <div ref={akarRef} className="relative">
-      <button type="button" aria-expanded={terbuka} aria-haspopup="true" onClick={() => setTerbuka((sebelum) => !sebelum)} className={`${fieldClass} flex items-center justify-between gap-2 text-left`}>
-        <span className={`truncate ${value ? "font-semibold" : "font-medium text-[#a1a89f]"}`}>{value || placeholder}</span>
-        <ChevronDown size={15} aria-hidden="true" className={`shrink-0 text-[#7a857a] transition ${terbuka ? "rotate-180" : ""}`} />
-      </button>
-      {terbuka && (
-        <div className="absolute inset-x-0 top-full z-30 mt-2 rounded-xl border border-[#e2e8e1] bg-white p-1.5 shadow-[0_16px_40px_rgba(36,53,39,.16)]">
-          <div className="grid gap-0.5">
-            {options.map((item) => (
-              <button key={item} type="button" onClick={() => { onChange(item); setTerbuka(false); }} className={`flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-left text-xs font-semibold transition ${item === value ? "bg-[#eef5ea] text-[#33523a]" : "text-[#4c5a4d] hover:bg-[#f6f8f5]"}`}>
-                <span className="min-w-0 flex-1 truncate">{item}</span>
-                {item === value && <Check size={13} aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Pratinjau memakai komponen yang sama dengan halaman publik, jadi tidak mungkin berbeda. */
+/** Pratinjau memakai komponen yang sama dengan halaman publik. */
 function RecipePreview({ form }: { form: RecipeForm }) {
   const ingredients = filledIngredients(form.ingredients);
-  const steps = listFrom(form.steps);
-  // Sama seperti halaman publik: kategori dihitung dari jenis pemancingan.
+  const steps = form.steps.map((s) => s.trim()).filter(Boolean);
   const kategori = primaryFishingType(form.title, listFrom(form.fishingTypes));
+  const cuaca = listFrom(form.weather);
+  const air = listFrom(form.water);
   const informasi = [
     { label: "Target", value: "Ikan mas", icon: Fish },
-    { label: "Cuaca", value: listFrom(form.weather).slice(0, 2).join(" · ") || "—", icon: CloudRain },
-    { label: "Kondisi air", value: listFrom(form.water).join(" · ") || "—", icon: Droplets },
-    { label: "Jenis kolam", value: listFrom(form.fishingTypes).join(" · ") || "—", icon: Waves },
-    { label: "Budget", value: form.price || "—", icon: Wallet },
-    { label: "Kesulitan", value: form.difficulty, icon: Gauge },
+    ...(cuaca.length ? [{ label: "Cuaca", value: cuaca.slice(0, 2).join(" · "), icon: CloudRain }] : []),
+    ...(air.length ? [{ label: "Kondisi air", value: air.join(" · "), icon: Droplets }] : []),
+    { label: "Jenis kolam", value: listFrom(form.fishingTypes).join(" · ") || "Harian", icon: Waves },
+    { label: "Budget", value: form.price.trim() || BIAYA_BAWAAN_RESEP, icon: Wallet },
+    { label: "Kesulitan", value: form.difficulty || "Mudah", icon: Gauge },
   ];
 
   return (
@@ -360,9 +362,9 @@ function RecipePreview({ form }: { form: RecipeForm }) {
           {form.image && <Image src={form.image} alt="" fill sizes="640px" unoptimized={form.image.startsWith("blob:")} className="object-cover" />}
           <span className="absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-[#3a513d] backdrop-blur-sm">{kategori} · Ikan mas</span>
         </div>
-        {listFrom(form.images).length > 1 && (
+        {linesFrom(form.images).length > 1 && (
           <div className="flex gap-2 overflow-x-auto border-b border-[#eef0ec] p-3">
-            {listFrom(form.images).map((url) => (
+            {linesFrom(form.images).map((url) => (
               <span key={url} className={`relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#edf1ea] ${url === form.image ? "ring-2 ring-[#294b34] ring-offset-1" : "opacity-75"}`}>
                 <Image src={url} alt="" fill sizes="56px" unoptimized={url.startsWith("blob:")} className="object-cover" />
               </span>
@@ -371,12 +373,12 @@ function RecipePreview({ form }: { form: RecipeForm }) {
         )}
         <div className="p-4 sm:p-5">
           <h3 className="break-words text-xl font-black tracking-[-.03em] text-[#213426]">{form.title || "Judul resep"}</h3>
-          <p className="mt-2 break-words text-xs leading-5 text-[#636d63] (4.62:1 terburuk)">{form.summary || "Ringkasan resep tampil di sini."}</p>
+          <p className="mt-2 break-words text-xs leading-5 text-[#636d63]">{form.summary || "Cerita singkat resep tampil di sini."}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {informasi.map(({ label, value, icon: Icon }) => (
               <div key={label} className="min-w-0 rounded-xl border border-[#edf0eb] bg-[#fafbf8] p-2.5">
-                <Icon size={14} className="text-[#5c705c] (4.59:1 terburuk)" />
-                <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[.1em] text-[#969d94]">{label}</p>
+                <Icon size={14} className="text-[#5c705c]" />
+                <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[.1em] text-[#666e65]">{label}</p>
                 <p className="mt-0.5 break-words text-[11px] font-bold leading-4 text-[#405142]">{value}</p>
               </div>
             ))}
@@ -385,7 +387,7 @@ function RecipePreview({ form }: { form: RecipeForm }) {
       </section>
       <IngredientTable ingredients={ingredients} />
       {steps.length > 0 && <PreparationSteps steps={steps} />}
-      <ConditionTags suitable={listFrom(form.suitable)} notSuitable={listFrom(form.notSuitable)} />
+      <ConditionTags suitable={linesFrom(form.suitable)} notSuitable={linesFrom(form.notSuitable)} />
     </div>
   );
 }
@@ -393,23 +395,33 @@ function RecipePreview({ form }: { form: RecipeForm }) {
 function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: ManagedRecipe; onClose: () => void; onSave: (payload: ReturnType<typeof toPayload>, id?: number) => Promise<void>; readOnly?: boolean }) {
   const [form, setForm] = useState<RecipeForm>(recipe ? formFromRecipe(recipe) : blankForm);
   const [tab, setTab] = useState<"formulir" | "pratinjau">("formulir");
+  const [ubahUrl, setUbahUrl] = useState(false);
+  const [slugManual, setSlugManual] = useState(Boolean(recipe));
+  const [detailTerbuka, setDetailTerbuka] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const update = (key: keyof RecipeForm, value: string) => setForm((current) => ({ ...current, [key]: value, ...(key === "title" && !recipe ? { slug: slugify(value) } : {}) }));
 
-  // Foto racikan ditahan lokal dulu (berkas + pratinjau objek di browser),
-  // sama seperti form Bagikan: berkas baru BARU diunggah ke basis data saat
-  // resep disimpan (lihat `siapkanPayload`). Menekan Batal karenanya tidak
-  // menyimpan apa pun — tidak ada lagi foto yatim dari form yang dibatalkan.
-  // Foto yang sudah tersimpan di server tetap berupa alamat di `images`,
-  // dan `image` tetap menjadi thumbnail pilihannya.
+  const update = <K extends keyof RecipeForm>(key: K, value: RecipeForm[K]) =>
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "title" && !slugManual && typeof value === "string" ? { slug: slugify(value) } : {}),
+    }));
+
+  // Provinsi pada resep baru hanya diisi otomatis bila lokasi diizinkan; tanpa fallback.
+  const terapkanLokasi = useCallback((place: { province: string }) => {
+    if (recipe) return;
+    setForm((cur) => (listFrom(cur.provinces).length ? cur : { ...cur, provinces: place.province }));
+  }, [recipe]);
+  const { markTouched: tandaiProvinsiDiubah } = useLocationAutofill(terapkanLokasi);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [fotoBaru, setFotoBaru] = useState<{ file: File; url: string }[]>([]);
   const [thumbnailBaru, setThumbnailBaru] = useState<number | null>(null);
   const fotoBaruUrls = useRef<string[]>([]);
-  const galeri = listFrom(form.images);
+  const galeri = linesFrom(form.images);
   const totalFoto = galeri.length + fotoBaru.length;
 
   useEffect(() => () => { fotoBaruUrls.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
@@ -422,14 +434,10 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
     }));
   }
 
-  // `files` wajib sudah berupa salinan array: FileList dari input bersifat
-  // live dan ikut kosong begitu nilai input direset untuk memilih ulang.
   async function tambahFotoBaru(files: File[]) {
     const dipilih = files.slice(0, Math.max(0, 5 - totalFoto));
     setPhotoError(dipilih.length < files.length ? "Satu resep maksimal 5 foto. Hapus foto lain dulu." : "");
     if (!dipilih.length) return;
-    // Kompres di peramban dulu (maks lebar 1280 px, target ±200 KB) agar
-    // unggahan ringan; pratinjau memakai berkas hasil kompresinya.
     setPhotoBusy(true);
     try {
       const baru = await Promise.all(dipilih.map(async (file) => {
@@ -462,11 +470,6 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
     aturGaleri([], "/images/recipe-putih.jpg");
   }
 
-  /**
-   * Unggah semua foto lokal ke basis data lalu susun payload akhir.
-   * Tanpa foto lokal, payload langsung dari form. Bila satu unggahan gagal,
-   * penyimpanan resep dibatalkan agar tidak ada resep setengah jadi.
-   */
   async function siapkanPayload(status = form.status) {
     if (!fotoBaru.length) return toPayload(form, status);
     const slug = form.slug.trim() || slugify(form.title);
@@ -489,36 +492,49 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
     } finally { setPhotoBusy(false); }
   }
 
-  // Bentuk form untuk pratinjau: foto lokal ikut tampil dari pratinjau objeknya.
   const formPratinjau: RecipeForm = {
     ...form,
     image: thumbnailBaru !== null && fotoBaru[thumbnailBaru] ? fotoBaru[thumbnailBaru].url : form.image,
     images: [...galeri, ...fotoBaru.map((item) => item.url)].join("\n"),
   };
 
+  const bahanMulai = form.ingredients.filter((b) => b.name.trim() || b.amount.trim() || b.brand.trim());
   const ingredients = filledIngredients(form.ingredients);
-  const optionalCount = ingredients.filter((item) => item.optional).length;
+  const stepsBersih = form.steps.map((s) => s.trim()).filter(Boolean);
+  const slugTampil = form.slug.trim() || slugify(form.title) || "judul-resep";
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError("");
-    if (listFrom(form.fishingTypes).length === 0) { setError("Pilih minimal satu jenis kolam untuk resep ini."); return; }
-    if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
-    if (listFrom(form.steps).length === 0) { setError("Tambahkan setidaknya satu langkah persiapan."); return; }
+  const provinsiTerpilih = listFrom(form.provinces);
+  const cuacaTerpilih = listFrom(form.weather);
+  const airTerpilih = listFrom(form.water);
+  const ringkasanOpsional = [
+    provinsiTerpilih.length ? (provinsiTerpilih.length === 1 ? provinsiTerpilih[0] : `${provinsiTerpilih.length} provinsi`) : "",
+    cuacaTerpilih.length ? cuacaTerpilih.slice(0, 2).join(", ") : "",
+    airTerpilih.length ? `Air ${airTerpilih.slice(0, 2).join(", ").toLowerCase()}` : "",
+    form.price.trim() ? PILIHAN_BIAYA_CEPAT.find((b) => b.value === form.price.trim())?.label ?? form.price.trim() : "",
+  ].filter(Boolean);
+
+  function periksaWajib(): string | null {
+    if (form.title.trim().length < 3) return "Judul minimal 3 karakter.";
+    if (form.summary.trim().length < 10) return "Cerita singkat minimal 10 karakter (1–2 kalimat singkat).";
+    if (listFrom(form.fishingTypes).length === 0) return "Pilih minimal satu jenis kolam untuk resep ini.";
+    if (!ingredients.length || bahanMulai.some((b) => !b.name.trim() || !b.amount.trim())) return "Lengkapi nama dan takaran pada setiap bahan (merek boleh kosong).";
+    if (stepsBersih.length === 0) return "Tambahkan minimal satu langkah meracik.";
+    return null;
+  }
+
+  async function simpan(statusTarget = form.status) {
+    setError("");
+    const pesan = periksaWajib();
+    if (pesan) { setError(pesan); return; }
     setBusy(true);
-    try { await onSave(await siapkanPayload(), recipe?.id); }
+    try { await onSave(await siapkanPayload(statusTarget), recipe?.id); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Konten gagal disimpan."); }
     finally { setBusy(false); }
   }
 
-  async function publish(status: string) {
-    setError("");
-    if (form.title.trim().length < 3 || form.summary.trim().length < 15) { setError("Lengkapi judul dan ringkasan sebelum mengganti status."); return; }
-    if (listFrom(form.fishingTypes).length === 0) { setError("Pilih minimal satu jenis kolam untuk resep ini."); return; }
-    if (ingredients.length === 0) { setError("Tambahkan minimal satu bahan: isi nama dan takarannya."); return; }
-    setBusy(true);
-    try { await onSave(await siapkanPayload(status), recipe?.id); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Konten gagal disimpan."); }
-    finally { setBusy(false); }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await simpan(form.status);
   }
 
   return (
@@ -526,14 +542,14 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
       <section role="dialog" aria-modal="true" aria-labelledby="recipe-editor-title" className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-[25px] bg-[#f9faf8] shadow-2xl sm:rounded-[25px]">
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-[#e7ebe4] bg-white/95 px-5 py-4 backdrop-blur">
           <div>
-            <p className="text-[9px] font-extrabold uppercase tracking-[.15em] text-[#656d64] (4.59:1 terburuk)">Content Studio / Resep</p>
+            <p className="text-[9px] font-extrabold uppercase tracking-[.15em] text-[#656d64]">Content Studio / Resep</p>
             <h2 id="recipe-editor-title" className="mt-1 text-lg font-black text-[#2b3c2e]">{recipe ? "Edit resep" : "Tulis resep baru"}</h2>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-xl bg-[#eff3ec] p-1" role="tablist" aria-label="Mode editor">
               {([["formulir", "Formulir"], ["pratinjau", "Pratinjau"]] as const).map(([value, label]) => (
                 <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}
-                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition ${tab === value ? "bg-white text-[#315a39] shadow-sm" : "text-[#626e61] (4.59:1 terburuk)"}`}>
+                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition ${tab === value ? "bg-white text-[#315a39] shadow-sm" : "text-[#626e61]"}`}>
                   {value === "pratinjau" && <Eye size={13} />}{label}
                 </button>
               ))}
@@ -542,25 +558,35 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
           </div>
         </div>
 
-        {/*
-          Formulir dan pratinjau selalu terpasang: saat pratinjau aktif, isian
-          disembunyikan (bukan dibuang) supaya tombol simpan/publikasikan di
-          footer tetap bekerja tanpa kehilangan data yang sudah diisi.
-        */}
         <form onSubmit={submit} noValidate={tab !== "formulir"}>
-          {/* Peran tanpa izin konten: seluruh isian formulir nonaktif (fieldset),
-              tombol Batal/tutup di luar fieldset tetap bisa dipakai keluar. */}
           <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
-          <div className={tab === "pratinjau" ? "hidden" : "space-y-5 p-4 sm:p-6"}>
-            <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Informasi utama</h3>
-              <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
-                <Field label="Judul resep"><input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} minLength={3} placeholder="Tulis judul resep" required /></Field>
-                <Field label="Slug URL" hint="Alamat halaman detail. Harus unik."><input className={fieldClass} value={form.slug} onChange={(event) => update("slug", slugify(event.target.value))} maxLength={180} placeholder="slug-resep" required /></Field>
-                <Field label="Status konten"><select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}</select></Field>
-                <Field label="Ringkasan" wide><textarea className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} minLength={15} placeholder="Jelaskan karakter racikan dan konteks yang sesuai." required /><span className="text-right text-[10px] font-medium text-[#939b91]">{form.summary.length}/1.500</span></Field>
-                <div className="grid gap-1.5 text-xs font-bold text-[#616c60] (4.71:1 terburuk) sm:col-span-2">
-                  <span>Foto racikan <span className="font-semibold text-[#959c93]">({totalFoto}/5 foto · tampilan persegi 1:1)</span></span>
+            <div className={tab === "pratinjau" ? "hidden" : "space-y-4 p-4 sm:p-6"}>
+              <section className="space-y-4 rounded-2xl border border-[#e7ebe5] bg-white p-4 sm:p-5">
+                <div>
+                  <Field label="Judul racikan">
+                    <input autoFocus className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} maxLength={180} placeholder="Mis. Umpan Jagung Kukus Andalan" />
+                  </Field>
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#636d63]">
+                    <span className="truncate">URL: <code className="font-semibold text-[#3f5542]">/resep/{slugTampil}</code></span>
+                    <button type="button" onClick={() => setUbahUrl((cur) => !cur)} className="font-bold text-[#31593a] underline-offset-2 hover:underline">
+                      {ubahUrl ? "Sembunyikan URL" : "Ubah URL"}
+                    </button>
+                  </div>
+                  {ubahUrl && (
+                    <div className="mt-2">
+                      <input className={fieldClass} value={form.slug} aria-label="Slug URL"
+                        onChange={(event) => {
+                          const bersih = slugify(event.target.value);
+                          setSlugManual(Boolean(bersih));
+                          setForm((cur) => ({ ...cur, slug: bersih }));
+                        }}
+                        maxLength={180} placeholder="slug-resep" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-1.5 text-xs font-bold text-[#4f5d50]">
+                  <span>Foto racikan <span className="font-medium text-[#636d63]">(opsional, {totalFoto}/5 foto · persegi 1:1)</span></span>
                   {totalFoto > 0 && (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                       {galeri.map((url) => (
@@ -594,75 +620,150 @@ function RecipeEditor({ recipe, onClose, onSave, readOnly = false }: { recipe?: 
                       ))}
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" aria-label="Pilih berkas foto racikan"
                       onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; event.target.value = ""; if (files.length) void tambahFotoBaru(files); }} />
-                    <button type="button" disabled={photoBusy || totalFoto >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#294b34] px-4 text-xs font-extrabold text-white transition hover:bg-[#203d29] disabled:opacity-60">
+                    <button type="button" disabled={photoBusy || totalFoto >= 5} onClick={() => photoInputRef.current?.click()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#eef3ea] px-4 text-xs font-extrabold text-[#2f5b3a] transition hover:bg-[#e2ecdf] disabled:opacity-60">
                       {photoBusy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} />} {totalFoto ? "Tambah foto" : "Pilih foto"}
                     </button>
                     {totalFoto > 0 && (
-                      <button type="button" disabled={photoBusy} onClick={pakaiFotoBawaan} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk) transition hover:bg-[#f6f8f5] disabled:opacity-50">
+                      <button type="button" disabled={photoBusy} onClick={pakaiFotoBawaan} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#e2e7e0] bg-white px-3.5 text-xs font-bold text-[#636e63] transition hover:bg-[#f6f8f5] disabled:opacity-50">
                         <RotateCcw size={14} /> Pakai foto bawaan
                       </button>
                     )}
+                    <span className="text-[11px] font-medium text-[#636d63]">Otomatis dikompres ≤200 KB & diunggah saat resep disimpan.</span>
                   </div>
-                  <p className="text-[10px] font-medium leading-4 text-[#959c93]">Foto bertanda Thumbnail tampil di kartu dan hasil berbagi. Format PNG, JPEG, atau WebP, maks 3 MB per foto dan maks 5 foto. Foto besar otomatis dikecilkan dan dikompres (target sekitar 200 KB) agar tetap tajam tetapi ringan. <strong>Foto baru hanya ditahan di perangkat ini dan diunggah saat resep disimpan</strong>. Membatalkan form tidak menyimpan apa pun. Foto lama terhapus setelah resep disimpan.</p>
-                  {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f] (4.59:1 terburuk)">{photoError}</p>}
+                  {photoError && <p role="alert" className="text-[11px] font-semibold leading-4 text-[#a4442f]">{photoError}</p>}
                 </div>
-                <Field label="Penulis"><input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} /></Field>
-              </div>
-            </section>
 
-            <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Kondisi & harga</h3>
-              <div className="mt-4 grid items-start gap-3 sm:grid-cols-2">
-                <PilihanField label="Cuaca"><MultiSelectDropdown value={form.weather} options={WEATHER_CONDITIONS} onChange={(value) => update("weather", value)} placeholder="Pilih cuaca" /></PilihanField>
-                <PilihanField label="Kondisi air" hint="Warna air kolam/spot"><MultiSelectDropdown value={form.water} options={WATER_CONDITIONS} onChange={(value) => update("water", value)} placeholder="Pilih kondisi air" /></PilihanField>
-                <PilihanField label="Tipe air"><MultiSelectDropdown value={form.waterBodies} options={WATER_BODIES} onChange={(value) => update("waterBodies", value)} placeholder="Pilih tipe air" /></PilihanField>
-                <Field label="Jenis kolam" hint="Boleh lebih dari satu. Centang ketiganya bila cocok untuk semua jenis kolam."><FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} /></Field>
-                <PilihanField label="Musim"><MultiSelectDropdown value={form.seasons} options={SEASON_CONDITIONS} onChange={(value) => update("seasons", value)} placeholder="Pilih musim" /></PilihanField>
-                <PilihanField label="Provinsi terkait"><MultiSelectDropdown value={form.provinces} options={provinces.map((province) => province.name)} onChange={(value) => update("provinces", value)} placeholder="Pilih provinsi" searchable /></PilihanField>
-                <PilihanField label="Tingkat kesulitan"><SingleSelectDropdown value={form.difficulty} options={["Mudah", "Menengah", "Tingkat lanjut"]} onChange={(value) => update("difficulty", value)} placeholder="Pilih tingkat kesulitan" /></PilihanField>
-                <Field label="Label harga" hint="Harga acuan untuk filter budget dihitung otomatis dari titik tengah rentang ini, jadi tidak perlu diisi terpisah."><input className={fieldClass} value={form.price} onChange={(event) => update("price", event.target.value)} maxLength={80} placeholder="Rp20.000–25.000" /></Field>
-              </div>
-            </section>
+                <Field label="Cerita singkat">
+                  <textarea rows={3} className={areaClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={1500} placeholder="Tulis 1–2 kalimat singkat tentang karakter atau keunggulan racikan ini." />
+                </Field>
 
-            <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Bahan racikan</h3>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="sage">{ingredients.length - optionalCount} bahan</Badge>
-                  {optionalCount > 0 && <Badge tone="gold">{optionalCount} tambahan opsional</Badge>}
+                <div className="grid gap-1.5 text-xs font-bold text-[#4f5d50]">
+                  <span>Jenis kolam <span className="font-medium text-[#636d63]">(pilih minimal satu)</span></span>
+                  <FishingTypePicker value={form.fishingTypes} onChange={(value) => update("fishingTypes", value)} />
                 </div>
-              </div>
-              <p className="mt-2 text-[10px] font-medium leading-4 text-[#959c93]">Susunannya sama dengan yang tampil di halaman publik. Tombol Inti/Opsional memindahkan bahan antar bagian.</p>
-              <div className="mt-3"><IngredientRowsEditor rows={form.ingredients} onChange={(rows) => setForm({ ...form, ingredients: rows })} /></div>
-            </section>
 
-            <section className="rounded-2xl border border-[#e7ebe5] bg-white p-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-[.11em] text-[#58685a]">Langkah & catatan kondisi</h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Field label="Langkah persiapan" hint="Satu langkah per baris" wide><textarea className={`${areaClass} min-h-32`} value={form.steps} onChange={(event) => update("steps", event.target.value)} placeholder={"Haluskan pelet.\nCampurkan bahan kering.\nTambahkan air perlahan."} /></Field>
-                <Field label="Cocok untuk" hint="Pisahkan dengan baris baru atau koma"><textarea className={areaClass} value={form.suitable} onChange={(event) => update("suitable", event.target.value)} /></Field>
-                <Field label="Kurang cocok untuk" hint="Pisahkan dengan baris baru atau koma"><textarea className={areaClass} value={form.notSuitable} onChange={(event) => update("notSuitable", event.target.value)} /></Field>
-              </div>
-            </section>
+                <div className="grid gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#4f5d50]">Bahan-bahan <span className="font-medium text-[#636d63]">(merek boleh kosong)</span></span>
+                    {ingredients.length > 0 && <Badge tone="sage">{ingredients.length} bahan siap</Badge>}
+                  </div>
+                  <IngredientRowsEditor rows={form.ingredients} onChange={(rows) => update("ingredients", rows)} />
+                </div>
 
-          </div>
-          {tab === "pratinjau" && (
-            <div className="space-y-4 p-4 sm:p-6">
-              <p className="flex items-center gap-2 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-[11px] font-semibold text-[#436444]"><Eye size={14} /> Mode pratinjau — perubahan belum disimpan sampai Anda menekan “Simpan perubahan”.</p>
-              <RecipePreview form={formPratinjau} />
+                <div className="grid gap-2">
+                  <span className="text-xs font-bold text-[#4f5d50]">Cara meracik</span>
+                  <StepsRowsEditor steps={form.steps} onChange={(rows) => update("steps", rows)} />
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-[#e3e9df] bg-white">
+                <button type="button" aria-expanded={detailTerbuka} onClick={() => setDetailTerbuka((cur) => !cur)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-[#2f4534]">
+                      {detailTerbuka ? "Sembunyikan kondisi & daerah" : "+ Lengkapi kondisi & daerah (opsional)"}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-[#616d61]">
+                      {ringkasanOpsional.length ? ringkasanOpsional.join(" · ") : "Cuaca, kondisi air, provinsi, perkiraan biaya, dan penulis"}
+                    </p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {ringkasanOpsional.length > 0 && <span className="rounded-full bg-[#e8f0e4] px-2.5 py-0.5 text-[10px] font-extrabold text-[#31593a]">{ringkasanOpsional.length} terisi</span>}
+                    <ChevronDown size={16} aria-hidden="true" className={`text-[#5a695b] transition ${detailTerbuka ? "rotate-180" : ""}`} />
+                  </span>
+                </button>
+
+                {detailTerbuka && (
+                  <div className="space-y-4 border-t border-[#eef1ec] p-4 sm:p-5">
+                    <ConditionChipPicker label="Cuaca yang cocok" options={WEATHER_CONDITIONS} value={form.weather} onChange={(value) => update("weather", value)} />
+                    <ConditionChipPicker label="Kondisi air yang cocok" options={WATER_CONDITIONS} value={form.water} onChange={(value) => update("water", value)} />
+
+                    <div className="grid gap-1.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-[#4f5d50]">Provinsi asal / yang cocok</span>
+                        <UseMyLocationButton
+                          label="Isi dari lokasi"
+                          onPlace={(place) => {
+                            tandaiProvinsiDiubah();
+                            const cur = listFrom(form.provinces);
+                            if (!cur.includes(place.province)) update("provinces", [...cur, place.province].join(", "));
+                          }}
+                          onForget={() => {
+                            tandaiProvinsiDiubah();
+                            update("provinces", "");
+                          }}
+                        />
+                      </div>
+                      <MultiSelectDropdown
+                        value={form.provinces}
+                        options={provinces.map((province) => province.name)}
+                        onChange={(value) => { tandaiProvinsiDiubah(); update("provinces", value); }}
+                        placeholder="Pilih provinsi (opsional)…"
+                        searchable
+                      />
+                    </div>
+
+                    <fieldset>
+                      <legend className="mb-1.5 block text-xs font-bold text-[#4f5d50]">Perkiraan biaya bahan</legend>
+                      <div className="flex flex-wrap gap-2">
+                        {PILIHAN_BIAYA_CEPAT.map((opsi) => {
+                          const aktif = form.price === opsi.value;
+                          return (
+                            <button key={opsi.value} type="button" aria-pressed={aktif}
+                              onClick={() => update("price", aktif ? "" : opsi.value)}
+                              className={`min-h-9 rounded-full border px-3.5 text-xs font-bold transition ${aktif ? "border-[#294b34] bg-[#294b34] text-white" : "border-[#e2e8e1] bg-white text-[#4b5b4e] hover:bg-[#eef3ea]"}`}>
+                              {opsi.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {form.price && !PILIHAN_BIAYA_CEPAT.some((opsi) => opsi.value === form.price) && (
+                        <p className="mt-1.5 text-[11px] text-[#616d61]">Biaya tersimpan saat ini: <strong>{form.price}</strong></p>
+                      )}
+                    </fieldset>
+
+                    <div className="grid gap-3 border-t border-[#eef1ec] pt-3 sm:grid-cols-2">
+                      <Field label="Penulis">
+                        <input className={fieldClass} value={form.author} onChange={(event) => update("author", event.target.value)} maxLength={100} />
+                      </Field>
+                      <Field label="Status konten">
+                        <select className={fieldClass} value={form.status} onChange={(event) => update("status", event.target.value)}>
+                          {statuses.map((item) => <option key={item} value={item}>{item === "published" ? "Published · tampil publik" : item === "draft" ? "Draft · hanya admin" : "Archived · disimpan"}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
-          )}
-          {error && <p role="alert" className="mx-4 mb-2 rounded-xl border border-[#efdcd5] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold leading-5 text-[#9c513e] sm:mx-6">{error}</p>}
+
+            {tab === "pratinjau" && (
+              <div className="space-y-4 p-4 sm:p-6">
+                <p className="flex items-center gap-2 rounded-xl border border-[#dbe8d7] bg-[#f0f6ed] px-4 py-3 text-[11px] font-semibold text-[#436444]"><Eye size={14} /> Mode pratinjau — perubahan belum disimpan.</p>
+                <RecipePreview form={formPratinjau} />
+              </div>
+            )}
+            {error && <p role="alert" className="mx-4 mb-2 rounded-xl border border-[#efdcd5] bg-[#fbf1ed] px-4 py-3 text-xs font-semibold leading-5 text-[#9c513e] sm:mx-6">{error}</p>}
           </fieldset>
+
           <div className="sticky bottom-0 flex flex-col-reverse justify-between gap-2 border-t border-[#e6eae4] bg-[#f9faf8]/95 px-4 py-3 backdrop-blur sm:flex-row sm:px-6">
-            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63] (4.57:1 terburuk)">Batal</button>
+            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#e2e7e0] bg-white px-4 text-xs font-bold text-[#636e63]">Batal</button>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button type="button" onClick={() => setTab(tab === "pratinjau" ? "formulir" : "pratinjau")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0]"><Eye size={14} /> {tab === "pratinjau" ? "Kembali ke formulir" : "Lihat pratinjau"}</button>
-              <button type="submit" disabled={busy || readOnly} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : "Simpan perubahan"}</button>
-              <button type="button" disabled={busy || readOnly} onClick={() => void publish("published")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-bold text-white hover:bg-[#203d29] disabled:opacity-60"><Send size={14} /> Publikasikan</button>
+              {recipe && form.status === "published" ? (
+                <>
+                  <button type="button" disabled={busy || readOnly} onClick={() => void simpan("draft")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60">Jadikan draft</button>
+                  <button type="submit" disabled={busy || readOnly} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-bold text-white hover:bg-[#203d29] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : "Simpan perubahan"}</button>
+                </>
+              ) : (
+                <>
+                  <button type="submit" disabled={busy || readOnly} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4d9] bg-white px-4 text-xs font-bold text-[#456047] hover:bg-[#f3f6f0] disabled:opacity-60"><Check size={14} /> {busy ? "Menyimpan…" : form.status === "archived" ? "Simpan arsip" : "Simpan draft"}</button>
+                  <button type="button" disabled={busy || readOnly} onClick={() => void simpan("published")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#294b34] px-5 text-xs font-bold text-white hover:bg-[#203d29] disabled:opacity-60"><Send size={14} /> {recipe ? "Publikasikan" : "Tayangkan langsung"}</button>
+                </>
+              )}
             </div>
           </div>
         </form>

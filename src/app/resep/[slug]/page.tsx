@@ -151,8 +151,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
     : undefined;
   const information = [
     { label: "Target", value: "Ikan mas", icon: Fish },
-    { label: "Cuaca", value: recipe.weather.slice(0, 2).join(" · "), icon: CloudRain },
-    { label: "Kondisi air", value: recipe.water.join(" · "), icon: Droplets },
+    ...(recipe.weather.length ? [{ label: "Cuaca", value: recipe.weather.slice(0, 2).join(" · "), icon: CloudRain }] : []),
+    ...(recipe.water.length ? [{ label: "Kondisi air", value: recipe.water.join(" · "), icon: Droplets }] : []),
     { label: "Jenis kolam", value: recipe.fishingTypes.join(" · "), icon: Waves },
     { label: "Budget", value: recipe.price, icon: Wallet },
     { label: "Kesulitan", value: recipe.difficulty, icon: Gauge },
@@ -190,7 +190,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
           <div className="min-w-0 space-y-10">
             <section id="bahan" className="scroll-mt-24"><SectionHeader eyebrow="Siapkan sebelum berangkat" title="Bahan yang dibutuhkan" subtitle="Takaran untuk satu sesi. Atur kelembapan adonan sedikit demi sedikit." /><IngredientTable ingredients={recipe.ingredients} /></section>
             <section><SectionHeader eyebrow="Ikuti langkahnya" title="Cara meracik" subtitle="Persiapan sekitar 25 menit, termasuk waktu mengukus bila dibutuhkan." /><PreparationSteps steps={recipe.steps} /></section>
-            <section><SectionHeader eyebrow="Catatan kondisi" title="Cocok untuk kondisi apa?" subtitle="Jadikan titik awal, lalu sesuaikan dengan karakter kolammu." /><ConditionTags suitable={recipe.suitable} notSuitable={recipe.notSuitable} /></section>
+            {(recipe.suitable.length > 0 || recipe.notSuitable.length > 0) && (
+              <section><SectionHeader eyebrow="Catatan kondisi" title="Cocok untuk kondisi apa?" subtitle="Jadikan titik awal, lalu sesuaikan dengan karakter kolammu." /><ConditionTags suitable={recipe.suitable} notSuitable={recipe.notSuitable} /></section>
+            )}
             <RecipeReviewSection recipe={recipe} initialRating={serverRatings?.[recipe.slug]} />
           </div>
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-24 lg:self-start">

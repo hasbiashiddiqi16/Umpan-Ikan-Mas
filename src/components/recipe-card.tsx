@@ -62,8 +62,8 @@ export function RecipeCard({ recipe, matchScore, initialRating }: { recipe: Reci
           <Link href={`/resep/${recipe.slug}`} aria-label={`Buka ${recipe.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f1f4ef] text-[#4f694f] transition hover:bg-[#e5ede2]"><ArrowUpRight size={17} /></Link>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 content-start gap-1.5 min-[440px]:grid-cols-3">
-          <Badge className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.weather[0]}><WeatherIcon weather={recipe.weather[0]} className="shrink-0" /> {recipe.weather[0]}</span></Badge>
-          <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.water[0]}><WaterIcon className="shrink-0" /> {recipe.water[0]}</span></Badge>
+          {recipe.weather[0] && <Badge className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.weather[0]}><WeatherIcon weather={recipe.weather[0]} className="shrink-0" /> {recipe.weather[0]}</span></Badge>}
+          {recipe.water[0] && <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={recipe.water[0]}><WaterIcon className="shrink-0" /> {recipe.water[0]}</span></Badge>}
           <Badge tone="cream" className={cardMetaBadgeClass}><span className="inline-flex min-w-0 items-center gap-1 truncate" title={`Jenis pemancingan: ${tagJenis}`}><FishingTypeIcon className="shrink-0" /> {tagJenis}</span></Badge>
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-[#edf0eb] pt-3.5">
